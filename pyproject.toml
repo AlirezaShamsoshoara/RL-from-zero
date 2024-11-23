@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
-    "gym>=0.26.2",
+    "gym[toy-text]>=0.26.2",
     "numpy>=1.24.4",
+    "tqdm>=4.67.0",
 ]
