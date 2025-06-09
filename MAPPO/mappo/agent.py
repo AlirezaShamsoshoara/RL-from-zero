@@ -1,9 +1,12 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
+from typing import Dict, List, Tuple
+
 import numpy as np
 import torch
 import torch.nn as nn
-from typing import List, Dict, Tuple
+
 from .networks import ActorCritic
 
 
@@ -108,7 +111,9 @@ class MAPPOAgent:
 
             # Get value based on centralized or decentralized critic
             if self.use_centralized_critic and state is not None:
-                state_t = torch.as_tensor(state, dtype=torch.float32, device=self.device)
+                state_t = torch.as_tensor(
+                    state, dtype=torch.float32, device=self.device
+                )
                 value = self.models[i].get_value(state_t)
             else:
                 value = self.models[i].get_value(obs_t)
@@ -176,7 +181,9 @@ class MAPPOAgent:
             value_loss = 0.5 * torch.mean(torch.max(vf_losses1, vf_losses2))
 
             # Total loss
-            loss = policy_loss + self.vf_coef * value_loss - self.ent_coef * entropy.mean()
+            loss = (
+                policy_loss + self.vf_coef * value_loss - self.ent_coef * entropy.mean()
+            )
 
             # Optimize
             optimizer_idx = 0 if self.share_policy else agent_id
