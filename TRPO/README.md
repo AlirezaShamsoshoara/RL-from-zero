@@ -45,6 +45,6 @@ Setup with uv (Windows cmd):
 - Hyperparameters can be tuned in `TRPO/configs/pendulum.yaml`. Lowering `max_kl` or increasing `cg_iters` improves stability at the cost of runtime.
 
 ## References
-- Schulman et al., Trust Region Policy Optimization, ICML 2015.
+- Schulman et al., Trust Region Policy Optimization, ICML 2015 https://arxiv.org/abs/1502.05477
 - OpenAI Spinning Up TRPO: https://spinningup.openai.com/en/latest/algorithms/trpo.html
 - Stable-Baselines3 TRPO docs: https://sb3-contrib.readthedocs.io/en/master/modules/trpo.html
