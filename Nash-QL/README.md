@@ -125,7 +125,3 @@ Nash Q-learning requires more memory (joint action space) but can achieve better
 
 4. **Computational cost**: Solving Nash equilibrium at each step can be expensive
    - Future: Cached equilibria or approximate solvers for real-time applications
-
----
-
-Happy experimenting with multi-agent coordination!
