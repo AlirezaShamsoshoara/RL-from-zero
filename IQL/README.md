@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/iql_logo.svg" width="420" alt="Implicit Q-Learning Logo" />
+</p>
+
 <h1 align="center">Implicit Q-Learning (IQL)</h1>
 
 ## Overview

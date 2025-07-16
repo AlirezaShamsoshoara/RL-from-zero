@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="200" viewBox="0 0 640 200">
+  <defs>
+    <linearGradient id="bg" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#10182b"/>
+      <stop offset="100%" stop-color="#1f3151"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" x2="100%" y1="50%" y2="50%">
+      <stop offset="0%" stop-color="#8fd3ff"/>
+      <stop offset="100%" stop-color="#4fb8ff"/>
+    </linearGradient>
+    <linearGradient id="spark" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#f9f9ff" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#88ccff" stop-opacity="0.4"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="640" height="200" rx="24" fill="url(#bg)" />
+  <g transform="translate(48 56)">
+    <text x="0" y="72" font-family="Segoe UI, Arial, sans-serif" font-size="96" font-weight="700" fill="#ecf7ff">
+      IQL
+    </text>
+    <rect x="6" y="104" width="200" height="6" rx="3" fill="url(#accent)"/>
+    <text x="0" y="136" font-family="Segoe UI, Arial, sans-serif" font-size="26" fill="#bcd2ec">
+      Implicit Q-Learning
+    </text>
+  </g>
+  <g transform="translate(370 28)">
+    <path d="M36 112 C60 72 124 100 156 40" fill="none" stroke="url(#accent)" stroke-width="6" stroke-linecap="round" stroke-dasharray="10 14"/>
+    <circle cx="164" cy="28" r="18" fill="url(#spark)"/>
+    <g opacity="0.5">
+      <circle cx="64" cy="100" r="44" fill="none" stroke="#467ed1" stroke-width="4"/>
+      <circle cx="120" cy="48" r="32" fill="none" stroke="#58a6ff" stroke-width="4"/>
+    </g>
+    <circle cx="64" cy="100" r="8" fill="#8fd3ff"/>
+    <circle cx="120" cy="48" r="8" fill="#8fd3ff"/>
+    <circle cx="36" cy="112" r="10" fill="#4fb8ff"/>
+    <circle cx="156" cy="40" r="10" fill="#4fb8ff"/>
+  </g>
+</svg>
