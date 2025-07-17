@@ -32,6 +32,7 @@ RL-from-zero is a collection of reinforcement learning agents implemented from s
 | `DDPG/` | Deep Deterministic Policy Gradient | Continuous | `Pendulum-v1` |
 | `TD3/` | Twin Delayed DDPG | Continuous | `Pendulum-v1` |
 | `TRPO/` | Trust Region Policy Optimization | Continuous | `Pendulum-v1` |
+| `IQL/` | Implicit Q-Learning (offline) | Continuous | `Pendulum-v1` (random offline dataset) |
 
 All agents expose a two-command Fire CLI (`train` and `demo`), use PyTorch under the hood, and save both periodic and best checkpoints in their respective `checkpoints/` directories.
 
@@ -107,6 +108,10 @@ python -m TD3.main demo --config TD3/configs/pendulum.yaml --model_path TD3/chec
 # Trust Region Policy Optimization
 python -m TRPO.main train --config TRPO/configs/pendulum.yaml
 python -m TRPO.main demo --config TRPO/configs/pendulum.yaml --model_path TRPO/checkpoints/best.pt
+
+# Implicit Q-Learning (offline)
+python -m IQL.main train --config IQL/configs/pendulum_random.yaml
+python -m IQL.main demo --config IQL/configs/pendulum_random.yaml --model_path IQL/checkpoints/best.pt
 ```
 
 ### Optional Weights & Biases logging
