@@ -48,3 +48,4 @@ Copy `pendulum_random.yaml` and tweak the fields for other continuous control ta
 - D4RL benchmark suite: Fu et al., D4RL: Datasets for Deep Data-Driven Reinforcement Learning, NeurIPS 2020. https://arxiv.org/abs/2004.07219
 - Implicit Q-learning by the Paper Author (Ilya Kostrikov): https://github.com/ikostrikov/implicit_q_learning
 - Sergey Levine Video on (Offline Reinforcement Learning: BayLearn 2021 Keynote Talk) https://www.youtube.com/watch?v=k08N5a0gG0A
+- Ray's IQL implementation: https://docs.ray.io/en/latest/rllib/rllib-algorithms.html#iql
