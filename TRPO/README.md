@@ -43,3 +43,8 @@ Setup with uv (Windows cmd):
 - Continuous `Box` action spaces and flat observation vectors are supported in this implementation.
 - Rendering requires a local display; ensure `pygame` is installed (already in `pyproject.toml`).
 - Hyperparameters can be tuned in `TRPO/configs/pendulum.yaml`. Lowering `max_kl` or increasing `cg_iters` improves stability at the cost of runtime.
+
+## References
+- Schulman et al., Trust Region Policy Optimization, ICML 2015.
+- OpenAI Spinning Up TRPO: https://spinningup.openai.com/en/latest/algorithms/trpo.html
+- Stable-Baselines3 TRPO docs: https://sb3-contrib.readthedocs.io/en/master/modules/trpo.html
