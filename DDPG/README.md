@@ -31,7 +31,7 @@ YAML files in `DDPG/configs/` expose hyper-parameters:
 Copy `pendulum.yaml` to tailor runs for other continuous control benchmarks.
 
 ## References
-- Lillicrap et al., Continuous Control with Deep Reinforcement Learning, ICLR 2016.
+- Lillicrap et al., Continuous Control with Deep Reinforcement Learning, ICLR 2016 https://arxiv.org/abs/1509.02971
 - OpenAI Spinning Up DDPG: https://spinningup.openai.com/en/latest/algorithms/ddpg.html
 - Stable-Baselines3 DDPG: https://stable-baselines3.readthedocs.io/en/master/modules/ddpg.html
 
