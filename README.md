@@ -1,5 +1,18 @@
 # RL-from-zero
 
+[![Python Version](https://img.shields.io/badge/Python-3.8%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![uv](https://img.shields.io/badge/uv-0.5%2B-6E56CF?logo=astral&logoColor=white)](https://github.com/astral-sh/uv)
+[![Last Commit](https://img.shields.io/github/last-commit/AlirezaShamsoshoara/RL-from-zero?logo=github)](https://github.com/AlirezaShamsoshoara/RL-from-zero/commits)
+[![Downloads](https://img.shields.io/github/downloads/AlirezaShamsoshoara/RL-from-zero/total?logo=github)](https://github.com/AlirezaShamsoshoara/RL-from-zero/releases)
+[![Code Style](https://img.shields.io/badge/code%20style-PEP%208-306998)](https://peps.python.org/pep-0008/)
+[![Hits of Code](https://hitsofcode.com/github/AlirezaShamsoshoara/RL-from-zero?branch=main&style=flat)](https://hitsofcode.com/github/AlirezaShamsoshoara/RL-from-zero/view?branch=main)
+[![Docs](https://img.shields.io/badge/docs-README-blue?logo=read-the-docs&logoColor=white)](README.md)
+[![GitHub stars](https://img.shields.io/github/stars/AlirezaShamsoshoara/RL-from-zero?logo=github)](https://github.com/AlirezaShamsoshoara/RL-from-zero/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/AlirezaShamsoshoara/RL-from-zero?logo=github)](https://github.com/AlirezaShamsoshoara/RL-from-zero/network/members)
+[![GitHub issues](https://img.shields.io/github/issues/AlirezaShamsoshoara/RL-from-zero?logo=gitbook)](https://github.com/AlirezaShamsoshoara/RL-from-zero/issues)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/AlirezaShamsoshoara/RL-from-zero?logo=github)](https://github.com/AlirezaShamsoshoara/RL-from-zero/pulls)
+[![GitHub license](https://img.shields.io/github/license/AlirezaShamsoshoara/RL-from-zero)](LICENSE)
+
 RL-from-zero is a collection of reinforcement learning agents implemented from scratch to refresh RL fundamentals and keep deep learning coding skills sharp. Each algorithm lives in its own self-contained package with a shared command-line interface, YAML-driven configuration, and optional experiment tracking via Weights & Biases.
 
 ## Why this repository?
