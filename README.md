@@ -29,6 +29,7 @@ RL-from-zero is a collection of reinforcement learning agents implemented from s
 | `PPO/` | Proximal Policy Optimization | Discrete | `CartPole-v1` |
 | `A3C/` | Asynchronous Advantage Actor-Critic | Discrete | `CartPole-v1` |
 | `SAC/` | Soft Actor-Critic | Continuous | `Pendulum-v1` |
+| `DDPG/` | Deep Deterministic Policy Gradient | Continuous | `Pendulum-v1` |
 | `TD3/` | Twin Delayed DDPG | Continuous | `Pendulum-v1` |
 | `TRPO/` | Trust Region Policy Optimization | Continuous | `Pendulum-v1` |
 
@@ -95,6 +96,10 @@ python -m A3C.main demo --config A3C/configs/cartpole.yaml --model_path A3C/chec
 python -m SAC.main train --config SAC/configs/pendulum.yaml
 python -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/checkpoints/best.pt
 
+# Deep Deterministic Policy Gradient
+python -m DDPG.main train --config DDPG/configs/pendulum.yaml
+python -m DDPG.main demo --config DDPG/configs/pendulum.yaml --model_path DDPG/checkpoints/best.pt
+
 # Twin Delayed DDPG
 python -m TD3.main train --config TD3/configs/pendulum.yaml
 python -m TD3.main demo --config TD3/configs/pendulum.yaml --model_path TD3/checkpoints/best.pt
@@ -126,6 +131,7 @@ RL-from-zero/
 |-- Qlearning/  # Tabular Q-learning agent
 |-- deepQN/     # Deep Q-Network agent
 |-- SAC/        # Soft Actor-Critic agent
+|-- DDPG/       # Deep Deterministic Policy Gradient agent
 |-- TD3/        # Twin Delayed DDPG agent
 |-- TRPO/       # Trust Region Policy Optimization agent
 |-- tests/      # Unit tests (currently deepQN replay buffer coverage)
