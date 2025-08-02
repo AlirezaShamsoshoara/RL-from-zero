@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/td3_logo.svg" width="420" alt="Twin Delayed DDPG Logo" />
+</p>
+
 # Twin Delayed DDPG (TD3)
 
 ## Overview
