@@ -16,6 +16,7 @@ TD3 is an off-policy actor-critic algorithm for continuous action spaces that im
 ## Quickstart
 ```bash
 python -m TD3.main train --config TD3/configs/pendulum.yaml
+
 python -m TD3.main demo --config TD3/configs/pendulum.yaml --model_path TD3/checkpoints/best.pt
 ```
 Use <code>--wandb_key YOUR_KEY</code> to authenticate for logging. Checkpoints live in <code>TD3/checkpoints</code>, and the moving-average best checkpoint is written to <code>best.pt</code>.
