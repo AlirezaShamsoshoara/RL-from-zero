@@ -103,6 +103,9 @@ RL-from-zero/
 `-- README.md   # You are here
 ```
 
+## License
+This project is licensed under the MIT License. See `LICENSE` for the full text.
+
 ## References
 Each subdirectory README links to seminal papers and additional resources for that algorithm. Use them as a launchpad for deeper study or for extending the agents.
 
