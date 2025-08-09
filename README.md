@@ -27,17 +27,29 @@ All agents expose a two-command Fire CLI (`train` and `demo`), use PyTorch under
 - **Demos:** `demo` commands load a saved checkpoint, run evaluation rollouts, and render to the screen or console depending on the environment.
 
 ## Getting started
-1. **Install uv (optional but recommended).** On Windows you can grab the installer from https://github.com/astral-sh/uv.
-2. **Create a virtual environment and install dependencies:**
+1. **Install uv (optional but recommended).**  
+   - Windows: download the installer from https://github.com/astral-sh/uv.  
+   - macOS: `brew install uv` (Homebrew) or use the installer linked above.  
+   - Linux: run the install script from the release page or `pipx install uv`.  
+2. **Create a virtual environment and install dependencies** (commands are identical on Windows, macOS, and Linux shells):
    ```bash
    uv venv .venv
    uv sync
    ```
    The `pyproject.toml` lists core packages: Gymnasium (classic_control and toy-text extras), NumPy, PyTorch, tqdm, Fire, PyYAML, wandb, and pygame for rendering.
-3. **Activate the environment** before running commands (PowerShell example):
-   ```powershell
-   .\.venv\Scripts\Activate.ps1
-   ```
+3. **Activate the environment** before running commands:
+   - PowerShell: 
+     ```powershell
+     .\.venv\Scripts\Activate.ps1
+     ```
+   - Command Prompt:
+     ```cmd
+     .\.venv\Scripts\activate.bat
+     ```
+   - macOS/Linux shells:
+     ```bash
+     source .venv/bin/activate
+     ```
 
 ## Running experiments
 Each algorithm can be launched with `python -m <package>.main` from the repository root. Supply a YAML config and optional overrides.
