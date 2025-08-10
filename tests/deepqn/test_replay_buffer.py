@@ -8,12 +8,14 @@ from deepQN.dqn.replay_buffer import ReplayBuffer
 
 class TestReplayBuffer(unittest.TestCase):
     def setUp(self) -> None:
+        """Instantiate a fresh replay buffer on CPU for each test case."""
         self.obs_dim = 4
         self.capacity = 5
         self.device = torch.device("cpu")
         self.buffer = ReplayBuffer(self.obs_dim, self.capacity, self.device)
 
     def test_add_increments_length_and_stores_values(self) -> None:
+        """Ensure pushed transitions are stored verbatim and the buffer length updates."""
         obs = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32)
         next_obs = np.array([4.0, 3.0, 2.0, 1.0], dtype=np.float32)
         action = 2
@@ -30,6 +32,7 @@ class TestReplayBuffer(unittest.TestCase):
         self.assertAlmostEqual(self.buffer.dones[0], done)
 
     def test_overwrites_oldest_transition_when_full(self) -> None:
+        """Verify circular buffering overwrites the oldest entries once capacity is exceeded."""
         for idx in range(self.capacity + 2):
             value = float(idx)
             obs = np.full(self.obs_dim, value, dtype=np.float32)
@@ -42,6 +45,7 @@ class TestReplayBuffer(unittest.TestCase):
         self.assertSetEqual(stored_values, expected_values)
 
     def test_can_sample_and_sample_shapes(self) -> None:
+        """Check sampling preconditions and that returned tensors have expected shapes and dtypes."""
         for idx in range(self.capacity):
             vector = np.full(self.obs_dim, float(idx), dtype=np.float32)
             self.buffer.add(vector, idx, float(idx), vector + 1.0, 0.0)
@@ -62,6 +66,7 @@ class TestReplayBuffer(unittest.TestCase):
         self.assertEqual(batch["obs"].device.type, self.device.type)
 
     def test_sample_raises_with_insufficient_data(self) -> None:
+        """Assert sampling without enough stored transitions raises a ValueError."""
         with self.assertRaises(ValueError):
             self.buffer.sample(1)
         self.assertFalse(self.buffer.can_sample(1))
