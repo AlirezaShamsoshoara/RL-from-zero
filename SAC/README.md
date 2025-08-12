@@ -1,5 +1,7 @@
 # Soft Actor-Critic (SAC)
 
+![Soft Actor-Critic Logo](assets/sac_logo.svg)
+
 This implementation mirrors the structure used for the existing PPO and Q-learning agents in this repository. It trains a Soft Actor-Critic agent on continuous-control tasks from Gymnasium, with default settings targeting `Pendulum-v1`.
 
 ## Features

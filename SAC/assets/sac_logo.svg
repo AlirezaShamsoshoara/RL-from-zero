@@ -1,0 +1,32 @@
+<svg width="360" height="120" viewBox="0 0 360 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Soft Actor-Critic Logo</title>
+  <desc id="desc">Stylised two-headed arrow capturing the actor-critic loop with SAC initials.</desc>
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#6366f1" />
+    </linearGradient>
+    <linearGradient id="accentWarm" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f97316" />
+      <stop offset="100%" stop-color="#fb7185" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="360" height="120" rx="16" fill="url(#bgGradient)" />
+  <g transform="translate(32,22)">
+    <path d="M40 20C40 9 49 0 60 0h56c11 0 20 9 20 20v4c0 11-9 20-20 20H92l18 18-22 22-28-28V40H60c-11 0-20-9-20-20z"
+          fill="url(#accent)" opacity="0.7" />
+    <path d="M156 18c0-9 7-16 16-16h48c9 0 16 7 16 16v8c0 9-7 16-16 16h-22l14 14-18 18-24-24V42h-14c-9 0-16-7-16-16v-8z"
+          fill="url(#accentWarm)" opacity="0.75" />
+  </g>
+  <g fill="white" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-weight="600" text-anchor="middle">
+    <text x="110" y="76" font-size="48">SA</text>
+    <text x="215" y="76" font-size="48">C</text>
+  </g>
+  <g fill="#94a3b8" font-family="'Fira Code', 'Courier New', monospace" font-size="16" text-anchor="middle">
+    <text x="180" y="102">Soft Actor-Critic</text>
+  </g>
+</svg>
