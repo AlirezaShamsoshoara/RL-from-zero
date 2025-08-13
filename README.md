@@ -1,4 +1,109 @@
-# RL_practice
-Different RL Practices to refresh my coding and knowledge
+# RL Practice Playground
 
-This repository aims at covering different RL algorithms just for fun!!!
+A collection of reinforcement learning agents implemented from scratch to refresh RL fundamentals and keep deep learning coding skills sharp. Each algorithm lives in its own self-contained package with a shared command-line interface, YAML-driven configuration, and optional experiment tracking via Weights & Biases.
+
+## Why this repository?
+- Revisit classic RL algorithms across discrete and continuous control settings without relying on heavyweight frameworks.
+- Compare tabular, value-based, and policy-gradient methods side by side with a consistent project layout.
+- Provide a starting point for quick experiments: tweak a YAML file, run a single command, and inspect checkpoints, logs, and metrics.
+- Serve as a personal sandbox for extending agents, adding environments, and experimenting with new ideas.
+
+## Algorithms included
+| Folder | Algorithm | Action space | Default environment |
+| --- | --- | --- | --- |
+| `Qlearning/` | Tabular Q-learning | Discrete | `FrozenLake-v1` (deterministic) |
+| `deepQN/` | Deep Q-Network (with Double DQN option) | Discrete | `CartPole-v1` |
+| `PPO/` | Proximal Policy Optimization | Discrete | `CartPole-v1` |
+| `A3C/` | Asynchronous Advantage Actor-Critic | Discrete | `CartPole-v1` |
+| `SAC/` | Soft Actor-Critic | Continuous | `Pendulum-v1` |
+| `TD3/` | Twin Delayed DDPG | Continuous | `Pendulum-v1` |
+
+All agents expose a two-command Fire CLI (`train` and `demo`), use PyTorch under the hood, and save both periodic and best checkpoints in their respective `checkpoints/` directories.
+
+## Common toolkit
+- **Configuration:** YAML files under each `<algo>/configs/` folder feed into a typed `Config` object for reproducible experiments.
+- **Logging:** Python logging configured per algorithm, `tqdm` progress bars, and optional Weights & Biases integration (`--wandb_key` argument or value in config).
+- **Checkpoints:** `best.pt` stores the top-performing policy by rolling average return; numbered checkpoints capture intermediate progress.
+- **Demos:** `demo` commands load a saved checkpoint, run evaluation rollouts, and render to the screen or console depending on the environment.
+
+## Getting started
+1. **Install uv (optional but recommended).** On Windows you can grab the installer from https://github.com/astral-sh/uv.
+2. **Create a virtual environment and install dependencies:**
+   ```bash
+   uv venv .venv
+   uv sync
+   ```
+   The `pyproject.toml` lists core packages: Gymnasium (classic_control and toy-text extras), NumPy, PyTorch, tqdm, Fire, PyYAML, wandb, and pygame for rendering.
+3. **Activate the environment** before running commands (PowerShell example):
+   ```powershell
+   .\.venv\Scripts\Activate.ps1
+   ```
+
+## Running experiments
+Each algorithm can be launched with `python -m <package>.main` from the repository root. Supply a YAML config and optional overrides.
+
+### Tabular example (Q-learning)
+```bash
+python -m Qlearning.main train --config Qlearning/configs/frozenlake.yaml
+python -m Qlearning.main demo --config Qlearning/configs/frozenlake.yaml --model_path Qlearning/checkpoints/best.pt --episodes 5
+```
+
+### Discrete deep RL examples
+```bash
+# PPO on CartPole
+python -m PPO.main train --config PPO/configs/cartpole.yaml
+python -m PPO.main demo --config PPO/configs/cartpole.yaml --model_path PPO/checkpoints/best.pt
+
+# Deep Q-Network
+python -m deepQN.main train --config deepQN/configs/cartpole.yaml
+python -m deepQN.main demo --config deepQN/configs/cartpole.yaml --model_path deepQN/checkpoints/best.pt
+
+# A3C with multiple workers
+python -m A3C.main train --config A3C/configs/cartpole.yaml
+python -m A3C.main demo --config A3C/configs/cartpole.yaml --model_path A3C/checkpoints/best.pt --episodes 5
+```
+
+### Continuous control examples
+```bash
+# Soft Actor-Critic
+python -m SAC.main train --config SAC/configs/pendulum.yaml
+python -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/checkpoints/best.pt
+
+# Twin Delayed DDPG
+python -m TD3.main train --config TD3/configs/pendulum.yaml
+python -m TD3.main demo --config TD3/configs/pendulum.yaml --model_path TD3/checkpoints/best.pt
+```
+
+### Optional Weights & Biases logging
+Add `--wandb_key YOUR_KEY` to any `train` command or set `wandb_key` in the YAML config to authenticate and push metrics, losses, and episode returns to W&B.
+
+## Configuring experiments
+- Duplicate a baseline YAML file (for example `PPO/configs/cartpole.yaml`) and edit environment ids, learning rates, rollout lengths, or logging cadence.
+- All configs share naming conventions (`env_id`, `total_steps` or `total_timesteps`, `checkpoint_interval`, etc.), so switching algorithms feels familiar.
+- Continuous control agents expose additional knobs like replay buffer sizes, target smoothing noise, and entropy targets.
+
+## Tests
+A small but growing `tests/` folder captures unit tests. Run them with Python's unittest CLI:
+```bash
+python -m unittest tests.deepqn.test_replay_buffer
+```
+
+## Repository layout
+```
+lets_do_RL/
+|-- A3C/        # Async advantage actor-critic implementation
+|-- PPO/        # Proximal policy optimization agent
+|-- Qlearning/  # Tabular Q-learning agent
+|-- deepQN/     # Deep Q-Network agent
+|-- SAC/        # Soft Actor-Critic agent
+|-- TD3/        # Twin Delayed DDPG agent
+|-- tests/      # Unit tests (currently deepQN replay buffer coverage)
+|-- pyproject.toml
+|-- uv.lock
+`-- README.md   # You are here
+```
+
+## References
+Each subdirectory README links to seminal papers and additional resources for that algorithm. Use them as a launchpad for deeper study or for extending the agents.
+
+Happy experimenting!
