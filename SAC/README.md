@@ -1,6 +1,9 @@
+![Soft Actor-Critic Logo](assets/sac_logo.svg)
+
 # Soft Actor-Critic (SAC)
 
-![Soft Actor-Critic Logo](assets/sac_logo.svg)
+## What is SAC?
+- Soft Actor-Critic is an off-policy actor-critic algorithm for continuous action spaces that optimizes expected reward while maximizing policy entropy, leveraging stochastic policies, twin Q-value critics, and automatic temperature tuning to balance exploration and stability.
 
 This implementation mirrors the structure used for the existing PPO and Q-learning agents in this repository. It trains a Soft Actor-Critic agent on continuous-control tasks from Gymnasium, with default settings targeting `Pendulum-v1`.
 
