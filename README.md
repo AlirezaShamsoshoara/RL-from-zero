@@ -1,6 +1,6 @@
-# RL Practice Playground
+# RL-from-zero
 
-A collection of reinforcement learning agents implemented from scratch to refresh RL fundamentals and keep deep learning coding skills sharp. Each algorithm lives in its own self-contained package with a shared command-line interface, YAML-driven configuration, and optional experiment tracking via Weights & Biases.
+RL-from-zero is a collection of reinforcement learning agents implemented from scratch to refresh RL fundamentals and keep deep learning coding skills sharp. Each algorithm lives in its own self-contained package with a shared command-line interface, YAML-driven configuration, and optional experiment tracking via Weights & Biases.
 
 ## Why this repository?
 - Revisit classic RL algorithms across discrete and continuous control settings without relying on heavyweight frameworks.
@@ -90,7 +90,7 @@ python -m unittest tests.deepqn.test_replay_buffer
 
 ## Repository layout
 ```
-lets_do_RL/
+RL-from-zero/
 |-- A3C/        # Async advantage actor-critic implementation
 |-- PPO/        # Proximal policy optimization agent
 |-- Qlearning/  # Tabular Q-learning agent
