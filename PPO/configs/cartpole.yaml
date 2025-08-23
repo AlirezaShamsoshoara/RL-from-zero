@@ -1,0 +1,40 @@
+# PPO Config for CartPole-v1
+project: rl-practice
+entity: null  # set your WandB entity if needed
+run_name: ppo-cartpole
+seed: 42
+
+# Environment
+env_id: CartPole-v1
+render_mode: human  # 'human' for on-screen rendering during demo/inference
+num_envs: 1
+
+# Training
+total_timesteps: 100000
+update_iterations: 4
+rollout_steps: 2048
+minibatch_size: 64
+learning_rate: 3e-4
+gamma: 0.99
+gae_lambda: 0.95
+clip_coef: 0.2
+ent_coef: 0.0
+vf_coef: 0.5
+max_grad_norm: 0.5
+
+# Model
+hidden_sizes: [64, 64]
+activation: tanh
+
+# Logging & Checkpoints
+log_interval: 10
+checkpoint_interval: 10
+checkpoint_dir: PPO/checkpoints
+save_best: true
+
+# Inference/Demo
+inference_model_path: PPO/checkpoints/best.pt
+episodes: 5
+
+# Misc
+device: auto  # 'cpu', 'cuda', or 'auto'
