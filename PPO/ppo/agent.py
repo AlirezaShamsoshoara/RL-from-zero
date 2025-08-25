@@ -18,7 +18,19 @@ class Batch:
 
 
 class PPOAgent:
-    def __init__(self, obs_dim: int, act_dim: int, hidden_sizes, activation: str, lr: float, clip_coef: float, ent_coef: float, vf_coef: float, max_grad_norm: float, device: str):
+    def __init__(
+        self,
+        obs_dim: int,
+        act_dim: int,
+        hidden_sizes,
+        activation: str,
+        lr: float,
+        clip_coef: float,
+        ent_coef: float,
+        vf_coef: float,
+        max_grad_norm: float,
+        device: str,
+    ):
         self.device = device
         self.model = ActorCritic(obs_dim, act_dim, hidden_sizes, activation).to(device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
@@ -39,7 +51,12 @@ class PPOAgent:
 
     def update(self, batch: Batch):
         obs, actions, old_logprobs, returns, advantages, old_values = (
-            batch.obs, batch.actions, batch.logprobs, batch.returns, batch.advantages, batch.values
+            batch.obs,
+            batch.actions,
+            batch.logprobs,
+            batch.returns,
+            batch.advantages,
+            batch.values,
         )
         logprob, entropy, value = self.evaluate(obs, actions)
         # Normalize advantages
@@ -48,11 +65,15 @@ class PPOAgent:
         # Policy loss
         ratio = torch.exp(logprob - old_logprobs)
         pg_loss1 = -advantages * ratio
-        pg_loss2 = -advantages * torch.clamp(ratio, 1.0 - self.clip_coef, 1.0 + self.clip_coef)
+        pg_loss2 = -advantages * torch.clamp(
+            ratio, 1.0 - self.clip_coef, 1.0 + self.clip_coef
+        )
         policy_loss = torch.mean(torch.max(pg_loss1, pg_loss2))
 
         # Value loss
-        value_clipped = old_values + (value - old_values).clamp(-self.clip_coef, self.clip_coef)
+        value_clipped = old_values + (value - old_values).clamp(
+            -self.clip_coef, self.clip_coef
+        )
         vf_losses1 = (value - returns) ** 2
         vf_losses2 = (value_clipped - returns) ** 2
         value_loss = 0.5 * torch.mean(torch.max(vf_losses1, vf_losses2))
@@ -74,7 +95,9 @@ class PPOAgent:
         }
 
     @staticmethod
-    def compute_gae(rewards, dones, values, next_value, gamma: float, gae_lambda: float):
+    def compute_gae(
+        rewards, dones, values, next_value, gamma: float, gae_lambda: float
+    ):
         T, N = rewards.shape
         advantages = np.zeros((T, N), dtype=np.float32)
         lastgaelam = np.zeros(N, dtype=np.float32)
