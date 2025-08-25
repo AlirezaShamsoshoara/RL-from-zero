@@ -9,12 +9,21 @@ import wandb
 from PPO.ppo.config import Config
 from PPO.ppo.utils import set_seed, make_vec_env, save_checkpoint
 from PPO.ppo.agent import PPOAgent, Batch
+from PPO.ppo.logging_utils import setup_logger
 
 
 def train(config: str = "PPO/configs/cartpole.yaml"):
     cfg = Config.from_yaml(config)
+    logger = setup_logger(
+        name="ppo",
+        level=cfg.log_level,
+        to_console=cfg.log_to_console,
+        to_file=cfg.log_to_file,
+        log_file=cfg.log_file,
+    )
     set_seed(cfg.seed)
 
+    logger.info(f"Initializing wandb run={cfg.run_name}")
     run = wandb.init(project=cfg.project, entity=cfg.entity, name=cfg.run_name, config=cfg.to_dict())
 
     # Env
@@ -26,11 +35,13 @@ def train(config: str = "PPO/configs/cartpole.yaml"):
 
     obs_dim = obs_space.shape[0]
     act_dim = act_space.n
+    logger.info(f"Env={cfg.env_id} | obs_dim={obs_dim} | act_dim={act_dim} | num_envs={cfg.num_envs}")
 
     agent = PPOAgent(obs_dim, act_dim, cfg.hidden_sizes, cfg.activation, cfg.learning_rate, cfg.clip_coef, cfg.ent_coef, cfg.vf_coef, cfg.max_grad_norm, cfg.device)
 
     num_updates = cfg.total_timesteps // (cfg.rollout_steps * cfg.num_envs)
     global_step = 0
+    logger.info(f"Training for {cfg.total_timesteps} steps -> {num_updates} updates")
 
     ep_returns_hist = []
     ep_lengths_hist = []
@@ -135,20 +146,33 @@ def train(config: str = "PPO/configs/cartpole.yaml"):
         })
         pbar.set_postfix({"avgR": f"{avg_return:.1f}", "loss": f"{mean_losses.get('loss/total', 0):.3f}"})
 
+        if mean_losses.get("stats/approx_kl", 0) > 0.03:
+            logger.warning(f"High KL detected: {mean_losses['stats/approx_kl']:.4f}")
+
         # Checkpointing
         if (update + 1) % cfg.checkpoint_interval == 0:
             path = os.path.join(cfg.checkpoint_dir, f"checkpoint_{global_step}.pt")
             save_checkpoint(path, agent.model, agent.optimizer, global_step, best_avg_return)
+            logger.info(f"Saved checkpoint: {path}")
         if cfg.save_best and avg_return > best_avg_return:
             best_avg_return = avg_return
-            save_checkpoint(os.path.join(cfg.checkpoint_dir, "best.pt"), agent.model, agent.optimizer, global_step, best_avg_return)
+            best_path = os.path.join(cfg.checkpoint_dir, "best.pt")
+            save_checkpoint(best_path, agent.model, agent.optimizer, global_step, best_avg_return)
+            logger.info(f"New best avg return {best_avg_return:.2f}; saved {best_path}")
 
     run.finish()
-    print("Training finished. Best avg return:", best_avg_return)
+    logger.info(f"Training finished. Best avg return: {best_avg_return:.2f}")
 
 
 def demo(config: str = "PPO/configs/cartpole.yaml", model_path: Optional[str] = None, episodes: Optional[int] = None):
     cfg = Config.from_yaml(config)
+    logger = setup_logger(
+        name="ppo",
+        level=cfg.log_level,
+        to_console=cfg.log_to_console,
+        to_file=cfg.log_to_file,
+        log_file=cfg.log_file,
+    )
     model_path = model_path or cfg.inference_model_path
     episodes = episodes or cfg.episodes
 
@@ -167,6 +191,7 @@ def demo(config: str = "PPO/configs/cartpole.yaml", model_path: Optional[str] = 
     data = torch.load(model_path, map_location=cfg.device)
     agent.model.load_state_dict(data["model_state_dict"])
     agent.model.eval()
+    logger.info(f"Loaded model from {model_path}")
 
     returns = []
     for ep in range(episodes):
@@ -180,10 +205,10 @@ def demo(config: str = "PPO/configs/cartpole.yaml", model_path: Optional[str] = 
             done = np.logical_or(terminated, truncated)
             ep_ret += float(reward[0])
             # Render is handled by env when render_mode="human"
-        print(f"Episode {ep+1}: return={ep_ret:.2f}")
+        logger.info(f"Episode {ep+1}: return={ep_ret:.2f}")
         returns.append(ep_ret)
 
-    print(f"Average return over {episodes} episodes: {np.mean(returns):.2f}")
+    logger.info(f"Average return over {episodes} episodes: {np.mean(returns):.2f}")
 
 
 if __name__ == "__main__":

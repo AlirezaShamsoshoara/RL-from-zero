@@ -50,6 +50,11 @@ class Config:
     checkpoint_interval: int = 10
     checkpoint_dir: str = "PPO/checkpoints"
     save_best: bool = True
+    # Python logging
+    log_level: str = "INFO"
+    log_to_file: bool = False
+    log_file: str = "PPO/logs/ppo.log"
+    log_to_console: bool = True
 
     # Inference
     inference_model_path: str = "PPO/checkpoints/best.pt"
@@ -70,6 +75,8 @@ class Config:
         # Normalize checkpoint paths to be workspace-root relative
         cfg.checkpoint_dir = os.path.normpath(cfg.checkpoint_dir)
         cfg.inference_model_path = os.path.normpath(cfg.inference_model_path)
+        if cfg.log_file:
+            cfg.log_file = os.path.normpath(cfg.log_file)
         return cfg
 
     def to_dict(self) -> Dict[str, Any]:
@@ -98,6 +105,10 @@ class Config:
             "checkpoint_interval": self.checkpoint_interval,
             "checkpoint_dir": self.checkpoint_dir,
             "save_best": self.save_best,
+            "log_level": self.log_level,
+            "log_to_file": self.log_to_file,
+            "log_file": self.log_file,
+            "log_to_console": self.log_to_console,
             "inference_model_path": self.inference_model_path,
             "episodes": self.episodes,
             "device": self.device,

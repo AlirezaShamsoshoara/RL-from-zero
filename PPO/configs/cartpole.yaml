@@ -31,6 +31,11 @@ log_interval: 10
 checkpoint_interval: 10
 checkpoint_dir: PPO/checkpoints
 save_best: true
+# Python logger
+log_level: INFO
+log_to_file: true
+log_file: PPO/logs/ppo.log
+log_to_console: true
 
 # Inference/Demo
 inference_model_path: PPO/checkpoints/best.pt
