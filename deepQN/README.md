@@ -25,14 +25,23 @@ python -m deepQN.main demo --config deepQN/configs/cartpole.yaml --model_path de
 ```
 
 ## Configuration
-All tunables live under `deepQN/configs/`. The default `cartpole.yaml` exposes:
-- **Environment**: Gym id, seed, render mode, and optional kwargs for `gym.make`.
-- **Model**: hidden layer sizes and activation shared by online and target Q networks.
-- **Training**: interaction horizon, batch size, replay capacity, learning rate, target-sync cadence, and gradient clipping.
-- **Exploration**: epsilon schedule endpoints and decay horizon plus evaluation epsilon.
-- **Logging**: intervals, checkpoint policy, and logger sinks.
-- **Inference**: default checkpoint path and number of evaluation episodes.
+All tunables live under `deepQN/configs/`. The default `cartpole.yaml` exposes the following groups and keys:
 
+A concise excerpt of the default setup:
+```yaml
+# Experiment tracking
+project: rl-practice
+run_name: dqn-cartpole
+
+# Environment
+env_id: CartPole-v1
+seed: 42
+
+# Training
+total_steps: 100000
+batch_size: 64
+lr: 0.0005
+```
 Clone the YAML template to configure other discrete-control environments.
 
 ## References
@@ -43,4 +52,3 @@ Clone the YAML template to configure other discrete-control environments.
 - Mnih et al., "Human-level control through deep reinforcement learning" (2015)
 - OpenAI Baselines DQN: https://github.com/openai/baselines/tree/master/baselines/deepq
 - Stable-Baselines3 DQN: https://stable-baselines3.readthedocs.io/en/master/modules/dqn.html
-
