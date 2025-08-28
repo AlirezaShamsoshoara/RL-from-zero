@@ -24,7 +24,9 @@ def train(config: str = "PPO/configs/cartpole.yaml"):
     set_seed(cfg.seed)
 
     logger.info(f"Initializing wandb run={cfg.run_name}")
-    run = wandb.init(project=cfg.project, entity=cfg.entity, name=cfg.run_name, config=cfg.to_dict())
+    run = wandb.init(
+        project=cfg.project, entity=cfg.entity, name=cfg.run_name, config=cfg.to_dict()
+    )
 
     # Env
     vec_env = make_vec_env(cfg.env_id, cfg.num_envs, cfg.seed, render_mode=None)
@@ -35,9 +37,22 @@ def train(config: str = "PPO/configs/cartpole.yaml"):
 
     obs_dim = obs_space.shape[0]
     act_dim = act_space.n
-    logger.info(f"Env={cfg.env_id} | obs_dim={obs_dim} | act_dim={act_dim} | num_envs={cfg.num_envs}")
+    logger.info(
+        f"Env={cfg.env_id} | obs_dim={obs_dim} | act_dim={act_dim} | num_envs={cfg.num_envs}"
+    )
 
-    agent = PPOAgent(obs_dim, act_dim, cfg.hidden_sizes, cfg.activation, cfg.learning_rate, cfg.clip_coef, cfg.ent_coef, cfg.vf_coef, cfg.max_grad_norm, cfg.device)
+    agent = PPOAgent(
+        obs_dim,
+        act_dim,
+        cfg.hidden_sizes,
+        cfg.activation,
+        cfg.learning_rate,
+        cfg.clip_coef,
+        cfg.ent_coef,
+        cfg.vf_coef,
+        cfg.max_grad_norm,
+        cfg.device,
+    )
 
     num_updates = cfg.total_timesteps // (cfg.rollout_steps * cfg.num_envs)
     global_step = 0
@@ -93,15 +108,29 @@ def train(config: str = "PPO/configs/cartpole.yaml"):
             _, next_value = agent.model.forward(obs_t)
             next_value = next_value.cpu().numpy()
 
-        advantages, returns = PPOAgent.compute_gae(rewards_buf, dones_buf, values_buf, next_value, cfg.gamma, cfg.gae_lambda)
+        advantages, returns = PPOAgent.compute_gae(
+            rewards_buf, dones_buf, values_buf, next_value, cfg.gamma, cfg.gae_lambda
+        )
 
         # Flatten
-        b_obs = torch.as_tensor(obs_buf.reshape(-1, obs_dim), dtype=torch.float32, device=agent.device)
-        b_actions = torch.as_tensor(actions_buf.reshape(-1), dtype=torch.int64, device=agent.device)
-        b_logprobs = torch.as_tensor(logprobs_buf.reshape(-1), dtype=torch.float32, device=agent.device)
-        b_returns = torch.as_tensor(returns.reshape(-1), dtype=torch.float32, device=agent.device)
-        b_advantages = torch.as_tensor(advantages.reshape(-1), dtype=torch.float32, device=agent.device)
-        b_values = torch.as_tensor(values_buf.reshape(-1), dtype=torch.float32, device=agent.device)
+        b_obs = torch.as_tensor(
+            obs_buf.reshape(-1, obs_dim), dtype=torch.float32, device=agent.device
+        )
+        b_actions = torch.as_tensor(
+            actions_buf.reshape(-1), dtype=torch.int64, device=agent.device
+        )
+        b_logprobs = torch.as_tensor(
+            logprobs_buf.reshape(-1), dtype=torch.float32, device=agent.device
+        )
+        b_returns = torch.as_tensor(
+            returns.reshape(-1), dtype=torch.float32, device=agent.device
+        )
+        b_advantages = torch.as_tensor(
+            advantages.reshape(-1), dtype=torch.float32, device=agent.device
+        )
+        b_values = torch.as_tensor(
+            values_buf.reshape(-1), dtype=torch.float32, device=agent.device
+        )
 
         batch = Batch(b_obs, b_actions, b_logprobs, b_returns, b_advantages, b_values)
 
@@ -128,7 +157,9 @@ def train(config: str = "PPO/configs/cartpole.yaml"):
         # Logging
         if len(ep_returns_hist) > 0:
             avg_return = float(np.mean(ep_returns_hist[-10:]))
-            avg_length = float(np.mean(ep_lengths_hist[-10:])) if len(ep_lengths_hist) > 0 else 0
+            avg_length = (
+                float(np.mean(ep_lengths_hist[-10:])) if len(ep_lengths_hist) > 0 else 0
+            )
         else:
             avg_return = 0.0
             avg_length = 0.0
@@ -137,14 +168,21 @@ def train(config: str = "PPO/configs/cartpole.yaml"):
         if losses:
             for k in losses[0].keys():
                 mean_losses[k] = float(np.mean([x[k] for x in losses]))
-        wandb.log({
-            "charts/avg_return": avg_return,
-            "charts/avg_length": avg_length,
-            **mean_losses,
-            "progress/global_step": global_step,
-            "progress/update": update,
-        })
-        pbar.set_postfix({"avgR": f"{avg_return:.1f}", "loss": f"{mean_losses.get('loss/total', 0):.3f}"})
+        wandb.log(
+            {
+                "charts/avg_return": avg_return,
+                "charts/avg_length": avg_length,
+                **mean_losses,
+                "progress/global_step": global_step,
+                "progress/update": update,
+            }
+        )
+        pbar.set_postfix(
+            {
+                "avgR": f"{avg_return:.1f}",
+                "loss": f"{mean_losses.get('loss/total', 0):.3f}",
+            }
+        )
 
         if mean_losses.get("stats/approx_kl", 0) > 0.03:
             logger.warning(f"High KL detected: {mean_losses['stats/approx_kl']:.4f}")
@@ -152,19 +190,27 @@ def train(config: str = "PPO/configs/cartpole.yaml"):
         # Checkpointing
         if (update + 1) % cfg.checkpoint_interval == 0:
             path = os.path.join(cfg.checkpoint_dir, f"checkpoint_{global_step}.pt")
-            save_checkpoint(path, agent.model, agent.optimizer, global_step, best_avg_return)
+            save_checkpoint(
+                path, agent.model, agent.optimizer, global_step, best_avg_return
+            )
             logger.info(f"Saved checkpoint: {path}")
         if cfg.save_best and avg_return > best_avg_return:
             best_avg_return = avg_return
             best_path = os.path.join(cfg.checkpoint_dir, "best.pt")
-            save_checkpoint(best_path, agent.model, agent.optimizer, global_step, best_avg_return)
+            save_checkpoint(
+                best_path, agent.model, agent.optimizer, global_step, best_avg_return
+            )
             logger.info(f"New best avg return {best_avg_return:.2f}; saved {best_path}")
 
     run.finish()
     logger.info(f"Training finished. Best avg return: {best_avg_return:.2f}")
 
 
-def demo(config: str = "PPO/configs/cartpole.yaml", model_path: Optional[str] = None, episodes: Optional[int] = None):
+def demo(
+    config: str = "PPO/configs/cartpole.yaml",
+    model_path: Optional[str] = None,
+    episodes: Optional[int] = None,
+):
     cfg = Config.from_yaml(config)
     logger = setup_logger(
         name="ppo",
@@ -185,7 +231,18 @@ def demo(config: str = "PPO/configs/cartpole.yaml", model_path: Optional[str] = 
     obs_dim = obs_space.shape[0]
     act_dim = act_space.n
 
-    agent = PPOAgent(obs_dim, act_dim, cfg.hidden_sizes, cfg.activation, cfg.learning_rate, cfg.clip_coef, cfg.ent_coef, cfg.vf_coef, cfg.max_grad_norm, cfg.device)
+    agent = PPOAgent(
+        obs_dim,
+        act_dim,
+        cfg.hidden_sizes,
+        cfg.activation,
+        cfg.learning_rate,
+        cfg.clip_coef,
+        cfg.ent_coef,
+        cfg.vf_coef,
+        cfg.max_grad_norm,
+        cfg.device,
+    )
 
     # Load checkpoint
     data = torch.load(model_path, map_location=cfg.device)
@@ -213,7 +270,10 @@ def demo(config: str = "PPO/configs/cartpole.yaml", model_path: Optional[str] = 
 
 if __name__ == "__main__":
     import fire
-    fire.Fire({
-        "train": train,
-        "demo": demo,
-    })
+
+    fire.Fire(
+        {
+            "train": train,
+            "demo": demo,
+        }
+    )

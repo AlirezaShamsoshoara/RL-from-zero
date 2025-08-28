@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/ppo-logo.svg" alt="PPO — Proximal Policy Optimization" width="520" />
+</p>
+
 PPO (Proximal Policy Optimization) quickstart
 
 What is PPO?

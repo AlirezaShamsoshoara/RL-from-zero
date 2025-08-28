@@ -12,7 +12,9 @@ def get_activation(name: str):
 
 
 class ActorCritic(nn.Module):
-    def __init__(self, obs_dim: int, act_dim: int, hidden_sizes=(64, 64), activation="tanh"):
+    def __init__(
+        self, obs_dim: int, act_dim: int, hidden_sizes=(64, 64), activation="tanh"
+    ):
         super().__init__()
         layers = []
         last = obs_dim
