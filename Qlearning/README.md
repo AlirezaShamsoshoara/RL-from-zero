@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/qlearning-logo.svg" width="420" alt="Q-Learning Logo" />
+</p>
+
 Q-learning quickstart
 
 What is Q-learning?
