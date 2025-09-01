@@ -1,0 +1,39 @@
+# Q-learning Config for FrozenLake-v1
+project: rl-practice
+entity: null
+run_name: qlearning-frozenlake
+seed: 42
+
+# Environment
+env_id: FrozenLake-v1
+render_mode: null  # no window; uses terminal
+env_kwargs:
+  is_slippery: false
+  map_name: "4x4"
+
+# Training
+total_episodes: 5000
+max_steps_per_episode: 200
+gamma: 0.99
+alpha: 0.1
+epsilon_start: 1.0
+epsilon_end: 0.05
+epsilon_decay: 0.001
+
+# Logging & Checkpoints
+log_interval: 50
+checkpoint_interval: 250
+checkpoint_dir: Qlearning/checkpoints
+save_best: true
+log_level: INFO
+log_to_file: true
+log_file: Qlearning/logs/qlearning.log
+log_to_console: true
+
+# Inference/Demo
+inference_model_path: Qlearning/checkpoints/best.pt
+episodes: 5
+
+# Misc
+device: auto
+
