@@ -12,8 +12,11 @@ from PPO.ppo.agent import PPOAgent, Batch
 from PPO.ppo.logging_utils import setup_logger
 
 
-def train(config: str = "PPO/configs/cartpole.yaml"):
+def train(config: str = "PPO/configs/cartpole.yaml", wandb_key: str = ""):
     cfg = Config.from_yaml(config)
+    # Allow providing the key via CLI arg; default remains blank
+    if wandb_key:
+        cfg.wandb_key = wandb_key
     logger = setup_logger(
         name="ppo",
         level=cfg.log_level,
@@ -22,6 +25,11 @@ def train(config: str = "PPO/configs/cartpole.yaml"):
         log_file=cfg.log_file,
     )
     set_seed(cfg.seed)
+
+    # Login to Weights & Biases at Python level if a key is provided
+    if getattr(cfg, "wandb_key", ""):
+        import wandb as _wandb
+        _wandb.login(key=cfg.wandb_key)
 
     logger.info(f"Initializing wandb run={cfg.run_name}")
     run = wandb.init(

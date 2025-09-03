@@ -22,6 +22,8 @@ class Config:
     project: str = "rl-practice"
     entity: Optional[str] = None
     run_name: str = "ppo-run"
+    # API key for programmatic login (do not log). Default blank
+    wandb_key: str = ""
 
     # Env
     env_id: str = "CartPole-v1"
@@ -85,6 +87,7 @@ class Config:
             "project": self.project,
             "entity": self.entity,
             "run_name": self.run_name,
+            # Intentionally exclude wandb_key from the public config dict
             "env_id": self.env_id,
             "render_mode": self.render_mode,
             "num_envs": self.num_envs,
