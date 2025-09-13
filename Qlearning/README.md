@@ -33,10 +33,11 @@ Notes
 - You can edit hyperparameters in `Qlearning/configs/frozenlake.yaml`.
 
 
-# References and useful links - Papers:
+# References, useful links, and Papers:
 - [Technical Note of Q-learning](https://www.gatsby.ucl.ac.uk/~dayan/papers/cjch.pdf)
 - [Reinforcement Learning: An Introduction; Richard S. Sutton and Andrew G. Barto](https://web.stanford.edu/class/psych209/Readings/SuttonBartoIPRLBook2ndEd.pdf)
 - [Reinforcement Learning An Introduction second edition; Richard S. Sutton and Andrew G. Barto](https://www.andrew.cmu.edu/course/10-703/textbook/BartoSutton.pdf)
 - [Reinforcement Learning in 60 days](https://github.com/andri27-ts/Reinforcement-Learning)
 - [HF Q-learning example](https://huggingface.co/learn/deep-rl-course/en/unit2/q-learning-example)
 - [HF Q-learning Course](https://huggingface.co/learn/deep-rl-course/unit2/introduction)
+- [YTube - Q-Learning Tutorial 1: Train Gymnasium FrozenLake-v1 with Python Reinforcement Learning](https://www.youtube.com/watch?v=ZhoIgo3qqLU)
