@@ -2,9 +2,9 @@
   <img src="assets/qlearning-logo.svg" width="420" alt="Q-Learning Logo" />
 </p>
 
-Q-learning quickstart
+# Q-learning quickstart
 
-What is Q-learning?
+## What is Q-learning?
 - Q-learning is a model-free, off-policy, value-based RL algorithm that learns an action-value (Q) function for discrete state and action spaces via temporal-difference updates and an epsilon-greedy behavior policy.
 
 This template mirrors the PPO structure and includes:
@@ -14,10 +14,10 @@ This template mirrors the PPO structure and includes:
 - Weights & Biases logging for rewards
 - Checkpoint saving (best and periodic) storing the Q-table
 
-Default environment
+## Default environment
 - Uses `FrozenLake-v1` (toy-text) with `is_slippery: false` for a deterministic grid. Both observations and actions are discrete, ideal for tabular Q-learning.
 
-Setup with uv (Windows cmd):
+## Setup with uv (Windows cmd):
 1) Create venv and install deps
    uv venv .venv
    uv sync
@@ -31,3 +31,7 @@ Setup with uv (Windows cmd):
 Notes
 - Only discrete observation and action spaces are supported.
 - You can edit hyperparameters in `Qlearning/configs/frozenlake.yaml`.
+
+
+# References and useful links - Papers:
+- https://arxiv.org/pdf/1602.02068.pdf
