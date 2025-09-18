@@ -1,0 +1,44 @@
+# SAC config targeting Pendulum-v1
+project: rl-practice
+entity: null
+run_name: sac-pendulum
+seed: 42
+
+# Environment
+env_id: Pendulum-v1
+render_mode: null
+env_kwargs: {}
+
+# Training
+total_steps: 200000
+start_steps: 10000
+batch_size: 256
+buffer_size: 1000000
+updates_per_step: 1
+gamma: 0.99
+tau: 0.005
+actor_lr: 0.0003
+critic_lr: 0.0003
+alpha_lr: 0.0003
+target_entropy_scale: 1.0
+
+# Model
+hidden_sizes: [256, 256]
+activation: relu
+
+# Logging & Checkpoints
+log_interval: 1000
+checkpoint_interval: 50000
+checkpoint_dir: SAC/checkpoints
+save_best: true
+log_level: INFO
+log_to_file: true
+log_file: SAC/logs/sac.log
+log_to_console: true
+
+# Inference
+inference_model_path: SAC/checkpoints/best.pt
+episodes: 5
+
+# Misc
+device: auto
