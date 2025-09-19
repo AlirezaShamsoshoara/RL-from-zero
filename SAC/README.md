@@ -33,3 +33,10 @@ Hyper-parameters live in YAML files under `SAC/configs/`. The default file expos
 - **Inference**: default checkpoint for demos and number of rollout episodes.
 
 Feel free to duplicate the YAML stub to experiment with other continuous Gym tasks.
+
+
+# References, useful links, and Papers:
+
+- Original SAC paper: https://arxiv.org/abs/1801.01290
+- SAC implementation in PyTorch: https://github.com/pranz24/pytorch-soft-actor-critic
+- SAC implementation in JAX: https://github.com/haarnoja/sac_jax
