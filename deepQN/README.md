@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/dqn_logo.svg" width="420" alt="Deep Q-Network Logo" />
+</p>
+
 # Deep Q-Network (DQN)
 
 ## What is DQN?
