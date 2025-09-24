@@ -36,6 +36,11 @@ All tunables live under `deepQN/configs/`. The default `cartpole.yaml` exposes:
 Clone the YAML template to configure other discrete-control environments.
 
 ## References
+- [Playing Atari with Deep Reinforcement Learning](https://arxiv.org/pdf/1312.05602)
+- [PyTorch @ Reinforcement Learning (DQN) Tutorial](https://docs.pytorch.org/tutorials/intermediate/reinforcement_q_learning.html)
+- [HF @ The Deep Q-Learning Algorithm
+](https://huggingface.co/learn/deep-rl-course/en/unit3/deep-q-algorithm)
 - Mnih et al., "Human-level control through deep reinforcement learning" (2015)
 - OpenAI Baselines DQN: https://github.com/openai/baselines/tree/master/baselines/deepq
 - Stable-Baselines3 DQN: https://stable-baselines3.readthedocs.io/en/master/modules/dqn.html
+
