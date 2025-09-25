@@ -20,6 +20,14 @@ python -m TRPO.main train --config TRPO/configs/pendulum.yaml
 python -m TRPO.main demo --config TRPO/configs/pendulum.yaml --model_path TRPO/checkpoints/best.pt
 ```
 
+## Configuration
+YAML files in `TRPO/configs/` expose the experiment knobs:
+- **Environment**: Gym id, render mode, vectorised env count, and optional `env_kwargs`.
+- **Training**: total timesteps, rollout horizon, discount/GAE factors, KL threshold, conjugate-gradient settings, line-search coefficients, value-loss optimisation steps, and entropy bonus.
+- **Model**: shared hidden sizes and activation for the policy/value networks.
+- **Logging**: checkpoint cadence, log intervals, paths, and console/file toggles alongside WandB metadata.
+- **Inference**: default checkpoint path and evaluation episode count for `demo`.
+
 Setup with uv (Windows cmd):
 1) Create venv and install deps  
    uv venv .venv  
@@ -35,4 +43,3 @@ Setup with uv (Windows cmd):
 - Continuous `Box` action spaces and flat observation vectors are supported in this implementation.
 - Rendering requires a local display; ensure `pygame` is installed (already in `pyproject.toml`).
 - Hyperparameters can be tuned in `TRPO/configs/pendulum.yaml`. Lowering `max_kl` or increasing `cg_iters` improves stability at the cost of runtime.
-
