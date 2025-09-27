@@ -1,9 +1,10 @@
 <p align="center">
   <img src="assets/a3c_logo.svg" alt="A3C Logo" width="520" />
 </p>
-A3C (Asynchronous Advantage Actor-Critic) quickstart
 
-What is A3C?
+# A3C (Asynchronous Advantage Actor-Critic) quickstart
+
+## What is A3C?
 - A3C launches multiple environment workers that run in parallel, each maintaining a local copy of the policy/value network.
 - After every `t_max` steps (or episode termination) workers push gradients to a shared global network, enabling on-policy updates without heavy experience replay.
 
