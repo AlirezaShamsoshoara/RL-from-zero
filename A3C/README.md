@@ -1,3 +1,6 @@
+<p align="center">
+  <img src="assets/a3c_logo.svg" alt="A3C Logo" width="520" />
+</p>
 A3C (Asynchronous Advantage Actor-Critic) quickstart
 
 What is A3C?
@@ -26,3 +29,4 @@ Notes
 - This reference implementation currently supports CPU devices, flat observation spaces, and discrete action spaces.
 - Increase `num_workers` and `t_max` carefully; CPU contention can hurt performance.
 - Tweak exploration via `entropy_coef` in the config to balance return and stability.
+

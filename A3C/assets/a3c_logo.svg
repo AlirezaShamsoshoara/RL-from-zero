@@ -1,0 +1,50 @@
+<svg width="420" height="160" viewBox="0 0 420 160" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">A3C Logo</title>
+  <desc id="desc">Interconnected worker nodes feeding gradients into a shared global network with A3C initials.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    <linearGradient id="accentBlue" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#22d3ee" />
+    </linearGradient>
+    <linearGradient id="accentPurple" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7c3aed" />
+      <stop offset="100%" stop-color="#a855f7" />
+    </linearGradient>
+    <linearGradient id="accentOrange" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f97316" />
+      <stop offset="100%" stop-color="#fb7185" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#000" flood-opacity="0.35" />
+    </filter>
+    <marker id="arrowPurple" markerWidth="8" markerHeight="8" refX="5" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#a855f7" />
+    </marker>
+    <marker id="arrowOrange" markerWidth="8" markerHeight="8" refX="5" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#fb7185" />
+    </marker>
+  </defs>
+  <g filter="url(#shadow)">
+    <rect x="16" y="16" width="388" height="128" rx="22" fill="url(#bg)" />
+    <rect x="16" y="16" width="388" height="128" rx="22" fill="none" stroke="#38bdf8" stroke-opacity="0.35" stroke-width="2" />
+  </g>
+  <g transform="translate(46,44)">
+    <circle cx="42" cy="38" r="26" fill="#0f172a" stroke="url(#accentBlue)" stroke-width="4" />
+    <circle cx="140" cy="18" r="22" fill="#0f172a" stroke="url(#accentPurple)" stroke-width="4" />
+    <circle cx="140" cy="60" r="22" fill="#0f172a" stroke="url(#accentOrange)" stroke-width="4" />
+    <path d="M68 38 C88 20 112 20 132 18" fill="none" stroke="url(#accentBlue)" stroke-width="4" stroke-linecap="round" />
+    <path d="M68 38 C88 56 112 58 132 60" fill="none" stroke="url(#accentBlue)" stroke-width="4" stroke-linecap="round" />
+    <path d="M140 18 L220 38" stroke="url(#accentPurple)" stroke-width="4" stroke-linecap="round" marker-end="url(#arrowPurple)" />
+    <path d="M140 60 L220 44" stroke="url(#accentOrange)" stroke-width="4" stroke-linecap="round" marker-end="url(#arrowOrange)" />
+  </g>
+  <g fill="white" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-weight="700" text-anchor="start">
+    <text x="248" y="82" font-size="56">A3C</text>
+  </g>
+  <g fill="#94a3b8" font-family="'Fira Code', 'Courier New', monospace" font-size="16" text-anchor="start">
+    <text x="248" y="108">Asynchronous Advantage Actor-Critic</text>
+  </g>
+</svg>
