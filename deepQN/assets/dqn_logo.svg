@@ -1,0 +1,61 @@
+<svg width="360" height="120" viewBox="0 0 360 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Deep Q-Network Logo</title>
+  <desc id="desc">Stylised neural network with highlighted Q-value pathway representing Deep Q-Network.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    <linearGradient id="link" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+    <linearGradient id="highlight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316" />
+      <stop offset="100%" stop-color="#fb7185" />
+    </linearGradient>
+    <radialGradient id="nodeGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#9ca3af" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#475569" stop-opacity="0.4" />
+    </radialGradient>
+  </defs>
+  <rect x="0" y="0" width="360" height="120" rx="16" fill="url(#bg)" />
+  <g transform="translate(48,20)">
+    <g fill="none" stroke="url(#link)" stroke-width="2.4" stroke-linecap="round" opacity="0.65">
+      <line x1="0" y1="12" x2="90" y2="20" />
+      <line x1="0" y1="52" x2="90" y2="44" />
+      <line x1="0" y1="92" x2="90" y2="68" />
+      <line x1="0" y1="12" x2="90" y2="60" />
+      <line x1="0" y1="52" x2="90" y2="84" />
+      <line x1="0" y1="92" x2="90" y2="36" />
+    </g>
+    <g fill="none" stroke="url(#highlight)" stroke-width="3" stroke-linecap="round" opacity="0.85">
+      <path d="M90 44 L172 40 L240 54" />
+      <path d="M172 40 Q204 24 240 12" />
+    </g>
+    <g fill="url(#nodeGlow)">
+      <circle cx="0" cy="12" r="10" />
+      <circle cx="0" cy="52" r="10" />
+      <circle cx="0" cy="92" r="10" />
+      <circle cx="90" cy="20" r="12" />
+      <circle cx="90" cy="44" r="12" />
+      <circle cx="90" cy="68" r="12" />
+      <circle cx="90" cy="92" r="12" />
+      <circle cx="172" cy="24" r="11" />
+      <circle cx="172" cy="56" r="11" />
+      <circle cx="240" cy="12" r="10" />
+      <circle cx="240" cy="54" r="10" />
+    </g>
+    <g fill="none" stroke="#1e40af" stroke-width="1.4" stroke-linecap="round" opacity="0.55">
+      <path d="M90 20 L172 24 L240 54" />
+      <path d="M90 68 L172 56 L240 12" />
+      <path d="M90 92 L172 56" />
+    </g>
+  </g>
+  <g fill="white" font-family="'Segoe UI Semibold', 'Helvetica Neue', Arial, sans-serif" text-anchor="middle">
+    <text x="240" y="80" font-size="50">DQN</text>
+  </g>
+  <g fill="#94a3b8" font-family="'Fira Code', 'Courier New', monospace" font-size="16" text-anchor="middle">
+    <text x="240" y="102">Deep Q-Network</text>
+  </g>
+</svg>
