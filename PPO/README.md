@@ -15,6 +15,12 @@ This template includes:
 - Checkpoint saving (best and periodic)
 - Inference/demo with on-screen rendering
 
+## Quick Commands
+```bash
+python -m PPO.main train --config PPO/configs/cartpole.yaml
+python -m PPO.main demo --config PPO/configs/cartpole.yaml --model_path PPO/checkpoints/best.pt
+```
+
 Setup with uv (Windows cmd):
 1) Create venv and install deps
    uv venv .venv

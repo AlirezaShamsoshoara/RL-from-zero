@@ -15,6 +15,12 @@ This template includes:
 - Periodic & best checkpoint saving compatible with other algorithms in this repo
 - CLI powered by Fire with `train` and `demo` entrypoints (`A3C/main.py`)
 
+## Quick Commands
+```bash
+python -m A3C.main train --config A3C/configs/cartpole.yaml
+python -m A3C.main demo --config A3C/configs/cartpole.yaml --model_path A3C/checkpoints/best.pt
+```
+
 Getting started (Windows cmd using uv):
 1) Create venv and install deps
    uv venv .venv
@@ -30,4 +36,3 @@ Notes
 - This reference implementation currently supports CPU devices, flat observation spaces, and discrete action spaces.
 - Increase `num_workers` and `t_max` carefully; CPU contention can hurt performance.
 - Tweak exploration via `entropy_coef` in the config to balance return and stability.
-

@@ -1,0 +1,76 @@
+<svg width="420" height="160" viewBox="0 0 420 160" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">TD3 Logo</title>
+  <desc id="desc">Twin critic blocks supporting an actor policy arrow representing Twin Delayed Deep Deterministic Policy Gradients.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1120" />
+      <stop offset="100%" stop-color="#111c3a" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#22d3ee" />
+    </linearGradient>
+    <linearGradient id="critic" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1f2937" />
+      <stop offset="100%" stop-color="#374151" />
+    </linearGradient>
+    <linearGradient id="actor" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee" />
+      <stop offset="100%" stop-color="#0ea5e9" />
+    </linearGradient>
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%" filterUnits="objectBoundingBox">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="420" height="160" rx="16" fill="url(#bg)" />
+
+  <g opacity="0.12">
+    <circle cx="70" cy="40" r="20" fill="#38bdf8" />
+    <circle cx="350" cy="120" r="26" fill="#22d3ee" />
+    <path d="M40 130 L120 30" stroke="#38bdf8" stroke-width="6" stroke-linecap="round" />
+    <path d="M260 30 L360 100" stroke="#22d3ee" stroke-width="6" stroke-linecap="round" />
+  </g>
+
+  <g transform="translate(70,36)">
+    <rect x="0" y="0" width="110" height="88" rx="12" fill="url(#critic)" stroke="#3f4b5f" stroke-width="2" />
+    <rect x="170" y="0" width="110" height="88" rx="12" fill="url(#critic)" stroke="#3f4b5f" stroke-width="2" />
+    <rect x="310" y="12" width="20" height="64" rx="10" fill="#1f2937" stroke="#334155" stroke-width="2" />
+    <g transform="translate(12,16)">
+      <circle cx="16" cy="16" r="8" fill="#38bdf8" />
+      <circle cx="16" cy="44" r="8" fill="#38bdf8" />
+      <circle cx="64" cy="30" r="12" fill="#22d3ee" />
+      <path d="M24 16 L52 26" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" />
+      <path d="M24 44 L52 34" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" />
+    </g>
+    <g transform="translate(182,16)">
+      <circle cx="16" cy="16" r="8" fill="#38bdf8" />
+      <circle cx="16" cy="44" r="8" fill="#38bdf8" />
+      <circle cx="64" cy="30" r="12" fill="#22d3ee" />
+      <path d="M24 16 L52 26" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" />
+      <path d="M24 44 L52 34" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" />
+    </g>
+  </g>
+
+  <g transform="translate(210,40)">
+    <circle cx="0" cy="40" r="34" fill="url(#actor)" stroke="#bae6fd" stroke-width="2" filter="url(#softGlow)" />
+    <path d="M-12 40 L18 40" stroke="#0f172a" stroke-width="4" stroke-linecap="round" />
+    <path d="M8 28 Q24 40 8 52" stroke="#0f172a" stroke-width="4" stroke-linecap="round" fill="none" />
+    <text x="0" y="45" text-anchor="middle" font-family="'Segoe UI', Arial, sans-serif" font-size="16" font-weight="700" fill="#0f172a">π</text>
+  </g>
+
+  <path d="M180 80 L210 80" stroke="url(#accent)" stroke-width="6" stroke-linecap="round" />
+  <path d="M210 80 L240 80" stroke="url(#accent)" stroke-width="6" stroke-linecap="round" />
+  <polygon points="240,80 228,74 228,86" fill="#22d3ee" />
+
+  <g font-family="'Segoe UI', Arial, sans-serif" font-weight="600" fill="#f8fafc">
+    <text x="125" y="128" font-size="18">Q1</text>
+    <text x="295" y="128" font-size="18">Q2</text>
+    <text x="368" y="90" font-size="14" fill="#bae6fd">Delayed</text>
+    <text x="20" y="142" font-size="24">TD3</text>
+  </g>
+</svg>

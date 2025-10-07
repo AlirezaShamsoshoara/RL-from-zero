@@ -14,6 +14,12 @@ This template mirrors the PPO structure and includes:
 - Weights & Biases logging for rewards
 - Checkpoint saving (best and periodic) storing the Q-table
 
+## Quick Commands
+```bash
+python -m Qlearning.main train --config Qlearning/configs/frozenlake.yaml
+python -m Qlearning.main demo --config Qlearning/configs/frozenlake.yaml --model_path Qlearning/checkpoints/best.pt
+```
+
 ## Default environment
 - Uses `FrozenLake-v1` (toy-text) with `is_slippery: false` for a deterministic grid. Both observations and actions are discrete, ideal for tabular Q-learning.
 
