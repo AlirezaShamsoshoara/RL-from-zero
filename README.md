@@ -136,4 +136,4 @@ Each subdirectory README links to seminal papers and additional resources for th
 
 Happy experimenting!
 
-[![Star History Chart](https://api.star-history.com/svg?repos=AlirezaShamsoshoara/RL-from-zero&type=Date)](https://star-history.com/#AlirezaShamsoshoara/RL-from-zero)
+[![Star History Chart](https://api.star-history.com/svg?repos=AlirezaShamsoshoara/RL-from-zero&type=Date)](https://www.star-history.com/#AlirezaShamsoshoara/RL-from-zero&Date)
