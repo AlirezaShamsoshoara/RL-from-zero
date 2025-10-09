@@ -13,6 +13,8 @@
 [![GitHub pull requests](https://img.shields.io/github/issues-pr/AlirezaShamsoshoara/RL-from-zero?logo=github)](https://github.com/AlirezaShamsoshoara/RL-from-zero/pulls)
 [![GitHub license](https://img.shields.io/github/license/AlirezaShamsoshoara/RL-from-zero)](LICENSE)
 
+[![Star History Chart](https://api.star-history.com/svg?repos=AlirezaShamsoshoara/RL-from-zero&type=Date)](https://star-history.com/#AlirezaShamsoshoara/RL-from-zero)
+
 RL-from-zero is a collection of reinforcement learning agents implemented from scratch to refresh RL fundamentals and keep deep learning coding skills sharp. Each algorithm lives in its own self-contained package with a shared command-line interface, YAML-driven configuration, and optional experiment tracking via Weights & Biases.
 
 ## Why this repository?
