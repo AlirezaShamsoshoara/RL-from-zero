@@ -30,6 +30,7 @@ RL-from-zero is a collection of reinforcement learning agents implemented from s
 | `A3C/` | Asynchronous Advantage Actor-Critic | Discrete | `CartPole-v1` |
 | `SAC/` | Soft Actor-Critic | Continuous | `Pendulum-v1` |
 | `TD3/` | Twin Delayed DDPG | Continuous | `Pendulum-v1` |
+| `TRPO/` | Trust Region Policy Optimization | Continuous | `Pendulum-v1` |
 
 All agents expose a two-command Fire CLI (`train` and `demo`), use PyTorch under the hood, and save both periodic and best checkpoints in their respective `checkpoints/` directories.
 
@@ -97,6 +98,10 @@ python -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/chec
 # Twin Delayed DDPG
 python -m TD3.main train --config TD3/configs/pendulum.yaml
 python -m TD3.main demo --config TD3/configs/pendulum.yaml --model_path TD3/checkpoints/best.pt
+
+# Trust Region Policy Optimization
+python -m TRPO.main train --config TRPO/configs/pendulum.yaml
+python -m TRPO.main demo --config TRPO/configs/pendulum.yaml --model_path TRPO/checkpoints/best.pt
 ```
 
 ### Optional Weights & Biases logging
@@ -122,6 +127,7 @@ RL-from-zero/
 |-- deepQN/     # Deep Q-Network agent
 |-- SAC/        # Soft Actor-Critic agent
 |-- TD3/        # Twin Delayed DDPG agent
+|-- TRPO/       # Trust Region Policy Optimization agent
 |-- tests/      # Unit tests (currently deepQN replay buffer coverage)
 |-- pyproject.toml
 |-- uv.lock

@@ -1,0 +1,17 @@
+<svg width="640" height="160" viewBox="0 0 640 160" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0f4c81" />
+      <stop offset="100%" stop-color="#3aa17e" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="640" height="160" fill="#0b0d0f" rx="18" />
+  <g transform="translate(40, 110)">
+    <text x="0" y="0" font-family="Segoe UI, sans-serif" font-size="84" fill="url(#grad)" font-weight="700">TRPO</text>
+    <text x="270" y="-30" font-family="Segoe UI, sans-serif" font-size="28" fill="#e3f2fd">Trust Region Policy Optimization</text>
+  </g>
+  <path d="M120 35 C160 20 210 55 240 45 C280 30 300 65 340 50" stroke="#3aa17e" stroke-width="6" fill="none" stroke-linecap="round" />
+  <circle cx="120" cy="35" r="6" fill="#3aa17e" />
+  <circle cx="240" cy="45" r="6" fill="#3aa17e" />
+  <circle cx="340" cy="50" r="6" fill="#3aa17e" />
+</svg>
