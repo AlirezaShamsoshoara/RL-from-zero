@@ -1,0 +1,48 @@
+# TRPO configuration for Pendulum-v1
+project: rl-practice
+entity: null
+run_name: trpo-pendulum
+seed: 0
+
+# Environment
+env_id: Pendulum-v1
+render_mode: human
+num_envs: 1
+env_kwargs: {}
+
+# Training
+total_timesteps: 300000
+rollout_steps: 2048
+gamma: 0.99
+gae_lambda: 0.97
+max_kl: 0.01
+cg_iters: 10
+cg_damping: 0.1
+line_search_coef: 0.5
+line_search_steps: 10
+vf_lr: 3e-4
+vf_iters: 5
+entropy_coef: 0.0
+normalize_advantages: true
+
+# Model
+hidden_sizes: [64, 64]
+activation: tanh
+
+# Logging & Checkpoints
+log_interval: 1
+checkpoint_interval: 5
+checkpoint_dir: TRPO/checkpoints
+save_best: true
+log_level: INFO
+log_to_file: true
+log_file: TRPO/logs/trpo.log
+log_to_console: true
+
+# Inference
+inference_model_path: TRPO/checkpoints/best.pt
+episodes: 5
+
+# Misc
+device: auto
+
