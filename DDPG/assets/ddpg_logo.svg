@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="200" viewBox="0 0 640 200">
+  <defs>
+    <linearGradient id="bg" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#0f1c2e"/>
+      <stop offset="100%" stop-color="#163a4c"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" x2="100%" y1="50%" y2="50%">
+      <stop offset="0%" stop-color="#39c5bb"/>
+      <stop offset="100%" stop-color="#6be3cf"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="640" height="200" rx="24" fill="url(#bg)" />
+  <g transform="translate(48 60)">
+    <text x="0" y="70" font-family="Segoe UI, Arial, sans-serif" font-size="96" font-weight="700" fill="#e6f5ff">
+      DDPG
+    </text>
+    <rect x="4" y="100" width="200" height="6" rx="3" fill="url(#accent)"/>
+    <text x="0" y="130" font-family="Segoe UI, Arial, sans-serif" font-size="26" fill="#c0d7e6">
+      Deep Deterministic Policy Gradient
+    </text>
+  </g>
+  <g transform="translate(420 40)" opacity="0.35">
+    <circle cx="64" cy="64" r="52" fill="none" stroke="#6be3cf" stroke-width="6"/>
+    <path d="M64 18 L64 110" stroke="#39c5bb" stroke-width="5" stroke-linecap="round"/>
+    <path d="M18 64 L110 64" stroke="#39c5bb" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="64" cy="28" r="9" fill="#6be3cf"/>
+    <circle cx="64" cy="100" r="9" fill="#6be3cf"/>
+    <circle cx="28" cy="64" r="9" fill="#6be3cf"/>
+    <circle cx="100" cy="64" r="9" fill="#6be3cf"/>
+  </g>
+</svg>
+
