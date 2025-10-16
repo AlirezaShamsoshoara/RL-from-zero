@@ -1,0 +1,22 @@
+project: rl-practice
+run_name: iql-pendulum-random
+env_id: Pendulum-v1
+dataset_source: random
+dataset_steps: 60000
+total_updates: 120000
+batch_size: 256
+gamma: 0.99
+tau: 0.005
+expectile: 0.7
+temperature: 3.0
+max_weight: 100.0
+actor_lr: 0.0003
+critic_lr: 0.0003
+value_lr: 0.0003
+hidden_sizes: [256, 256]
+activation: relu
+log_interval: 500
+eval_interval: 5000
+checkpoint_interval: 20000
+eval_episodes: 5
+device: auto
