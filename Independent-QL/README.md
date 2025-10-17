@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/independent-ql-logo.svg" width="420" alt="Independent Q-Learning Logo" />
+</p>
+
 # Independent Q-Learning (Multi-Agent)
 
 This implementation extends the single-agent Q-learning scaffolding in the repo to a decentralised multi-agent formulation where each agent maintains an independent Q-table and treats the rest of the team as part of the environment dynamics.
