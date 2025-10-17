@@ -1,5 +1,9 @@
 # RL-from-zero
 
+<p align="center">
+  <img src="assets/rl-from-zero-logo.svg" alt="RL-from-zero logo showing converging reinforcement learning pathways" width="640">
+</p>
+
 [![Python Version](https://img.shields.io/badge/Python-3.8%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![uv](https://img.shields.io/badge/uv-0.5%2B-6E56CF?logo=astral&logoColor=white)](https://github.com/astral-sh/uv)
 [![Last Commit](https://img.shields.io/github/last-commit/AlirezaShamsoshoara/RL-from-zero?logo=github)](https://github.com/AlirezaShamsoshoara/RL-from-zero/commits)

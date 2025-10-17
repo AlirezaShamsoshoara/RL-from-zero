@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 220" role="img" aria-labelledby="title desc">
+  <title id="title">RL-from-zero logo</title>
+  <desc id="desc">Reinforcement learning pathways converging into a unified agent core.</desc>
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1f33" />
+      <stop offset="50%" stop-color="#132c4a" />
+      <stop offset="100%" stop-color="#18425f" />
+    </linearGradient>
+    <linearGradient id="pathGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#53f3c5" />
+      <stop offset="100%" stop-color="#6fa6ff" />
+    </linearGradient>
+    <linearGradient id="pulseGradient" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#6fa6ff" />
+      <stop offset="100%" stop-color="#53f3c5" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#082033" flood-opacity="0.45" />
+    </filter>
+  </defs>
+
+  <rect width="640" height="220" rx="24" fill="url(#bgGradient)" />
+
+  <g filter="url(#shadow)">
+    <path
+      d="M120 170 Q205 90 280 110 T360 112 T440 118 Q520 128 560 160"
+      fill="none"
+      stroke="url(#pathGradient)"
+      stroke-width="10"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      opacity="0.85"
+    />
+    <path
+      d="M120 210 Q200 250 280 230 T360 228 T440 236 Q520 244 560 210"
+      fill="none"
+      stroke="rgba(116, 196, 255, 0.5)"
+      stroke-width="6"
+      stroke-linecap="round"
+      stroke-dasharray="18 20"
+    />
+  </g>
+
+  <g>
+    <circle cx="120" cy="170" r="40" fill="#0d2b45" stroke="#53f3c5" stroke-width="5" />
+    <text x="120" y="170" text-anchor="middle" dominant-baseline="middle" font-family="Monaco, 'Andale Mono', monospace" font-size="18" fill="#dff9ff">
+      tabular
+    </text>
+    <circle cx="240" cy="130" r="38" fill="#0d2b45" stroke="#6fa6ff" stroke-width="5" />
+    <text x="240" y="130" text-anchor="middle" dominant-baseline="middle" font-family="Monaco, 'Andale Mono', monospace" font-size="18" fill="#dff9ff">
+      value
+    </text>
+    <circle cx="360" cy="150" r="46" fill="#0d2b45" stroke="#8be8ff" stroke-width="6" />
+    <text x="360" y="150" text-anchor="middle" dominant-baseline="middle" font-family="Monaco, 'Andale Mono', monospace" font-size="24" font-weight="700" fill="#ffffff">
+      agent
+    </text>
+    <circle cx="480" cy="130" r="36" fill="#0d2b45" stroke="#53f3c5" stroke-width="5" />
+    <text x="480" y="130" text-anchor="middle" dominant-baseline="middle" font-family="Monaco, 'Andale Mono', monospace" font-size="18" fill="#dff9ff">
+      policy
+    </text>
+    <circle cx="560" cy="170" r="38" fill="#0d2b45" stroke="#6fa6ff" stroke-width="5" />
+    <text x="560" y="170" text-anchor="middle" dominant-baseline="middle" font-family="Monaco, 'Andale Mono', monospace" font-size="18" fill="#dff9ff">
+      offline
+    </text>
+  </g>
+
+  <g>
+    <circle cx="360" cy="150" r="64" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="8" />
+    <circle cx="360" cy="150" r="82" fill="none" stroke="rgba(83,243,197,0.25)" stroke-width="4" stroke-dasharray="12 16" />
+    <circle cx="360" cy="150" r="10" fill="#53f3c5" />
+  </g>
+
+  <g>
+    <rect x="188" y="28" width="264" height="60" rx="16" fill="#0d2b45" stroke="rgba(255,255,255,0.15)" stroke-width="2" />
+    <text x="320" y="60" text-anchor="middle" font-family="'Segoe UI', 'Inter', sans-serif" font-size="34" font-weight="600" fill="#f5fcff">
+      RL-from-zero
+    </text>
+    <text x="320" y="86" text-anchor="middle" font-family="'Segoe UI', 'Inter', sans-serif" font-size="16" letter-spacing="4" fill="#6fa6ff">
+      explore • iterate • converge
+    </text>
+  </g>
+
+  <g>
+    <path
+      d="M180 208 c22 -8 48 -12 80 -12 s58 4 80 12 c-22 8 -48 12 -80 12 s-58 -4 -80 -12z"
+      fill="rgba(12, 27, 44, 0.9)"
+    />
+    <path
+      d="M440 208 c22 -8 48 -12 80 -12 s58 4 80 12 c-22 8 -48 12 -80 12 s-58 -4 -80 -12z"
+      fill="rgba(12, 27, 44, 0.9)"
+    />
+  </g>
+</svg>
