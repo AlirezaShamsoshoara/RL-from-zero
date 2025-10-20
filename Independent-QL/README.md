@@ -26,7 +26,7 @@ python Independent-QL/main.py demo --config Independent-QL/configs/line_world.ya
 - Individual goals near the right boundary, step penalties to promote efficiency, and collision penalties to foster coordination.
 - Shared bonus when every agent reaches its goal in the same episode.
 
-## Customisation
+## Customization
 - Adjust `env_kwargs` in the YAML config to change grid length, number of agents, rewards, or penalties.
 - Tune learning hyperparameters (`alpha`, `gamma`, `epsilon_*`) directly in the same config.
 - Checkpoints store the full stack of agent Q-tables as a tensor for easy inspection or warm-starting.
@@ -35,3 +35,9 @@ python Independent-QL/main.py demo --config Independent-QL/configs/line_world.ya
 - Implementation relies only on the repos existing dependencies (`gym`, `numpy`, `torch`, `tqdm`, `wandb`)—no extra packages required.
 - Episodes terminate when every agent reaches its respective goal or the step budget is exhausted.
 - For more complex scenarios, implement a new environment under `independent_ql/envs/` and reference it via `env_id` in the config.
+
+## References
+- Tan, M. (1993). *Multi-Agent Reinforcement Learning: Independent vs. Cooperative Agents.* Proceedings of the Tenth International Conference on Machine Learning, 330-337.
+- Littman, M. (1994). *Markov Games as a Framework for Multi-Agent Reinforcement Learning.* Proceedings of the Eleventh International Conference on Machine Learning, 157-163.
+- Foerster, J., Nardelli, N., Farquhar, G., Torr, P., Kohli, P., & Whiteson, S. (2017). *Stabilising Experience Replay for Deep Multi-Agent Reinforcement Learning.* In ICML.
+- Lowe, R., Wu, Y., Tamar, A., Harb, J., Abbeel, P., & Mordatch, I. (2017). *Multi-Agent Actor-Critic for Mixed Cooperative-Competitive Environments.* In NIPS.
