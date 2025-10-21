@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="200" viewBox="0 0 760 200" role="img" aria-labelledby="title desc">
+  <title id="title">Independent Q-Learning (Multi-Agent)</title>
+  <desc id="desc">Logo with multiple agents orbiting a shared state grid to symbolise decentralised independent Q-learning.</desc>
+
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F6F8FF"/>
+      <stop offset="100%" stop-color="#FFFFFF"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#05C3DD"/>
+      <stop offset="100%" stop-color="#7644FF"/>
+    </linearGradient>
+    <linearGradient id="nodeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#12D1A3"/>
+      <stop offset="100%" stop-color="#0B7FE3"/>
+    </linearGradient>
+    <linearGradient id="gridGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#CFE6FF"/>
+      <stop offset="100%" stop-color="#E0D7FF"/>
+    </linearGradient>
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <!-- Rounded backdrop -->
+  <rect x="0" y="0" width="760" height="200" rx="20" fill="url(#bgGrad)" stroke="#E6EAF2"/>
+
+  <g transform="translate(28,24)" filter="url(#softShadow)">
+    <!-- Outer orbit -->
+    <circle cx="90" cy="76" r="72" fill="none" stroke="url(#accentGrad)" stroke-width="6" stroke-dasharray="6 12" opacity="0.7"/>
+
+    <!-- Shared state core -->
+    <circle cx="90" cy="76" r="58" fill="#FFFFFF" stroke="url(#accentGrad)" stroke-width="6"/>
+
+    <!-- 3x3 grid representing local Q-tables -->
+    <g transform="translate(52,38)" opacity="0.92">
+      <rect x="0" y="0" width="28" height="28" rx="6" fill="#F4F8FF"/>
+      <rect x="32" y="0" width="28" height="28" rx="6" fill="#EEF1FF"/>
+      <rect x="64" y="0" width="28" height="28" rx="6" fill="#F4F8FF"/>
+
+      <rect x="0" y="32" width="28" height="28" rx="6" fill="#EEF1FF"/>
+      <rect x="32" y="32" width="28" height="28" rx="6" fill="url(#gridGrad)"/>
+      <rect x="64" y="32" width="28" height="28" rx="6" fill="#EEF1FF"/>
+
+      <rect x="0" y="64" width="28" height="28" rx="6" fill="#F4F8FF"/>
+      <rect x="32" y="64" width="28" height="28" rx="6" fill="#EEF1FF"/>
+      <rect x="64" y="64" width="28" height="28" rx="6" fill="#F4F8FF"/>
+    </g>
+
+    <!-- Policy arrows -->
+    <g stroke="url(#accentGrad)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="0.85">
+      <path d="M80 26 L90 14 L100 26"/>
+      <path d="M136 70 L148 80 L136 90"/>
+      <path d="M80 126 L90 138 L100 126"/>
+    </g>
+
+    <!-- Agent nodes -->
+    <g fill="url(#nodeGrad)" stroke="#FFFFFF" stroke-width="4">
+      <circle cx="24" cy="48" r="16"/>
+      <circle cx="30" cy="120" r="16"/>
+      <circle cx="152" cy="44" r="16"/>
+    </g>
+
+    <!-- Communication arcs -->
+    <g stroke="url(#accentGrad)" stroke-width="4" stroke-linecap="round" opacity="0.55">
+      <path d="M40 56 Q72 26 118 32"/>
+      <path d="M42 112 Q70 130 110 130"/>
+      <path d="M40 68 Q44 100 66 120"/>
+      <path d="M150 60 Q128 96 90 112"/>
+    </g>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(240,100)">
+    <text x="0" y="0" font-size="46" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" fill="#1B2559" dominant-baseline="middle">
+      Independent QL
+    </text>
+    <text x="0" y="34" font-size="18" font-weight="500" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" fill="#5B6B92">
+      Decentralised multi-agent value learning
+    </text>
+  </g>
+</svg>
