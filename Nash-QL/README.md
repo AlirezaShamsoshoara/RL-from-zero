@@ -90,7 +90,7 @@ We solve for a Nash equilibrium $(\pi_1^*, \pi_2^*)$ using linear programming. E
 | **Action selection** | Greedy on own Q-values | Nash equilibrium of stage game |
 | **Update target** | $\max_{a} Q_i(s', a)$ | $V_i^{\text{Nash}}(s')$ |
 | **Convergence** | May fail in coordination games | Proven convergence to Nash equilibria |
-| **Complexity** | $O(|S| \cdot |A|)$ per agent | $O(|S| \cdot |A|^n)$ for n agents |
+| **Complexity** | $O(\|S\| \cdot \|A\|)$ per agent | $O(\|S\| \cdot \|A\|^n)$ for n agents |
 
 Nash Q-learning requires more memory (joint action space) but can achieve better coordination in strategic multi-agent settings.
 
