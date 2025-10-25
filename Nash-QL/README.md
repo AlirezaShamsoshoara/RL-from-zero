@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/nash-ql-logo.svg" width="640" alt="Nash Q-Learning Logo" />
+</p>
+
 # Nash Q-Learning (Multi-Agent)
 
 Nash Q-learning is a multi-agent reinforcement learning algorithm that extends Q-learning to general-sum stochastic games. Unlike independent Q-learning where agents independently optimize their own Q-values, Nash Q-learning computes Nash equilibrium strategies at each state to achieve coordinated behavior.

@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="200" viewBox="0 0 760 200" role="img" aria-labelledby="title desc">
+  <title id="title">Nash Q-Learning (Game Theory)</title>
+  <desc id="desc">Logo depicting two agents computing Nash equilibrium with payoff matrices and strategic coordination.</desc>
+
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F8F9FF"/>
+      <stop offset="100%" stop-color="#FFFFFF"/>
+    </linearGradient>
+    <linearGradient id="agent1Grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF6B9D"/>
+      <stop offset="100%" stop-color="#C44569"/>
+    </linearGradient>
+    <linearGradient id="agent2Grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4E65FF"/>
+      <stop offset="100%" stop-color="#4099FF"/>
+    </linearGradient>
+    <linearGradient id="equilibriumGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFB74D"/>
+      <stop offset="100%" stop-color="#FFA726"/>
+    </linearGradient>
+    <linearGradient id="matrixGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#E8EAFF"/>
+      <stop offset="100%" stop-color="#FFE8F0"/>
+    </linearGradient>
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.15"/>
+    </filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Rounded backdrop -->
+  <rect x="0" y="0" width="760" height="200" rx="20" fill="url(#bgGrad)" stroke="#E6EAF2"/>
+
+  <g transform="translate(28,24)" filter="url(#softShadow)">
+
+    <!-- Central payoff matrix representation (2x2 game) -->
+    <g transform="translate(50,36)">
+      <!-- Matrix grid -->
+      <rect x="0" y="0" width="80" height="80" rx="8" fill="#FFFFFF" stroke="#D0D5E6" stroke-width="2"/>
+
+      <!-- Quadrants representing payoff combinations -->
+      <rect x="4" y="4" width="36" height="36" rx="4" fill="url(#matrixGrad)" opacity="0.7"/>
+      <rect x="44" y="4" width="32" height="36" rx="4" fill="#E8EAFF" opacity="0.6"/>
+      <rect x="4" y="44" width="36" height="32" rx="4" fill="#FFE8F0" opacity="0.6"/>
+      <rect x="44" y="44" width="32" height="32" rx="4" fill="url(#matrixGrad)" opacity="0.7"/>
+
+      <!-- Nash equilibrium star in center -->
+      <g transform="translate(40,40)" filter="url(#glow)">
+        <path d="M0,-10 L2.4,-3 L9.5,-3 L4,1.5 L6,8.5 L0,4 L-6,8.5 L-4,1.5 L-9.5,-3 L-2.4,-3 Z"
+              fill="url(#equilibriumGrad)" opacity="0.95"/>
+      </g>
+
+      <!-- Small Q values in corners -->
+      <text x="12" y="18" font-size="11" font-weight="600" font-family="monospace" fill="#4E65FF" opacity="0.7">Q₁</text>
+      <text x="52" y="18" font-size="11" font-weight="600" font-family="monospace" fill="#FF6B9D" opacity="0.7">Q₂</text>
+      <text x="12" y="62" font-size="11" font-weight="600" font-family="monospace" fill="#FF6B9D" opacity="0.7">Q₃</text>
+      <text x="52" y="62" font-size="11" font-weight="600" font-family="monospace" fill="#4E65FF" opacity="0.7">Q₄</text>
+    </g>
+
+    <!-- Agent 1 (left) -->
+    <g transform="translate(24,76)">
+      <!-- Agent circle -->
+      <circle cx="0" cy="0" r="20" fill="url(#agent1Grad)" stroke="#FFFFFF" stroke-width="3"/>
+      <!-- Strategy arrow -->
+      <g stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" fill="none">
+        <path d="M-6,-3 L4,-3 L4,-8 L10,0 L4,8 L4,3 L-6,3 Z" fill="#FFFFFF" opacity="0.9"/>
+      </g>
+      <!-- Label -->
+      <text x="0" y="32" font-size="12" font-weight="600" font-family="Inter, sans-serif"
+            fill="#C44569" text-anchor="middle">Agent 1</text>
+    </g>
+
+    <!-- Agent 2 (right) -->
+    <g transform="translate(156,76)">
+      <!-- Agent circle -->
+      <circle cx="0" cy="0" r="20" fill="url(#agent2Grad)" stroke="#FFFFFF" stroke-width="3"/>
+      <!-- Strategy arrow -->
+      <g stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" fill="none">
+        <path d="M6,-3 L-4,-3 L-4,-8 L-10,0 L-4,8 L-4,3 L6,3 Z" fill="#FFFFFF" opacity="0.9"/>
+      </g>
+      <!-- Label -->
+      <text x="0" y="32" font-size="12" font-weight="600" font-family="Inter, sans-serif"
+            fill="#4099FF" text-anchor="middle">Agent 2</text>
+    </g>
+
+    <!-- Strategic interaction arrows (bidirectional) -->
+    <g stroke-width="3" stroke-linecap="round" opacity="0.6">
+      <!-- From Agent 1 to matrix -->
+      <path d="M44,66 L58,66" stroke="url(#agent1Grad)" stroke-dasharray="4 3"/>
+      <path d="M54,62 L60,66 L54,70" fill="none" stroke="#FF6B9D" stroke-width="2.5"/>
+
+      <!-- From matrix to Agent 2 -->
+      <path d="M122,66 L136,66" stroke="url(#agent2Grad)" stroke-dasharray="4 3"/>
+      <path d="M126,62 L120,66 L126,70" fill="none" stroke="#4E65FF" stroke-width="2.5"/>
+
+      <!-- Feedback from Agent 2 -->
+      <path d="M136,86 L122,86" stroke="url(#agent2Grad)" stroke-dasharray="4 3" opacity="0.5"/>
+
+      <!-- Feedback from matrix to Agent 1 -->
+      <path d="M58,86 L44,86" stroke="url(#agent1Grad)" stroke-dasharray="4 3" opacity="0.5"/>
+    </g>
+
+    <!-- Equilibrium balance indicator -->
+    <g transform="translate(90,12)">
+      <path d="M-16,0 L-6,0 M6,0 L16,0" stroke="url(#equilibriumGrad)" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="0" cy="0" r="4" fill="url(#equilibriumGrad)"/>
+      <text x="0" y="-8" font-size="9" font-weight="600" font-family="Inter, sans-serif"
+            fill="#FFA726" text-anchor="middle">Nash ⚖</text>
+    </g>
+
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(220,100)">
+    <text x="0" y="0" font-size="46" font-weight="700"
+          font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+          fill="#1B2559" dominant-baseline="middle">
+      Nash Q-Learning
+    </text>
+    <text x="0" y="34" font-size="18" font-weight="500"
+          font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+          fill="#5B6B92">
+      Game-theoretic multi-agent coordination
+    </text>
+  </g>
+</svg>
