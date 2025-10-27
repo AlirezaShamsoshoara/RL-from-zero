@@ -29,6 +29,7 @@ RL-from-zero is a collection of reinforcement learning agents implemented from s
 | Folder | Algorithm | Action space | Default environment |
 | --- | --- | --- | --- |
 | `Qlearning/` | Tabular Q-learning | Discrete | `FrozenLake-v1` (deterministic) |
+| `Independent-QL/` | Independent Q-learning (multi-agent) | Discrete | `LineWorld` (custom 2-agent grid) |
 | `deepQN/` | Deep Q-Network (with Double DQN option) | Discrete | `CartPole-v1` |
 | `PPO/` | Proximal Policy Optimization | Discrete | `CartPole-v1` |
 | `A3C/` | Asynchronous Advantage Actor-Critic | Discrete | `CartPole-v1` |
@@ -74,10 +75,15 @@ All agents expose a two-command Fire CLI (`train` and `demo`), use PyTorch under
 ## Running experiments
 Each algorithm can be launched with `python -m <package>.main` from the repository root. Supply a YAML config and optional overrides.
 
-### Tabular example (Q-learning)
+### Tabular examples (Q-learning)
 ```bash
+# Single-agent Q-learning
 python -m Qlearning.main train --config Qlearning/configs/frozenlake.yaml
 python -m Qlearning.main demo --config Qlearning/configs/frozenlake.yaml --model_path Qlearning/checkpoints/best.pt --episodes 5
+
+# Multi-agent Independent Q-learning
+python -m Independent-QL.main train --config Independent-QL/configs/line_world.yaml
+python -m Independent-QL.main demo --config Independent-QL/configs/line_world.yaml --model_path Independent-QL/checkpoints/best.pt
 ```
 
 ### Discrete deep RL examples
@@ -135,18 +141,20 @@ python -m unittest tests.deepqn.test_replay_buffer
 ## Repository layout
 ```
 RL-from-zero/
-|-- A3C/        # Async advantage actor-critic implementation
-|-- PPO/        # Proximal policy optimization agent
-|-- Qlearning/  # Tabular Q-learning agent
-|-- deepQN/     # Deep Q-Network agent
-|-- SAC/        # Soft Actor-Critic agent
-|-- DDPG/       # Deep Deterministic Policy Gradient agent
-|-- TD3/        # Twin Delayed DDPG agent
-|-- TRPO/       # Trust Region Policy Optimization agent
-|-- tests/      # Unit tests (currently deepQN replay buffer coverage)
+|-- A3C/            # Async advantage actor-critic implementation
+|-- PPO/            # Proximal policy optimization agent
+|-- Qlearning/      # Tabular Q-learning agent
+|-- Independent-QL/ # Multi-agent Independent Q-learning
+|-- deepQN/         # Deep Q-Network agent
+|-- SAC/            # Soft Actor-Critic agent
+|-- DDPG/           # Deep Deterministic Policy Gradient agent
+|-- TD3/            # Twin Delayed DDPG agent
+|-- TRPO/           # Trust Region Policy Optimization agent
+|-- IQL/            # Implicit Q-Learning (offline) agent
+|-- tests/          # Unit tests (currently deepQN replay buffer coverage)
 |-- pyproject.toml
 |-- uv.lock
-`-- README.md   # You are here
+`-- README.md       # You are here
 ```
 
 ## License
