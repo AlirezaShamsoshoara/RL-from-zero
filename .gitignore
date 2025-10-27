@@ -77,3 +77,4 @@ dmypy.json
 *.tmp
 
 # Custom ignores (add project-specific files here)
+.claude/

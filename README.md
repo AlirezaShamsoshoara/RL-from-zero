@@ -30,6 +30,7 @@ RL-from-zero is a collection of reinforcement learning agents implemented from s
 | --- | --- | --- | --- |
 | `Qlearning/` | Tabular Q-learning | Discrete | `FrozenLake-v1` (deterministic) |
 | `Independent-QL/` | Independent Q-learning (multi-agent) | Discrete | `LineWorld` (custom 2-agent grid) |
+| `Nash-QL/` | Nash Q-learning (multi-agent game theory) | Discrete | `LineWorld` (custom 2-agent grid) |
 | `deepQN/` | Deep Q-Network (with Double DQN option) | Discrete | `CartPole-v1` |
 | `PPO/` | Proximal Policy Optimization | Discrete | `CartPole-v1` |
 | `A3C/` | Asynchronous Advantage Actor-Critic | Discrete | `CartPole-v1` |
@@ -84,6 +85,10 @@ python -m Qlearning.main demo --config Qlearning/configs/frozenlake.yaml --model
 # Multi-agent Independent Q-learning
 python -m Independent-QL.main train --config Independent-QL/configs/line_world.yaml
 python -m Independent-QL.main demo --config Independent-QL/configs/line_world.yaml --model_path Independent-QL/checkpoints/best.pt
+
+# Multi-agent Nash Q-learning (game-theoretic)
+python -m Nash-QL.main train --config Nash-QL/configs/line_world.yaml
+python -m Nash-QL.main demo --config Nash-QL/configs/line_world.yaml --model_path Nash-QL/checkpoints/best.pt
 ```
 
 ### Discrete deep RL examples
@@ -145,6 +150,7 @@ RL-from-zero/
 |-- PPO/            # Proximal policy optimization agent
 |-- Qlearning/      # Tabular Q-learning agent
 |-- Independent-QL/ # Multi-agent Independent Q-learning
+|-- Nash-QL/        # Multi-agent Nash Q-learning (game theory)
 |-- deepQN/         # Deep Q-Network agent
 |-- SAC/            # Soft Actor-Critic agent
 |-- DDPG/           # Deep Deterministic Policy Gradient agent
