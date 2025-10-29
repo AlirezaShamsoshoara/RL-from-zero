@@ -1,0 +1,51 @@
+# MAPPO Config for MultiWalker-v9 (PettingZoo)
+project: rl-practice
+entity: null  # set your WandB entity if needed
+run_name: mappo-multiwalker
+seed: 42
+
+# Environment
+env_id: multiwalker_v9
+render_mode: human  # 'human' for on-screen rendering during demo/inference
+n_walkers: 3
+
+# Multi-Agent Settings
+n_agents: 3
+share_policy: false  # If true, all agents share the same policy network
+use_centralized_critic: true  # Use centralized critic with full state information
+
+# Training
+total_timesteps: 1000000
+rollout_steps: 400
+update_iterations: 10
+minibatch_size: 128
+learning_rate: 5e-4
+gamma: 0.99
+gae_lambda: 0.95
+clip_coef: 0.2
+ent_coef: 0.01
+vf_coef: 1.0
+max_grad_norm: 10.0
+
+# Model Architecture
+actor_hidden_sizes: [256, 128]
+critic_hidden_sizes: [256, 128]
+activation: relu
+
+# Logging & Checkpoints
+log_interval: 10
+checkpoint_interval: 50
+checkpoint_dir: MAPPO/checkpoints
+save_best: true
+# Python logger
+log_level: INFO
+log_to_file: true
+log_file: MAPPO/logs/mappo.log
+log_to_console: true
+
+# Inference/Demo
+inference_model_path: MAPPO/checkpoints/best.pt
+episodes: 5
+
+# Misc
+device: auto  # 'cpu', 'cuda', or 'auto'

@@ -33,6 +33,7 @@ RL-from-zero is a collection of reinforcement learning agents implemented from s
 | `Nash-QL/` | Nash Q-learning (multi-agent game theory) | Discrete | `LineWorld` (custom 2-agent grid) |
 | `deepQN/` | Deep Q-Network (with Double DQN option) | Discrete | `CartPole-v1` |
 | `PPO/` | Proximal Policy Optimization | Discrete | `CartPole-v1` |
+| `MAPPO/` | Multi-Agent PPO (centralized critic) | Discrete | `MultiWalker-v9` (PettingZoo) |
 | `A3C/` | Asynchronous Advantage Actor-Critic | Discrete | `CartPole-v1` |
 | `SAC/` | Soft Actor-Critic | Continuous | `Pendulum-v1` |
 | `DDPG/` | Deep Deterministic Policy Gradient | Continuous | `Pendulum-v1` |
@@ -89,6 +90,13 @@ python -m Independent-QL.main demo --config Independent-QL/configs/line_world.ya
 # Multi-agent Nash Q-learning (game-theoretic)
 python -m Nash-QL.main train --config Nash-QL/configs/line_world.yaml
 python -m Nash-QL.main demo --config Nash-QL/configs/line_world.yaml --model_path Nash-QL/checkpoints/best.pt
+```
+
+### Multi-agent deep RL examples
+```bash
+# MAPPO on MultiWalker (PettingZoo)
+python -m MAPPO.main train --config MAPPO/configs/multiwalker.yaml
+python -m MAPPO.main demo --config MAPPO/configs/multiwalker.yaml --model_path MAPPO/checkpoints/best.pt
 ```
 
 ### Discrete deep RL examples
@@ -148,6 +156,7 @@ python -m unittest tests.deepqn.test_replay_buffer
 RL-from-zero/
 |-- A3C/            # Async advantage actor-critic implementation
 |-- PPO/            # Proximal policy optimization agent
+|-- MAPPO/          # Multi-agent PPO (centralized training, decentralized execution)
 |-- Qlearning/      # Tabular Q-learning agent
 |-- Independent-QL/ # Multi-agent Independent Q-learning
 |-- Nash-QL/        # Multi-agent Nash Q-learning (game theory)
