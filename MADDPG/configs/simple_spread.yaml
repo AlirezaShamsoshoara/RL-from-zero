@@ -1,0 +1,49 @@
+# MADDPG Configuration for Simple Spread Environment
+
+# WandB
+project: "rl-practice"
+entity: null
+run_name: "maddpg-simple-spread"
+wandb_key: ""
+
+# Environment
+env_id: "simple_spread_v3"
+render_mode: null
+seed: 42
+n_agents: 3
+max_cycles: 25
+
+# Training
+total_steps: 1000000
+start_steps: 25000        # Random exploration steps before training
+batch_size: 1024
+buffer_size: 1000000
+updates_per_step: 1
+gamma: 0.95               # Discount factor
+tau: 0.01                 # Soft update coefficient for target networks
+actor_lr: 0.01            # Actor learning rate
+critic_lr: 0.01           # Critic learning rate
+exploration_noise: 0.1    # Gaussian noise std for exploration
+target_policy_noise: 0.2  # Noise std for target policy smoothing
+target_noise_clip: 0.5    # Noise clipping range for target policy
+
+# Model
+hidden_sizes: [64, 64]
+activation: "relu"
+
+# Logging & Checkpoints
+log_interval: 5000
+checkpoint_interval: 50000
+checkpoint_dir: "MADDPG/checkpoints"
+save_best: true
+log_level: "INFO"
+log_to_file: false
+log_file: "MADDPG/logs/maddpg.log"
+log_to_console: true
+
+# Inference
+inference_model_path: "MADDPG/checkpoints/best.pt"
+episodes: 5
+
+# Misc
+device: "auto"
