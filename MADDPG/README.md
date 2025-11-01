@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/maddpg_logo.svg" width="640" alt="Multi-Agent Deep Deterministic Policy Gradient Logo" />
+</p>
+
 # Multi-Agent Deep Deterministic Policy Gradient (MADDPG)
 
 MADDPG is a multi-agent reinforcement learning algorithm that extends DDPG to cooperative and competitive multi-agent environments. It uses centralized training with decentralized execution (CTDE).

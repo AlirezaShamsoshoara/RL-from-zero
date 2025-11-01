@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="200" viewBox="0 0 640 200">
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bg" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#0a1628"/>
+      <stop offset="100%" stop-color="#1a2f4a"/>
+    </linearGradient>
+
+    <!-- Accent gradient (teal to cyan for DDPG aspect) -->
+    <linearGradient id="accent" x1="0%" x2="100%" y1="50%" y2="50%">
+      <stop offset="0%" stop-color="#14b8a6"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+
+    <!-- Multi-agent gradient (purple to pink) -->
+    <linearGradient id="multiagent" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="50%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+
+    <!-- Glow effect for central critic -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Arrow marker -->
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#06b6d4" opacity="0.8"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect x="0" y="0" width="640" height="200" rx="24" fill="url(#bg)"/>
+
+  <!-- Left side: Multi-agent architecture visualization -->
+  <g transform="translate(380, 30)">
+    <!-- Central Critic (larger, glowing) -->
+    <circle cx="100" cy="70" r="22" fill="#8b5cf6" opacity="0.2" filter="url(#glow)"/>
+    <circle cx="100" cy="70" r="16" fill="url(#multiagent)" opacity="0.9"/>
+    <text x="100" y="76" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">C</text>
+
+    <!-- Agent 1 (top) -->
+    <circle cx="60" cy="30" r="14" fill="#14b8a6" opacity="0.9"/>
+    <text x="60" y="36" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle">A₁</text>
+
+    <!-- Agent 2 (bottom-left) -->
+    <circle cx="50" cy="100" r="14" fill="#06b6d4" opacity="0.9"/>
+    <text x="50" y="106" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle">A₂</text>
+
+    <!-- Agent 3 (bottom-right) -->
+    <circle cx="150" cy="100" r="14" fill="#0ea5e9" opacity="0.9"/>
+    <text x="150" y="106" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle">A₃</text>
+
+    <!-- Observation inputs (small boxes) -->
+    <rect x="48" y="10" width="24" height="6" rx="2" fill="#1e293b" stroke="#14b8a6" stroke-width="1" opacity="0.6"/>
+    <rect x="38" y="116" width="24" height="6" rx="2" fill="#1e293b" stroke="#06b6d4" stroke-width="1" opacity="0.6"/>
+    <rect x="138" y="116" width="24" height="6" rx="2" fill="#1e293b" stroke="#0ea5e9" stroke-width="1" opacity="0.6"/>
+
+    <!-- Connection lines from agents to critic (centralized training) -->
+    <line x1="72" y1="36" x2="88" y2="58" stroke="#a78bfa" stroke-width="2" opacity="0.5"/>
+    <line x1="62" y1="96" x2="86" y2="78" stroke="#a78bfa" stroke-width="2" opacity="0.5"/>
+    <line x1="138" y1="96" x2="114" y2="78" stroke="#a78bfa" stroke-width="2" opacity="0.5"/>
+
+    <!-- Action outputs (arrows showing continuous actions) -->
+    <path d="M 74 30 L 88 30" stroke="#14b8a6" stroke-width="2.5" marker-end="url(#arrow)" opacity="0.8"/>
+    <path d="M 64 100 L 78 100" stroke="#06b6d4" stroke-width="2.5" marker-end="url(#arrow)" opacity="0.8"/>
+    <path d="M 164 100 L 178 100" stroke="#0ea5e9" stroke-width="2.5" marker-end="url(#arrow)" opacity="0.8"/>
+
+    <!-- Continuous action space indicators (wavy lines) -->
+    <path d="M 90 28 Q 95 26, 100 28 Q 105 30, 110 28" stroke="#14b8a6" stroke-width="1.5" fill="none" opacity="0.4"/>
+    <path d="M 80 98 Q 85 96, 90 98 Q 95 100, 100 98" stroke="#06b6d4" stroke-width="1.5" fill="none" opacity="0.4"/>
+    <path d="M 180 98 Q 185 96, 190 98 Q 195 100, 200 98" stroke="#0ea5e9" stroke-width="1.5" fill="none" opacity="0.4"/>
+  </g>
+
+  <!-- Title and subtitle -->
+  <g transform="translate(48, 50)">
+    <!-- Main title -->
+    <text x="0" y="60" font-family="Segoe UI, Arial, sans-serif" font-size="84" font-weight="700" fill="#e6f5ff">
+      MADDPG
+    </text>
+
+    <!-- Accent line under title -->
+    <rect x="4" y="88" width="280" height="6" rx="3" fill="url(#accent)"/>
+
+    <!-- Subtitle -->
+    <text x="0" y="118" font-family="Segoe UI, Arial, sans-serif" font-size="20" fill="#c0d7e6">
+      Multi-Agent Deep Deterministic
+    </text>
+    <text x="0" y="144" font-family="Segoe UI, Arial, sans-serif" font-size="20" fill="#c0d7e6">
+      Policy Gradient
+    </text>
+  </g>
+
+  <!-- Feature badges -->
+  <g transform="translate(370, 165)">
+    <!-- Badge 1: Centralized Training -->
+    <rect x="0" y="0" width="120" height="18" rx="9" fill="#1e293b" stroke="#8b5cf6" stroke-width="1.5" opacity="0.8"/>
+    <text x="60" y="13" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#a78bfa" text-anchor="middle" font-weight="600">
+      Centralized Training
+    </text>
+
+    <!-- Badge 2: Continuous Actions -->
+    <rect x="130" y="0" width="110" height="18" rx="9" fill="#1e293b" stroke="#06b6d4" stroke-width="1.5" opacity="0.8"/>
+    <text x="185" y="13" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#06b6d4" text-anchor="middle" font-weight="600">
+      Continuous Actions
+    </text>
+  </g>
+</svg>
