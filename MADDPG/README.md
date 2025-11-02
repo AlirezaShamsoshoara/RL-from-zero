@@ -134,27 +134,28 @@ MADDPG/
 MADDPG update equations:
 
 **Critic Loss:**
-```
-L = E[(Q_i(o, a) - y)^2]
-where y = r_i + γ * Q'_i(o', μ'(o'))
-```
+
+$$L = E[(Q_i(o, a) - y)^2]$$
+where
+$$y = r_i + \gamma * Q'_i(o', \mu'(o'))$$
+
 
 **Actor Loss:**
-```
-∇_θ J = E[∇_θ μ_i(o_i) * ∇_a Q_i(o, a₁, ..., μ_i(o_i), ..., a_N)]
-```
+
+$$\nabla_\theta J = E[\nabla_\theta \mu_i(o_i) * \nabla_a Q_i(o, a_1, ..., \mu_i(o_i), ..., a_N)]$$
+
 
 **Target Update:**
-```
-θ' ← τθ + (1-τ)θ'
-```
+
+$$\theta ' ← \tau \theta + (1-\tau)\theta'$$
+
 
 Where:
-- `Q_i`: Critic for agent i
-- `μ_i`: Actor (policy) for agent i
-- `o`: All agents' observations
-- `a`: All agents' actions
-- `τ`: Soft update coefficient
+- $Q_i$: Critic for agent i
+- $\mu_i$: Actor (policy) for agent i
+- $o$: All agents' observations
+- $a$: All agents' actions
+- $\tau$: Soft update coefficient
 
 ## References
 
