@@ -37,6 +37,7 @@ RL-from-zero is a collection of reinforcement learning agents implemented from s
 | `A3C/` | Asynchronous Advantage Actor-Critic | Discrete | `CartPole-v1` |
 | `SAC/` | Soft Actor-Critic | Continuous | `Pendulum-v1` |
 | `DDPG/` | Deep Deterministic Policy Gradient | Continuous | `Pendulum-v1` |
+| `MADDPG/` | Multi-Agent DDPG (centralized training) | Continuous | `simple_spread_v3` (PettingZoo MPE) |
 | `TD3/` | Twin Delayed DDPG | Continuous | `Pendulum-v1` |
 | `TRPO/` | Trust Region Policy Optimization | Continuous | `Pendulum-v1` |
 | `IQL/` | Implicit Q-Learning (offline) | Continuous | `Pendulum-v1` (random offline dataset) |
@@ -97,6 +98,10 @@ python -m Nash-QL.main demo --config Nash-QL/configs/line_world.yaml --model_pat
 # MAPPO on MultiWalker (PettingZoo)
 python -m MAPPO.main train --config MAPPO/configs/multiwalker.yaml
 python -m MAPPO.main demo --config MAPPO/configs/multiwalker.yaml --model_path MAPPO/checkpoints/best.pt
+
+# MADDPG on Simple Spread (PettingZoo MPE)
+python -m MADDPG.main train --config MADDPG/configs/simple_spread.yaml
+python -m MADDPG.main demo --config MADDPG/configs/simple_spread.yaml --model_path MADDPG/checkpoints/best.pt
 ```
 
 ### Discrete deep RL examples
@@ -163,6 +168,7 @@ RL-from-zero/
 |-- deepQN/         # Deep Q-Network agent
 |-- SAC/            # Soft Actor-Critic agent
 |-- DDPG/           # Deep Deterministic Policy Gradient agent
+|-- MADDPG/         # Multi-Agent DDPG (centralized training, decentralized execution)
 |-- TD3/            # Twin Delayed DDPG agent
 |-- TRPO/           # Trust Region Policy Optimization agent
 |-- IQL/            # Implicit Q-Learning (offline) agent
