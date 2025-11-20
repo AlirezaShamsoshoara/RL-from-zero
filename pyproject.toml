@@ -1,11 +1,11 @@
 [project]
-name = "rl-practice"
+name = "rl-from-zero"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies = [
-    "gym[classic_control,toy-text]>=0.26.2",
+    "gymnasium[classic-control,toy-text]>=0.29.1",
     "numpy>=1.24.4",
     "tqdm>=4.67.0",
     "torch>=2.3.0",
@@ -14,5 +14,5 @@ dependencies = [
     "wandb>=0.17.0",
     "pygame>=2.5.2",
     "scipy>=1.10.0",
-    "pettingzoo[mpe]>=1.24.0",
+    "pettingzoo[mpe]>=1.24.4",
 ]
