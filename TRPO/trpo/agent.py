@@ -4,7 +4,7 @@ from typing import Dict, Iterable, Optional, Tuple
 import numpy as np
 import torch
 import torch.nn as nn
-from gym import spaces
+from gymnasium import spaces
 from .networks import GaussianPolicy, ValueNetwork
 
 

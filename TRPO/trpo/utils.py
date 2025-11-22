@@ -2,7 +2,7 @@ from __future__ import annotations
 import os
 import random
 from typing import Any, Callable, Dict, Optional
-import gym
+import gymnasium as gym
 import numpy as np
 import torch
 
