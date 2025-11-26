@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.optim import Adam
-from gym import spaces
+from gymnasium import spaces
 from SAC.sac.networks import GaussianPolicy, QNetwork
 
 
