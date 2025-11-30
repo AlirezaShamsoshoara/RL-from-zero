@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional, Tuple
 import logging
 import numpy as np
 import torch
-import gym
+import gymnasium as gym
 
 
 @dataclass
