@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 import wandb
-from gym import spaces
+from gymnasium import spaces
 
 from IQL.iql.config import Config
 from IQL.iql.utils import (
