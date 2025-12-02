@@ -32,7 +32,7 @@ python Independent-QL/main.py demo --config Independent-QL/configs/line_world.ya
 - Checkpoints store the full stack of agent Q-tables as a tensor for easy inspection or warm-starting.
 
 ## Notes
-- Implementation relies only on the repos existing dependencies (`gym`, `numpy`, `torch`, `tqdm`, `wandb`)—no extra packages required.
+- Implementation relies only on the repos existing dependencies (`gymnasium`, `numpy`, `torch`, `tqdm`, `wandb`)—no extra packages required.
 - Episodes terminate when every agent reaches its respective goal or the step budget is exhausted.
 - For more complex scenarios, implement a new environment under `independent_ql/envs/` and reference it via `env_id` in the config.
 
