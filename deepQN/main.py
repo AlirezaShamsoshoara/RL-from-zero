@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 import wandb
-from gym import spaces
+from gymnasium import spaces
 
 from deepQN.dqn.config import Config
 from deepQN.dqn.utils import set_seed, make_env, save_checkpoint, load_checkpoint
