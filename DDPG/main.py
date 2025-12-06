@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 import wandb
-from gym import spaces
+from gymnasium import spaces
 
 from DDPG.ddpg.config import Config
 from DDPG.ddpg.utils import set_seed, make_env, save_checkpoint, load_checkpoint
