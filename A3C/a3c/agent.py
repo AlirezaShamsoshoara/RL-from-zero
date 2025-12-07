@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.nn.utils import clip_grad_norm_
-from gym import spaces
+from gymnasium import spaces
 from .networks import ActorCritic
 from .utils import SharedAdam
 
