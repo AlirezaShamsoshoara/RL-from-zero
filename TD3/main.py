@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 import wandb
-from gym import spaces
+from gymnasium import spaces
 
 from TD3.td3.config import Config
 from TD3.td3.utils import set_seed, make_env, save_checkpoint, load_checkpoint

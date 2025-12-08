@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 import wandb
-from gym import spaces
+from gymnasium import spaces
 
 from TRPO.trpo.config import Config
 from TRPO.trpo.utils import (

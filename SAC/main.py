@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 import wandb
-from gym import spaces
+from gymnasium import spaces
 
 from SAC.sac.config import Config
 from SAC.sac.utils import set_seed, make_env, save_checkpoint, load_checkpoint

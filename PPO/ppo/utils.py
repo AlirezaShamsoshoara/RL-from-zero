@@ -4,7 +4,7 @@ import random
 from typing import Callable, Optional
 import numpy as np
 import torch
-import gym
+import gymnasium as gym
 
 
 def set_seed(seed: int):

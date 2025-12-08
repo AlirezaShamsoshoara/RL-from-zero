@@ -26,7 +26,7 @@ python -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/chec
 
 ## Configuration
 Hyper-parameters live in YAML files under `SAC/configs/`. The default file exposes:
-- **Environment**: id, render mode, and optional kwargs passed to `gym.make`.
+- **Environment**: id, render mode, and optional kwargs passed to `gymnasium.make`.
 - **Training**: total interaction steps, warmup steps, batch size, buffer size, Polyak coefficient `tau`, learning rates, and entropy target scaling.
 - **Model**: hidden layer sizes and activation function shared by actor and critics.
 - **Logging**: intervals, checkpointing behaviour, and logger destinations.

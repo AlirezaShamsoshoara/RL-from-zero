@@ -7,8 +7,8 @@ import numpy as np
 import torch
 import torch.multiprocessing as mp
 import wandb
-import gym
-from gym import spaces
+import gymnasium as gym
+from gymnasium import spaces
 
 from A3C.a3c.config import Config
 from A3C.a3c.agent import A3CAgent
