@@ -5,11 +5,13 @@ run_name: qlearning-frozenlake
 seed: 42
 
 # Environment
+# env_id options: FrozenLake-v1 (default), Taxi-v3, CliffWalking-v0, custom gymnasium discrete env id
 env_id: FrozenLake-v1
+# render_mode options: null (no render), human (window; needs display), ansi (prints frames to terminal)
 render_mode: null  # no window; uses terminal
 env_kwargs:
-  is_slippery: false
-  map_name: "8x8"
+  is_slippery: false  # can be true for stochastic transitions
+  map_name: "8x8"    # "4x4", "8x8", or custom map via "desc"
 
 # Training
 total_episodes: 5000
@@ -25,7 +27,7 @@ log_interval: 50
 checkpoint_interval: 250
 checkpoint_dir: Qlearning/checkpoints
 save_best: true
-log_level: INFO
+log_level: INFO  # DEBUG, INFO, WARNING, ERROR
 log_to_file: true
 log_file: Qlearning/logs/qlearning.log
 log_to_console: true
@@ -35,5 +37,4 @@ inference_model_path: Qlearning/checkpoints/best.pt
 episodes: 5
 
 # Misc
-device: auto
-
+device: auto  # auto, cpu, or cuda
