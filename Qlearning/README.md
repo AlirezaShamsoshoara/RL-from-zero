@@ -11,6 +11,25 @@
 ## What is Q-learning?
 - Q-learning is a model-free, off-policy, value-based RL algorithm that learns an action-value (Q) function for discrete state and action spaces via temporal-difference updates and an epsilon-greedy behavior policy.
 
+## Mathematics (Q-learning & Temporal Difference)
+- Bellman optimality:
+  $$
+  Q^*(s, a) = \mathbb{E}\left[r + \gamma \max_{a'} Q^*(s', a')\right]
+  $$
+- One-step TD target:
+  $$
+  y_t = r_t + \gamma \max_{a'} Q(s_{t+1}, a')
+  $$
+- TD error:
+  $$
+  \delta_t = y_t - Q_t(s_t, a_t)
+  $$
+- Update rule:
+  $$
+  Q_{t+1}(s_t, a_t) = Q_t(s_t, a_t) + \alpha \, \delta_t
+  $$
+- Epsilon-greedy behavior: take \(\arg\max_a Q(s, a)\) with probability \(1 - \varepsilon\); otherwise sample a random action.
+
 This template mirrors the PPO structure and includes:
 - Clean Config class backed by a YAML file in `Qlearning/configs/`
 - Fire CLI with two commands: `train` and `demo`
