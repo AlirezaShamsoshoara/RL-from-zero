@@ -16,7 +16,7 @@
 **Bellman optimality:**
 
 $$
-Q^{*}(s, a) = \mathbb{E}\left[r + \gamma \max_{a'} Q^{*}(s', a')\right]
+Q^{*}(s, a) = \mathbb{E}[r + \gamma \max_{a'} Q^{*}(s', a')]
 $$
 
 **One-step TD target:**
