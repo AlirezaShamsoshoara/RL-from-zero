@@ -4,6 +4,10 @@
 
 # Q-learning quickstart
 
+<p align="center">
+  <video src="assets/qlearning_frozenlake_8x8.mp4" width="420" autoplay loop muted controls></video>
+</p>
+
 ## What is Q-learning?
 - Q-learning is a model-free, off-policy, value-based RL algorithm that learns an action-value (Q) function for discrete state and action spaces via temporal-difference updates and an epsilon-greedy behavior policy.
 

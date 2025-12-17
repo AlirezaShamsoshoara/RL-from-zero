@@ -9,7 +9,7 @@ env_id: FrozenLake-v1
 render_mode: null  # no window; uses terminal
 env_kwargs:
   is_slippery: false
-  map_name: "4x4"
+  map_name: "8x8"
 
 # Training
 total_episodes: 5000
