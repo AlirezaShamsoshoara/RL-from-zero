@@ -1,5 +1,5 @@
 # Q-learning Config for FrozenLake-v1
-project: rl-practice
+project: rl-hero
 entity: null
 run_name: qlearning-frozenlake
 seed: 42
