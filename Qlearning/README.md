@@ -18,6 +18,7 @@ This template mirrors the PPO structure and includes:
 ```bash
 python -m Qlearning.main train --config Qlearning/configs/frozenlake.yaml
 python -m Qlearning.main demo --config Qlearning/configs/frozenlake.yaml --model_path Qlearning/checkpoints/best.pt
+# add --render True to visualize the demo in human render mode
 ```
 
 ## Default environment
@@ -48,6 +49,7 @@ Notes
 - If `WANDB_API_KEY` is set, training will use it automatically; otherwise existing auth behavior is unchanged.
 - Only discrete observation and action spaces are supported.
 - You can edit hyperparameters in `Qlearning/configs/frozenlake.yaml`.
+- On headless setups (e.g., WSL without a display), set `render_mode: ansi` in the config and skip `--render True` to print the demo frames to the terminal.
 
 
 # References, useful links, and Papers:
