@@ -45,6 +45,7 @@ python -m Qlearning.main demo --config Qlearning/configs/frozenlake.yaml --model
    `uv run -m Qlearning.main demo --config Qlearning/configs/frozenlake.yaml --model_path Qlearning/checkpoints/best.pt --episodes 5`
 
 Notes
+- If `WANDB_API_KEY` is set, training will use it automatically; otherwise existing auth behavior is unchanged.
 - Only discrete observation and action spaces are supported.
 - You can edit hyperparameters in `Qlearning/configs/frozenlake.yaml`.
 

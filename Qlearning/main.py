@@ -12,9 +12,24 @@ from Qlearning.ql.logging_utils import setup_logger
 
 
 def train(config: str = "Qlearning/configs/frozenlake.yaml", wandb_key: str = ""):
+    """
+    Train a tabular Q-learning agent and log metrics to Weights & Biases.
+
+    Args:
+        config: Path to the YAML config file with hyperparameters and logging options.
+        wandb_key: Optional WandB API key; if omitted, `WANDB_API_KEY` env var is used.
+
+    Example:
+        >>> python -m Qlearning.main train --config Qlearning/configs/frozenlake.yaml
+    """
+
     cfg = Config.from_yaml(config)
+    env_wandb_key = os.getenv("WANDB_API_KEY", "")
     if wandb_key:
         cfg.wandb_key = wandb_key
+    elif env_wandb_key:
+        cfg.wandb_key = env_wandb_key
+
     logger = setup_logger(
         name="qlearning",
         level=cfg.log_level,
@@ -116,6 +131,17 @@ def demo(
     model_path: Optional[str] = None,
     episodes: Optional[int] = None,
 ):
+    """
+    Run a greedy-policy demo using a saved Q-table checkpoint.
+
+    Args:
+        config: Path to the YAML config file for environment and logging.
+        model_path: Optional checkpoint to load; defaults to the config value.
+        episodes: Optional override for number of demo episodes; defaults to config.
+
+    Example:
+        >>> python -m Qlearning.main demo --config Qlearning/configs/frozenlake.yaml --model_path Qlearning/checkpoints/best.pt
+    """
     cfg = Config.from_yaml(config)
     logger = setup_logger(
         name="qlearning",
@@ -175,4 +201,3 @@ if __name__ == "__main__":
             "demo": demo,
         }
     )
-
