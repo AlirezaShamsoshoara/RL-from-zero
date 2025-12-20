@@ -23,16 +23,26 @@ python -m Qlearning.main demo --config Qlearning/configs/frozenlake.yaml --model
 ## Default environment
 - Uses `FrozenLake-v1` (toy-text) with `is_slippery: false` for a deterministic grid. Both observations and actions are discrete, ideal for tabular Q-learning.
 
-## Setup with uv (Windows cmd):
-1) Create venv and install deps
-   uv venv .venv
-   uv sync
+## Setup with uv
+### Linux/macOS (bash or zsh)
+1) Create venv and install deps  
+   `uv venv .venv && source .venv/bin/activate && uv sync`
 
-2) Train Q-learning on FrozenLake
-   uv run -m Qlearning.main train --config Qlearning/configs/frozenlake.yaml
+2) Train Q-learning on FrozenLake  
+   `uv run -m Qlearning.main train --config Qlearning/configs/frozenlake.yaml`
 
-3) Demo a trained agent (renders in terminal)
-   uv run -m Qlearning.main demo --config Qlearning/configs/frozenlake.yaml --model_path Qlearning/checkpoints/best.pt --episodes 5
+3) Demo a trained agent (renders in terminal)  
+   `uv run -m Qlearning.main demo --config Qlearning/configs/frozenlake.yaml --model_path Qlearning/checkpoints/best.pt --episodes 5`
+
+### Windows (cmd)
+1) Create venv and install deps  
+   `uv venv .venv && .\.venv\Scripts\activate && uv sync`
+
+2) Train Q-learning on FrozenLake  
+   `uv run -m Qlearning.main train --config Qlearning/configs/frozenlake.yaml`
+
+3) Demo a trained agent (renders in terminal)  
+   `uv run -m Qlearning.main demo --config Qlearning/configs/frozenlake.yaml --model_path Qlearning/checkpoints/best.pt --episodes 5`
 
 Notes
 - Only discrete observation and action spaces are supported.
