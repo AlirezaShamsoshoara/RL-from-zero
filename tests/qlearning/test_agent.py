@@ -3,6 +3,8 @@ import numpy as np
 
 from Qlearning.ql.agent import QLearningAgent, Transition
 
+# To run: `python -m pytest tests/qlearning/test_agent.py`
+
 
 class TestQLearningAgent(unittest.TestCase):
     def test_epsilon_decay_respects_bounds(self) -> None:
