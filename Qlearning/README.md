@@ -5,7 +5,7 @@
 # Q-learning quickstart
 
 <p align="center">
-  <video src="assets/qlearning_frozenlake_8x8.mp4" width="420" autoplay loop muted controls></video>
+  <img src="assets/qlearning_frozenlake_8x8.gif" width="420">
 </p>
 
 ## What is Q-learning?
