@@ -78,3 +78,7 @@ dmypy.json
 
 # Custom ignores (add project-specific files here)
 .claude/
+
+# ignore wandb files
+.wandb/
+wandb/*

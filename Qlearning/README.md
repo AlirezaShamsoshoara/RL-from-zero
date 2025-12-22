@@ -4,8 +4,31 @@
 
 # Q-learning quickstart
 
+<p align="center">
+  <video src="assets/qlearning_frozenlake_8x8.mp4" width="420" autoplay loop muted controls></video>
+</p>
+
 ## What is Q-learning?
 - Q-learning is a model-free, off-policy, value-based RL algorithm that learns an action-value (Q) function for discrete state and action spaces via temporal-difference updates and an epsilon-greedy behavior policy.
+
+## Mathematics (Q-learning & Temporal Difference)
+- Bellman optimality:
+  $$
+  Q^*(s, a) = \mathbb{E}\left[r + \gamma \max_{a'} Q^*(s', a')\right]
+  $$
+- One-step TD target:
+  $$
+  y_t = r_t + \gamma \max_{a'} Q(s_{t+1}, a')
+  $$
+- TD error:
+  $$
+  \delta_t = y_t - Q_t(s_t, a_t)
+  $$
+- Update rule:
+  $$
+  Q_{t+1}(s_t, a_t) = Q_t(s_t, a_t) + \alpha \, \delta_t
+  $$
+- Epsilon-greedy behavior: take \(\arg\max_a Q(s, a)\) with probability \(1 - \varepsilon\); otherwise sample a random action.
 
 This template mirrors the PPO structure and includes:
 - Clean Config class backed by a YAML file in `Qlearning/configs/`
@@ -18,25 +41,38 @@ This template mirrors the PPO structure and includes:
 ```bash
 python -m Qlearning.main train --config Qlearning/configs/frozenlake.yaml
 python -m Qlearning.main demo --config Qlearning/configs/frozenlake.yaml --model_path Qlearning/checkpoints/best.pt
+# add --render True to visualize the demo in human render mode
 ```
 
 ## Default environment
 - Uses `FrozenLake-v1` (toy-text) with `is_slippery: false` for a deterministic grid. Both observations and actions are discrete, ideal for tabular Q-learning.
 
-## Setup with uv (Windows cmd):
-1) Create venv and install deps
-   uv venv .venv
-   uv sync
+## Setup with uv
+### Linux/macOS (bash or zsh)
+1) Create venv and install deps  
+   `uv venv .venv && source .venv/bin/activate && uv sync`
 
-2) Train Q-learning on FrozenLake
-   uv run -m Qlearning.main train --config Qlearning/configs/frozenlake.yaml
+2) Train Q-learning on FrozenLake  
+   `uv run -m Qlearning.main train --config Qlearning/configs/frozenlake.yaml`
 
-3) Demo a trained agent (renders in terminal)
-   uv run -m Qlearning.main demo --config Qlearning/configs/frozenlake.yaml --model_path Qlearning/checkpoints/best.pt --episodes 5
+3) Demo a trained agent (renders in terminal)  
+   `uv run -m Qlearning.main demo --config Qlearning/configs/frozenlake.yaml --model_path Qlearning/checkpoints/best.pt --episodes 5`
+
+### Windows (cmd)
+1) Create venv and install deps  
+   `uv venv .venv && .\.venv\Scripts\activate && uv sync`
+
+2) Train Q-learning on FrozenLake  
+   `uv run -m Qlearning.main train --config Qlearning/configs/frozenlake.yaml`
+
+3) Demo a trained agent (renders in terminal)  
+   `uv run -m Qlearning.main demo --config Qlearning/configs/frozenlake.yaml --model_path Qlearning/checkpoints/best.pt --episodes 5`
 
 Notes
+- If `WANDB_API_KEY` is set, training will use it automatically; otherwise existing auth behavior is unchanged.
 - Only discrete observation and action spaces are supported.
 - You can edit hyperparameters in `Qlearning/configs/frozenlake.yaml`.
+- On headless setups (e.g., WSL without a display), set `render_mode: ansi` in the config and skip `--render True` to print the demo frames to the terminal.
 
 
 # References, useful links, and Papers:

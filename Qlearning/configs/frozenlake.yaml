@@ -1,5 +1,5 @@
 # Q-learning Config for FrozenLake-v1
-project: rl-practice
+project: rl-hero
 entity: null
 run_name: qlearning-frozenlake
 seed: 42
@@ -9,7 +9,7 @@ env_id: FrozenLake-v1
 render_mode: null  # no window; uses terminal
 env_kwargs:
   is_slippery: false
-  map_name: "4x4"
+  map_name: "8x8"
 
 # Training
 total_episodes: 5000

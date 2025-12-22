@@ -12,9 +12,25 @@ from Qlearning.ql.logging_utils import setup_logger
 
 
 def train(config: str = "Qlearning/configs/frozenlake.yaml", wandb_key: str = ""):
+    """
+    Train a tabular Q-learning agent and log metrics to Weights & Biases.
+
+    Args:
+        config: Path to the YAML config file with hyperparameters and logging options.
+        wandb_key: Optional WandB API key; if omitted, `WANDB_API_KEY` env var is used.
+
+    Example:
+        python -m Qlearning.main train \
+            --config Qlearning/configs/frozenlake.yaml
+    """
+
     cfg = Config.from_yaml(config)
+    env_wandb_key = os.getenv("WANDB_API_KEY", "")
     if wandb_key:
         cfg.wandb_key = wandb_key
+    elif env_wandb_key:
+        cfg.wandb_key = env_wandb_key
+
     logger = setup_logger(
         name="qlearning",
         level=cfg.log_level,
@@ -25,10 +41,9 @@ def train(config: str = "Qlearning/configs/frozenlake.yaml", wandb_key: str = ""
     set_seed(cfg.seed)
 
     if getattr(cfg, "wandb_key", ""):
-        import wandb as _wandb
-        _wandb.login(key=cfg.wandb_key)
+        wandb.login(key=cfg.wandb_key)
 
-    logger.info(f"Initializing wandb run={cfg.run_name}")
+    logger.info("Initializing wandb run=%s", cfg.run_name)
     run = wandb.init(
         project=cfg.project, entity=cfg.entity, name=cfg.run_name, config=cfg.to_dict()
     )
@@ -41,7 +56,7 @@ def train(config: str = "Qlearning/configs/frozenlake.yaml", wandb_key: str = ""
     assert hasattr(act_space, "n"), "Q-learning requires discrete action spaces"
     n_states, n_actions = int(obs_space.n), int(act_space.n)
     logger.info(
-        f"Env={cfg.env_id} | n_states={n_states} | n_actions={n_actions}"
+        "Env=%s | n_states=%s | n_actions=%s", cfg.env_id, n_states, n_actions
     )
 
     agent = QLearningAgent(
@@ -92,7 +107,7 @@ def train(config: str = "Qlearning/configs/frozenlake.yaml", wandb_key: str = ""
         if (ep + 1) % cfg.checkpoint_interval == 0:
             path = os.path.join(cfg.checkpoint_dir, f"checkpoint_ep{ep+1}.pt")
             save_checkpoint(path, agent.Q, ep + 1, best_avg_return)
-            logger.info(f"Saved checkpoint: {path}")
+            logger.info("Saved checkpoint: %s", path)
 
         # Save best based on moving average over last 100 episodes
         if len(ep_returns) >= 10:
@@ -102,12 +117,12 @@ def train(config: str = "Qlearning/configs/frozenlake.yaml", wandb_key: str = ""
                 best_path = os.path.join(cfg.checkpoint_dir, "best.pt")
                 save_checkpoint(best_path, agent.Q, ep + 1, best_avg_return)
                 logger.info(
-                    f"New best avg return {best_avg_return:.2f}; saved {best_path}"
+                    "New best avg return %.2f; saved %s", best_avg_return, best_path
                 )
 
     run.finish()
     logger.info(
-        f"Training finished. Best 10-ep avg return: {best_avg_return:.2f}"
+        "Training finished. Best 10-ep avg return: %.2f", best_avg_return
     )
 
 
@@ -115,7 +130,23 @@ def demo(
     config: str = "Qlearning/configs/frozenlake.yaml",
     model_path: Optional[str] = None,
     episodes: Optional[int] = None,
+    render: bool = False,
 ):
+    """
+    Run a greedy-policy demo using a saved Q-table checkpoint.
+
+    Args:
+        config: Path to the YAML config file for environment and logging.
+        model_path: Optional checkpoint to load; defaults to the config value.
+        episodes: Optional override for number of demo episodes; defaults to config.
+        render: Whether to render the environment (human mode) during the demo.
+
+    Example:
+        python -m Qlearning.main demo \
+            --config Qlearning/configs/frozenlake.yaml \
+            --model_path Qlearning/checkpoints/best.pt \
+            --render True
+    """
     cfg = Config.from_yaml(config)
     logger = setup_logger(
         name="qlearning",
@@ -126,12 +157,15 @@ def demo(
     )
     model_path = model_path or cfg.inference_model_path
     episodes = episodes or cfg.episodes
+    render_mode = "human" if render or cfg.render_mode == "human" else (cfg.render_mode or None)
+    render_human = render_mode == "human"
+    render_ansi = render_mode == "ansi"
 
     set_seed(cfg.seed)
     env = make_env(
         cfg.env_id,
         cfg.seed,
-        render_mode=cfg.render_mode or None,
+        render_mode=render_mode,
         env_kwargs=cfg.env_kwargs,
     )
     obs_space = env.observation_space
@@ -142,12 +176,18 @@ def demo(
     data = load_checkpoint(model_path)
     q_table = data["q_table"].cpu().numpy() if isinstance(data["q_table"], torch.Tensor) else data["q_table"]
     assert q_table.shape == (n_states, n_actions)
-    logger.info(f"Loaded Q-table from {model_path}")
+    logger.info("Loaded Q-table from %s", model_path)
 
     returns = []
     for ep in range(episodes):
         state, _ = env.reset(seed=cfg.seed + ep)
         state = int(state)
+        if render_human:
+            env.render()
+        elif render_ansi:
+            frame = env.render()
+            if frame is not None:
+                print(frame)
         done = False
         ep_ret = 0.0
         steps = 0
@@ -156,14 +196,22 @@ def demo(
             q_vals = q_table[state]
             action = int(np.argmax(q_vals))
             next_state, reward, terminated, truncated, _ = env.step(action)
+            if render_human:
+                env.render()
+            elif render_ansi:
+                frame = env.render()
+                if frame is not None:
+                    print(frame)
             done = bool(terminated or truncated)
             state = int(next_state)
             ep_ret += float(reward)
             steps += 1
-        logger.info(f"Episode {ep+1}: return={ep_ret:.2f}")
+        logger.info("Episode %d: return=%.2f", ep + 1, ep_ret)
         returns.append(ep_ret)
 
-    logger.info(f"Average return over {episodes} episodes: {np.mean(returns):.2f}")
+    logger.info(
+        "Average return over %d episodes: %.2f", episodes, np.mean(returns)
+    )
 
 
 if __name__ == "__main__":
@@ -175,4 +223,3 @@ if __name__ == "__main__":
             "demo": demo,
         }
     )
-
