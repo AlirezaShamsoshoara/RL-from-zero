@@ -22,12 +22,12 @@ $$ L^{CLIP}(\theta)=\mathbb{E}_t[\min(r_t(\theta)\,\hat{A}_t,\;\text{clip}(r_t(\
 $$ r_t(\theta)=\frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{\text{old}}}(a_t|s_t)} $$
 
 Value function loss and entropy bonus:
-$$ L^{V}(\theta)=\mathbb{E}_t[(V_\theta(s_t)-\hat{R}_t)^2] $$
+$$ L^{V}(\theta)=\mathbb{E}_t[(V_\theta(s_t)-\hat{R}_t)^{2}] $$
 
 $$ L(\theta)=L^{CLIP}(\theta)-c_1 L^{V}(\theta)+c_2\,\mathbb{E}_t[\mathcal{H}(\pi_\theta(\cdot|s_t))] $$
 
 GAE (advantages):
-$$ \delta_t=r_t+\gamma V(s_{t+1})-V(s_t) $$
+$$ \delta_t=r_{t}+\gamma V(s_{t+1})-V(s_{t}) $$
 
 $$ \hat{A}_t=\sum_{l=0}^{T-t-1}(\gamma\lambda)^l\,\delta_{t+l} $$
 
