@@ -24,6 +24,7 @@ RL-from-zero is a collection of reinforcement learning agents implemented from s
 - Compare tabular, value-based, and policy-gradient methods side by side with a consistent project layout.
 - Provide a starting point for quick experiments: tweak a YAML file, run a single command, and inspect checkpoints, logs, and metrics.
 - Serve as a personal sandbox for extending agents, adding environments, and experimenting with new ideas.
+- All gifs demos in the Table below are based on the trained models in this project.
 
 ## Algorithms included
 | Folder | Algorithm | Action space | Default environment | Demo GIF |
