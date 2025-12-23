@@ -17,7 +17,7 @@ Key equations:
 
 Policy objective with clipping:
 
-$$ L^{CLIP}(\theta)=\mathbb{E}_t[\min(r_t(\theta)\,\hat{A}_t,\;\text{clip}(r_t(\theta),\,1-\epsilon,\,1+\epsilon)\,\hat{A}_t)] $$
+$$ L^{CLIP}(\theta)=\mathbb{E}_t\left[\min(r_t(\theta)\,\hat{A}_t,\;\text{clip}(r_t(\theta),\,1-\epsilon,\,1+\epsilon)\,\hat{A}_t)\right] $$
 
 $$ r_t(\theta)=\frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{\text{old}}}(a_t|s_t)} $$
 
