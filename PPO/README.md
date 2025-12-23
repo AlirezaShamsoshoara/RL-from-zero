@@ -27,9 +27,9 @@ $$ L^{V}(\theta)=\mathbb{E}_t[(V_\theta(s_t)-\hat{R}_t)^{2}] $$
 $$ L(\theta)=L^{CLIP}(\theta)-c_1 L^{V}(\theta)+c_2\,\mathbb{E}_t[\mathcal{H}(\pi_\theta(\cdot|s_t))] $$
 
 GAE (advantages):
-$$ \delta_t=r_{t}+\gamma V(s_{t+1})-V(s_{t}) $$
+$$ \delta_{t}=r_{t}+\gamma V(s_{t+1})-V(s_{t}) $$
 
-$$ \hat{A}_t=\sum_{l=0}^{T-t-1}(\gamma\lambda)^l\,\delta_{t+l} $$
+$$ \hat{A}_{t}=\sum_{l=0}^{T-t-1}(\gamma\lambda)^l\,\delta_{t+l} $$
 
 Where:
 - $\hat{A}_t$: advantage estimate at time $t$ (from GAE)
