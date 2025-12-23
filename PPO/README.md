@@ -23,9 +23,9 @@ $$ r_t(\theta)=\frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{\text{old}}}(a_t|s_t)} $$
 
 Value function loss and entropy bonus:
 
-$$ L^{V}(\theta)=\mathbb{E}_t[(V_\theta(s_t)-\hat{R}_t)^{2}] $$
+$$ L^{V}(\theta)=\mathbb{E}_t\left[(V_\theta(s_t)-\hat{R}_t)^{2}\right] $$
 
-$$ L(\theta)=L^{CLIP}(\theta)-c_1 L^{V}(\theta)+c_2\,\mathbb{E}_t[\mathcal{H}(\pi_\theta(\cdot|s_t))] $$
+$$ L(\theta)=L^{CLIP}(\theta)-c_1 L^{V}(\theta)+c_2\,\mathbb{E}_t\left[\mathcal{H}(\pi_\theta(\cdot|s_t))\right] $$
 
 GAE (advantages):
 
