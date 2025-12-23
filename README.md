@@ -26,21 +26,21 @@ RL-from-zero is a collection of reinforcement learning agents implemented from s
 - Serve as a personal sandbox for extending agents, adding environments, and experimenting with new ideas.
 
 ## Algorithms included
-| Folder | Algorithm | Action space | Default environment |
-| --- | --- | --- | --- |
-| `Qlearning/` | Tabular Q-learning | Discrete | `FrozenLake-v1` (deterministic) |
-| `Independent-QL/` | Independent Q-learning (multi-agent) | Discrete | `LineWorld` (custom 2-agent grid) |
-| `Nash-QL/` | Nash Q-learning (multi-agent game theory) | Discrete | `LineWorld` (custom 2-agent grid) |
-| `deepQN/` | Deep Q-Network (with Double DQN option) | Discrete | `CartPole-v1` |
-| `PPO/` | Proximal Policy Optimization | Discrete | `CartPole-v1` |
-| `MAPPO/` | Multi-Agent PPO (centralized critic) | Discrete | `MultiWalker-v9` (PettingZoo) |
-| `A3C/` | Asynchronous Advantage Actor-Critic | Discrete | `CartPole-v1` |
-| `SAC/` | Soft Actor-Critic | Continuous | `Pendulum-v1` |
-| `DDPG/` | Deep Deterministic Policy Gradient | Continuous | `Pendulum-v1` |
-| `MADDPG/` | Multi-Agent DDPG (centralized training) | Continuous | `simple_spread_v3` (PettingZoo MPE) |
-| `TD3/` | Twin Delayed DDPG | Continuous | `Pendulum-v1` |
-| `TRPO/` | Trust Region Policy Optimization | Continuous | `Pendulum-v1` |
-| `IQL/` | Implicit Q-Learning (offline) | Continuous | `Pendulum-v1` (random offline dataset) |
+| Folder | Algorithm | Action space | Default environment | Demo GIF |
+| --- | --- | --- | --- | --- |
+| `Qlearning/` | Tabular Q-learning | Discrete | `FrozenLake-v1` (deterministic) | <img src="Qlearning/assets/qlearning_frozenlake_8x8.gif" alt="Q-learning FrozenLake demo" width="160"> |
+| `Independent-QL/` | Independent Q-learning (multi-agent) | Discrete | `LineWorld` (custom 2-agent grid) | Coming soon |
+| `Nash-QL/` | Nash Q-learning (multi-agent game theory) | Discrete | `LineWorld` (custom 2-agent grid) | Coming soon |
+| `deepQN/` | Deep Q-Network (with Double DQN option) | Discrete | `CartPole-v1` | Coming soon |
+| `PPO/` | Proximal Policy Optimization | Discrete | `CartPole-v1` | <img src="PPO/assets/ppo_cartpole.gif" alt="PPO CartPole demo" width="160"> |
+| `MAPPO/` | Multi-Agent PPO (centralized critic) | Discrete | `MultiWalker-v9` (PettingZoo) | Coming soon |
+| `A3C/` | Asynchronous Advantage Actor-Critic | Discrete | `CartPole-v1` | Coming soon |
+| `SAC/` | Soft Actor-Critic | Continuous | `Pendulum-v1` | Coming soon |
+| `DDPG/` | Deep Deterministic Policy Gradient | Continuous | `Pendulum-v1` | Coming soon |
+| `MADDPG/` | Multi-Agent DDPG (centralized training) | Continuous | `simple_spread_v3` (PettingZoo MPE) | Coming soon |
+| `TD3/` | Twin Delayed DDPG | Continuous | `Pendulum-v1` | Coming soon |
+| `TRPO/` | Trust Region Policy Optimization | Continuous | `Pendulum-v1` | Coming soon |
+| `IQL/` | Implicit Q-Learning (offline) | Continuous | `Pendulum-v1` (random offline dataset) | Coming soon |
 
 All agents expose a two-command Fire CLI (`train` and `demo`), use PyTorch under the hood, and save both periodic and best checkpoints in their respective `checkpoints/` directories.
 
