@@ -74,6 +74,13 @@ class Config:
         for k, v in data.items():
             if hasattr(cfg, k):
                 setattr(cfg, k, v)
+        if isinstance(cfg.learning_rate, str):
+            try:
+                cfg.learning_rate = float(cfg.learning_rate)
+            except ValueError as exc:
+                raise ValueError(
+                    f"learning_rate must be a float, got {cfg.learning_rate!r}"
+                ) from exc
         cfg.device = _get_device(cfg.device)
         # Normalize checkpoint paths to be workspace-root relative
         cfg.checkpoint_dir = os.path.normpath(cfg.checkpoint_dir)
