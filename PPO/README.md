@@ -21,16 +21,31 @@ python -m PPO.main train --config PPO/configs/cartpole.yaml
 python -m PPO.main demo --config PPO/configs/cartpole.yaml --model_path PPO/checkpoints/best.pt
 ```
 
-Setup with uv (Windows cmd):
-1) Create venv and install deps
-   uv venv .venv
-   uv sync
+Setup with uv (activate the venv if you want to call `python` directly; `uv run` does not require activation):
 
-2) Train PPO on CartPole
-   uv run -m PPO.main train --config PPO/configs/cartpole.yaml
+Windows cmd:
+```cmd
+uv venv .venv
+uv sync
+.\.venv\Scripts\activate.bat
+python -m PPO.main train --config PPO/configs/cartpole.yaml
+python -m PPO.main demo --config PPO/configs/cartpole.yaml --model_path PPO/checkpoints/best.pt --episodes 5
+```
 
-3) Demo a trained policy (renders a window)
-   uv run -m PPO.main demo --config PPO/configs/cartpole.yaml --model_path PPO/checkpoints/best.pt --episodes 5
+macOS/Linux (bash or zsh):
+```bash
+uv venv .venv
+uv sync
+source .venv/bin/activate
+python -m PPO.main train --config PPO/configs/cartpole.yaml
+python -m PPO.main demo --config PPO/configs/cartpole.yaml --model_path PPO/checkpoints/best.pt --episodes 5
+```
+
+If you prefer `uv run` instead of activation:
+```bash
+uv run -m PPO.main train --config PPO/configs/cartpole.yaml
+uv run -m PPO.main demo --config PPO/configs/cartpole.yaml --model_path PPO/checkpoints/best.pt --episodes 5
+```
 
 Notes
 - Only discrete action spaces and flat observations are supported in this minimal example.
