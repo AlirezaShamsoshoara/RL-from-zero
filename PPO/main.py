@@ -26,10 +26,11 @@ def train(config: str = "PPO/configs/cartpole.yaml", wandb_key: str = ""):
     )
     set_seed(cfg.seed)
 
-    # Login to Weights & Biases at Python level if a key is provided
-    if getattr(cfg, "wandb_key", ""):
-        import wandb as _wandb
-        _wandb.login(key=cfg.wandb_key)
+    # Login to Weights & Biases if a key is provided via env var or config
+    env_wandb_key = os.getenv("WANDB_API_KEY", "")
+    login_key = env_wandb_key or getattr(cfg, "wandb_key", "")
+    if login_key:
+        wandb.login(key=login_key)
 
     logger.info(f"Initializing wandb run={cfg.run_name}")
     run = wandb.init(

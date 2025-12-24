@@ -1,5 +1,5 @@
 # PPO Config for CartPole-v1
-project: rl-practice
+project: rl-hero
 entity: null  # set your WandB entity if needed
 run_name: ppo-cartpole
 seed: 42
