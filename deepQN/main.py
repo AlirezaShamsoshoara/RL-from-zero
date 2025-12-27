@@ -103,7 +103,10 @@ def train(config: str = "deepQN/configs/mountaincar.yaml", wandb_key: str = ""):
 
         next_obs, reward, terminated, truncated, info = env.step(action)
         done = bool(terminated or truncated)
-        buffer_done = float(terminated)
+        # Use terminal observation when TimeLimit truncates the episode.
+        if truncated and isinstance(info, dict) and "final_observation" in info:
+            next_obs = info["final_observation"]
+        buffer_done = float(done)
         buffer.add(obs, action, reward, next_obs, buffer_done)
 
         ep_return += float(reward)
