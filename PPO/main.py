@@ -12,6 +12,14 @@ from PPO.ppo.agent import PPOAgent, Batch
 from PPO.ppo.logging_utils import setup_logger
 
 
+def _to_numpy_safe(tensor: torch.Tensor) -> np.ndarray:
+    tensor = tensor.detach().cpu()
+    try:
+        return tensor.numpy()
+    except RuntimeError:
+        return np.asarray(tensor.tolist())
+
+
 def train(config: str = "PPO/configs/cartpole.yaml", wandb_key: str = ""):
     cfg = Config.from_yaml(config)
     # Allow providing the key via CLI arg; default remains blank
@@ -115,7 +123,7 @@ def train(config: str = "PPO/configs/cartpole.yaml", wandb_key: str = ""):
         with torch.no_grad():
             obs_t = torch.as_tensor(obs, dtype=torch.float32, device=agent.device)
             _, next_value = agent.model.forward(obs_t)
-            next_value = next_value.cpu().numpy()
+            next_value = _to_numpy_safe(next_value)
 
         advantages, returns = PPOAgent.compute_gae(
             rewards_buf, dones_buf, values_buf, next_value, cfg.gamma, cfg.gae_lambda
@@ -145,10 +153,9 @@ def train(config: str = "PPO/configs/cartpole.yaml", wandb_key: str = ""):
 
         # Optimize policy for K epochs
         num_samples = b_obs.shape[0]
-        idxs = np.arange(num_samples)
         losses = []
         for epoch in range(cfg.update_iterations):
-            np.random.shuffle(idxs)
+            idxs = torch.randperm(num_samples, device=agent.device)
             for start in range(0, num_samples, cfg.minibatch_size):
                 end = start + cfg.minibatch_size
                 mb_idx = idxs[start:end]

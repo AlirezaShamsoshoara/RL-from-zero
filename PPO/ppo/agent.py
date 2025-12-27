@@ -39,11 +39,23 @@ class PPOAgent:
         self.vf_coef = vf_coef
         self.max_grad_norm = max_grad_norm
 
+    @staticmethod
+    def _to_numpy_safe(tensor: torch.Tensor) -> np.ndarray:
+        tensor = tensor.detach().cpu()
+        try:
+            return tensor.numpy()
+        except RuntimeError:
+            return np.asarray(tensor.tolist())
+
     @torch.no_grad()
     def act(self, obs: np.ndarray):
         obs_t = torch.as_tensor(obs, dtype=torch.float32, device=self.device)
         action, logprob, entropy, value = self.model.act(obs_t)
-        return action.cpu().numpy(), logprob.cpu().numpy(), value.cpu().numpy()
+        return (
+            self._to_numpy_safe(action),
+            self._to_numpy_safe(logprob),
+            self._to_numpy_safe(value),
+        )
 
     def evaluate(self, obs_t: torch.Tensor, actions_t: torch.Tensor):
         logprob, entropy, value = self.model.evaluate_actions(obs_t, actions_t)
