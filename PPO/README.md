@@ -2,9 +2,15 @@
   <img src="assets/ppo-logo.svg" alt="PPO — Proximal Policy Optimization" width="520" />
 </p>
 
-PPO (Proximal Policy Optimization) quickstart
+## PPO (Proximal Policy Optimization) quickstart
 
-What is PPO?
+
+<p align="center">
+  <img src="assets/ppo_cartpole.gif" alt="PPO CartPole demo" width="520" />
+</p>
+
+### What is PPO?
+
 - PPO is a policy-gradient algorithm that alternates between collecting rollouts with the current policy and optimizing a clipped surrogate objective to prevent destructive policy updates. It uses an actor-critic network and GAE (Generalized Advantage Estimation) for low-variance advantage targets.
 
 This template includes:
