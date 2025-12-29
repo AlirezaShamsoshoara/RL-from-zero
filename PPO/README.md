@@ -21,6 +21,18 @@ This template includes:
 - Checkpoint saving (best and periodic)
 - Inference/demo with on-screen rendering
 
+### Training charts
+
+<p align="center">
+  <img src="assets/chart_01.png" alt="PPO training chart 1" width="520" />
+</p>
+<p align="center">
+  <img src="assets/chart_02.png" alt="PPO training chart 2" width="520" />
+</p>
+<p align="center">
+  <img src="assets/chart_03.png" alt="PPO training chart 3" width="520" />
+</p>
+
 ## Quick Commands
 ```bash
 python -m PPO.main train --config PPO/configs/cartpole.yaml
