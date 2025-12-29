@@ -1,3 +1,12 @@
+"""DQN entry points.
+
+Examples:
+    >>> # Train on MountainCar-v0
+    >>> # python -m deepQN.main train --config deepQN/configs/mountaincar.yaml
+    >>> # Run a demo with a saved checkpoint
+    >>> # python -m deepQN.main demo --config deepQN/configs/mountaincar.yaml --model_path deepQN/checkpoints/best.pt
+"""
+
 from __future__ import annotations
 import os
 from typing import Optional, List, Dict
@@ -21,7 +30,7 @@ def _epsilon_by_step(step: int, cfg: Config) -> float:
     return cfg.epsilon_start + ratio * (cfg.epsilon_end - cfg.epsilon_start)
 
 
-def train(config: str = "deepQN/configs/cartpole.yaml", wandb_key: str = ""):
+def train(config: str = "deepQN/configs/mountaincar.yaml", wandb_key: str = ""):
     cfg = Config.from_yaml(config)
     if wandb_key:
         cfg.wandb_key = wandb_key
@@ -38,6 +47,7 @@ def train(config: str = "deepQN/configs/cartpole.yaml", wandb_key: str = ""):
 
     if getattr(cfg, "wandb_key", ""):
         import wandb as _wandb
+
         _wandb.login(key=cfg.wandb_key)
 
     logger.info(f"Initializing wandb run={cfg.run_name}")
@@ -93,14 +103,21 @@ def train(config: str = "deepQN/configs/cartpole.yaml", wandb_key: str = ""):
 
         next_obs, reward, terminated, truncated, info = env.step(action)
         done = bool(terminated or truncated)
-        buffer_done = float(terminated)
+        # Use terminal observation when TimeLimit truncates the episode.
+        if truncated and isinstance(info, dict) and "final_observation" in info:
+            next_obs = info["final_observation"]
+        buffer_done = float(done)
         buffer.add(obs, action, reward, next_obs, buffer_done)
 
         ep_return += float(reward)
         ep_length += 1
         obs = next_obs
 
-        if step >= cfg.learning_starts and step % cfg.train_freq == 0 and buffer.can_sample(cfg.batch_size):
+        if (
+            step >= cfg.learning_starts
+            and step % cfg.train_freq == 0
+            and buffer.can_sample(cfg.batch_size)
+        ):
             stats = agent.update(buffer.sample(cfg.batch_size))
             update_metrics.append({"loss": stats.loss, "td_error": stats.td_error})
 
@@ -112,8 +129,12 @@ def train(config: str = "deepQN/configs/cartpole.yaml", wandb_key: str = ""):
             ep_length = 0
 
         if step % cfg.log_interval == 0:
-            avg_return = float(np.mean(episode_returns[-10:])) if episode_returns else 0.0
-            avg_length = float(np.mean(episode_lengths[-10:])) if episode_lengths else 0.0
+            avg_return = (
+                float(np.mean(episode_returns[-10:])) if episode_returns else 0.0
+            )
+            avg_length = (
+                float(np.mean(episode_lengths[-10:])) if episode_lengths else 0.0
+            )
             log_payload = {
                 "charts/avg_return": avg_return,
                 "charts/avg_length": avg_length,
@@ -147,13 +168,11 @@ def train(config: str = "deepQN/configs/cartpole.yaml", wandb_key: str = ""):
 
     env.close()
     run.finish()
-    logger.info(
-        f"Training finished. Best 5-ep avg return: {best_avg_return:.2f}"
-    )
+    logger.info(f"Training finished. Best 5-ep avg return: {best_avg_return:.2f}")
 
 
 def demo(
-    config: str = "deepQN/configs/cartpole.yaml",
+    config: str = "deepQN/configs/mountaincar.yaml",
     model_path: Optional[str] = None,
     episodes: Optional[int] = None,
 ):

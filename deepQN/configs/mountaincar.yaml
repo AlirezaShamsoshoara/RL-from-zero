@@ -1,0 +1,53 @@
+# DQN Config for MountainCar-v0
+# Experiment tracking
+project: rl-hero  # wandb project name
+entity: null  # wandb entity/team; null to use default
+run_name: dqn-mountaincar  # wandb run name
+wandb_key: ""  # optional API key for wandb login
+
+# Environment
+# env_id options: MountainCar-v0 (default), Acrobot-v1, LunarLander-v2, or other gymnasium discrete env id
+env_id: MountainCar-v0
+# render_mode options: null (no render), human (window), ansi (text)
+render_mode: null
+seed: 42  # random seed for env/numpy/torch
+env_kwargs: {}  # extra kwargs passed to gym.make
+
+# Model
+hidden_sizes: [128, 128]  # MLP hidden layer sizes
+activation: relu  # relu, tanh, sigmoid, gelu
+
+# Training
+total_steps: 200000  # total environment steps
+learning_starts: 1000  # steps before learning begins
+train_freq: 4  # update every n steps
+batch_size: 64  # minibatch size
+buffer_size: 100000  # replay buffer capacity
+gamma: 0.99  # discount factor
+lr: 0.0005  # learning rate
+target_update_interval: 1000  # target network sync interval
+max_grad_norm: 10.0  # gradient clipping; 0 disables
+double_dqn: true  # enable Double DQN
+
+# Exploration
+epsilon_start: 1.0  # initial epsilon
+epsilon_end: 0.05  # final epsilon
+epsilon_decay_steps: 100000  # linear decay steps after learning_starts
+eval_epsilon: 0.0  # epsilon during demo
+
+# Logging & checkpoints
+log_interval: 1000  # log cadence (steps)
+checkpoint_interval: 5000  # checkpoint cadence (steps)
+checkpoint_dir: deepQN/checkpoints  # checkpoint directory
+save_best: true  # save best checkpoint
+log_level: INFO  # DEBUG, INFO, WARNING, ERROR
+log_to_console: true  # enable console logging
+log_to_file: false  # enable file logging
+log_file: deepQN/logs/dqn.log  # log file path
+
+# Inference
+inference_model_path: deepQN/checkpoints/best.pt  # model path for demo
+episodes: 5  # number of demo episodes
+
+# Misc
+device: cpu  # auto, cpu, or cuda

@@ -39,8 +39,12 @@ class DQNAgent:
         self.max_grad_norm = max_grad_norm
         self.double_dqn = double_dqn
 
-        self.q_network = QNetwork(self.obs_dim, self.action_dim, hidden_sizes, activation).to(self.device)
-        self.target_q_network = QNetwork(self.obs_dim, self.action_dim, hidden_sizes, activation).to(self.device)
+        self.q_network = QNetwork(
+            self.obs_dim, self.action_dim, hidden_sizes, activation
+        ).to(self.device)
+        self.target_q_network = QNetwork(
+            self.obs_dim, self.action_dim, hidden_sizes, activation
+        ).to(self.device)
         self.target_q_network.load_state_dict(self.q_network.state_dict())
         self.optimizer = torch.optim.Adam(self.q_network.parameters(), lr=lr)
 
@@ -51,7 +55,9 @@ class DQNAgent:
         self.step_count += 1
         if not deterministic and np.random.rand() < epsilon:
             return int(self.act_space.sample())
-        obs_tensor = torch.as_tensor(obs, dtype=torch.float32, device=self.device).reshape(1, -1)
+        obs_tensor = torch.as_tensor(
+            obs, dtype=torch.float32, device=self.device
+        ).reshape(1, -1)
         with torch.no_grad():
             q_values = self.q_network(obs_tensor)
         action = int(torch.argmax(q_values, dim=1).item())
@@ -69,8 +75,12 @@ class DQNAgent:
 
         with torch.no_grad():
             if self.double_dqn:
-                next_actions = torch.argmax(self.q_network(next_obs), dim=1, keepdim=True)
-                next_target_values = self.target_q_network(next_obs).gather(1, next_actions).squeeze(1)
+                next_actions = torch.argmax(
+                    self.q_network(next_obs), dim=1, keepdim=True
+                )
+                next_target_values = (
+                    self.target_q_network(next_obs).gather(1, next_actions).squeeze(1)
+                )
             else:
                 next_target_values = self.target_q_network(next_obs).max(dim=1).values
             targets = rewards + self.gamma * (1.0 - dones) * next_target_values

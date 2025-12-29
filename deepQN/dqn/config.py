@@ -10,6 +10,7 @@ def _get_device(dev: str) -> str:
         try:
             import torch  # noqa: F401
             import torch.cuda as _cuda
+
             return "cuda" if _cuda.is_available() else "cpu"
         except Exception:
             return "cpu"
@@ -25,7 +26,7 @@ class Config:
     wandb_key: str = ""
 
     # Environment
-    env_id: str = "CartPole-v1"
+    env_id: str = "MountainCar-v0"
     render_mode: Optional[str] = None
     seed: int = 42
     env_kwargs: Dict[str, Any] = field(default_factory=dict)
