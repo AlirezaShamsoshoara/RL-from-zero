@@ -5,7 +5,7 @@
 # Deep Q-Network (DQN)
 
 ## What is DQN?
-Deep Q-Networks combine Q-learning with deep neural networks to approximate state-action values in environments with high-dimensional observations. This implementation mirrors the repository structure used for PPO, A3C, SAC, and tabular Q-learning, delivering an off-policy value-based agent for discrete-action Gymnasium tasks such as `CartPole-v1`.
+Deep Q-Networks combine Q-learning with deep neural networks to approximate state-action values in environments with high-dimensional observations. This implementation mirrors the repository structure used for PPO, A3C, SAC, and tabular Q-learning, delivering an off-policy value-based agent for discrete-action Gymnasium tasks such as `MountainCar-v0`.
 
 ## Features
 - Torch-based Q-network with target network syncs and optional Double DQN updates.
@@ -15,26 +15,26 @@ Deep Q-Networks combine Q-learning with deep neural networks to approximate stat
 
 ## Quickstart
 ```bash
-python -m deepQN.main train --config deepQN/configs/cartpole.yaml
+python -m deepQN.main train --config deepQN/configs/mountaincar.yaml
 ```
 Provide `--wandb_key YOUR_KEY` to authenticate for cloud logging. Checkpoints land in `deepQN/checkpoints`, and the best moving-average model is saved as `best.pt`.
 
 To run evaluation rollouts:
 ```bash
-python -m deepQN.main demo --config deepQN/configs/cartpole.yaml --model_path deepQN/checkpoints/best.pt
+python -m deepQN.main demo --config deepQN/configs/mountaincar.yaml --model_path deepQN/checkpoints/best.pt
 ```
 
 ## Configuration
-All tunables live under `deepQN/configs/`. The default `cartpole.yaml` exposes the following groups and keys:
+All tunables live under `deepQN/configs/`. The default `mountaincar.yaml` exposes the following groups and keys:
 
 A concise excerpt of the default setup:
 ```yaml
 # Experiment tracking
 project: rl-practice
-run_name: dqn-cartpole
+run_name: dqn-mountaincar
 
 # Environment
-env_id: CartPole-v1
+env_id: MountainCar-v0
 seed: 42
 
 # Training

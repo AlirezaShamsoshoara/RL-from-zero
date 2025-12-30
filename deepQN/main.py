@@ -1,3 +1,12 @@
+"""DQN entry points.
+
+Examples:
+    >>> # Train on MountainCar-v0
+    >>> # python -m deepQN.main train --config deepQN/configs/mountaincar.yaml
+    >>> # Run a demo with a saved checkpoint
+    >>> # python -m deepQN.main demo --config deepQN/configs/mountaincar.yaml --model_path deepQN/checkpoints/best.pt
+"""
+
 from __future__ import annotations
 import os
 from typing import Optional, List, Dict
@@ -21,7 +30,7 @@ def _epsilon_by_step(step: int, cfg: Config) -> float:
     return cfg.epsilon_start + ratio * (cfg.epsilon_end - cfg.epsilon_start)
 
 
-def train(config: str = "deepQN/configs/cartpole.yaml", wandb_key: str = ""):
+def train(config: str = "deepQN/configs/mountaincar.yaml", wandb_key: str = ""):
     cfg = Config.from_yaml(config)
     if wandb_key:
         cfg.wandb_key = wandb_key
@@ -153,7 +162,7 @@ def train(config: str = "deepQN/configs/cartpole.yaml", wandb_key: str = ""):
 
 
 def demo(
-    config: str = "deepQN/configs/cartpole.yaml",
+    config: str = "deepQN/configs/mountaincar.yaml",
     model_path: Optional[str] = None,
     episodes: Optional[int] = None,
 ):
