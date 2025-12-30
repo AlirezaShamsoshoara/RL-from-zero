@@ -13,6 +13,40 @@
 
 - PPO is a policy-gradient algorithm that alternates between collecting rollouts with the current policy and optimizing a clipped surrogate objective to prevent destructive policy updates. It uses an actor-critic network and GAE (Generalized Advantage Estimation) for low-variance advantage targets.
 
+Key equations (GitHub Markdown math):
+
+Policy objective with clipping:
+$$
+L^{CLIP}(\theta)=\mathbb{E}_t\left[\min\left(r_t(\theta)\,\hat{A}_t,\;\text{clip}(r_t(\theta),\,1-\epsilon,\,1+\epsilon)\,\hat{A}_t\right)\right]
+$$
+$$
+r_t(\theta)=\frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{\text{old}}}(a_t|s_t)}
+$$
+
+Value function loss and entropy bonus:
+$$
+L^{V}(\theta)=\mathbb{E}_t\left[(V_\theta(s_t)-\hat{R}_t)^2\right]
+$$
+$$
+L(\theta)=L^{CLIP}(\theta)-c_1 L^{V}(\theta)+c_2\,\mathbb{E}_t[\mathcal{H}(\pi_\theta(\cdot|s_t))]
+$$
+
+GAE (advantages):
+$$
+\delta_t=r_t+\gamma V(s_{t+1})-V(s_t)
+$$
+$$
+\hat{A}_t=\sum_{l=0}^{T-t-1}(\gamma\lambda)^l\,\delta_{t+l}
+$$
+
+Where:
+- $\hat{A}_t$: advantage estimate at time $t$ (from GAE)
+- $\epsilon$: PPO clip range (e.g., `clip_coef` in config)
+- $r_t(\theta)$: probability ratio between new and old policies
+- $\hat{R}_t$: return target for the value function
+- $V_\theta(s_t)$: value function estimate at state $s_t$
+- $\mathcal{H}(\pi_\theta(\cdot|s_t))$: policy entropy at state $s_t$
+
 This template includes:
 - Clean Config class backed by a YAML file in `PPO/configs/`
 - Fire CLI with two commands: `train` and `demo`
