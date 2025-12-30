@@ -4,6 +4,12 @@
 
 # Deep Q-Network (DQN)
 
+<p align="center">
+  <img src="assets/dqn_mountaincar.gif" alt="DQN MountainCar Demo" width="520">
+</p>
+
+
+
 ## What is DQN?
 Deep Q-Networks (DQN) use a neural network to approximate the action-value function for a Markov decision process. The return from time step $t$ is
 $$
