@@ -53,6 +53,17 @@ This implementation mirrors the repository structure used for PPO, A3C, SAC, and
 - Weights & Biases logging, tqdm-compatible logging helpers, and checkpoint handling aligned with the other algorithms.
 - YAML-driven hyperparameters with `Config.from_yaml` parity across the repository.
 
+### Training charts
+
+<p align="center">
+  <img src="assets/chart_01.png" alt="DQN training td_error" width="320" />
+  <img src="assets/chart_02.png" alt="DQN training q_loss" width="327" />
+</p>
+<p align="center">
+  <img src="assets/chart_03.png" alt="DQN training avg reward" width="324" />
+  <img src="assets/chart_04.png" alt="DQN training avg length" width="320" />
+</p>
+
 ## Quickstart
 ```bash
 python -m deepQN.main train --config deepQN/configs/mountaincar.yaml
