@@ -10,6 +10,7 @@ def _get_device(dev: str) -> str:
         try:
             import torch  # noqa: F401
             import torch.cuda as _cuda
+
             return "cuda" if _cuda.is_available() else "cpu"
         except Exception:
             return "cpu"

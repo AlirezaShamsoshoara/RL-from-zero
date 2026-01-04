@@ -47,6 +47,7 @@ def train(config: str = "deepQN/configs/mountaincar.yaml", wandb_key: str = ""):
 
     if getattr(cfg, "wandb_key", ""):
         import wandb as _wandb
+
         _wandb.login(key=cfg.wandb_key)
 
     logger.info(f"Initializing wandb run={cfg.run_name}")
@@ -109,7 +110,11 @@ def train(config: str = "deepQN/configs/mountaincar.yaml", wandb_key: str = ""):
         ep_length += 1
         obs = next_obs
 
-        if step >= cfg.learning_starts and step % cfg.train_freq == 0 and buffer.can_sample(cfg.batch_size):
+        if (
+            step >= cfg.learning_starts
+            and step % cfg.train_freq == 0
+            and buffer.can_sample(cfg.batch_size)
+        ):
             stats = agent.update(buffer.sample(cfg.batch_size))
             update_metrics.append({"loss": stats.loss, "td_error": stats.td_error})
 
@@ -121,8 +126,12 @@ def train(config: str = "deepQN/configs/mountaincar.yaml", wandb_key: str = ""):
             ep_length = 0
 
         if step % cfg.log_interval == 0:
-            avg_return = float(np.mean(episode_returns[-10:])) if episode_returns else 0.0
-            avg_length = float(np.mean(episode_lengths[-10:])) if episode_lengths else 0.0
+            avg_return = (
+                float(np.mean(episode_returns[-10:])) if episode_returns else 0.0
+            )
+            avg_length = (
+                float(np.mean(episode_lengths[-10:])) if episode_lengths else 0.0
+            )
             log_payload = {
                 "charts/avg_return": avg_return,
                 "charts/avg_length": avg_length,
@@ -156,9 +165,7 @@ def train(config: str = "deepQN/configs/mountaincar.yaml", wandb_key: str = ""):
 
     env.close()
     run.finish()
-    logger.info(
-        f"Training finished. Best 5-ep avg return: {best_avg_return:.2f}"
-    )
+    logger.info(f"Training finished. Best 5-ep avg return: {best_avg_return:.2f}")
 
 
 def demo(
