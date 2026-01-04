@@ -30,9 +30,10 @@ def train(config: str = "SAC/configs/pendulum.yaml", wandb_key: str = ""):
 
     set_seed(cfg.seed)
 
-    if getattr(cfg, "wandb_key", ""):
-        import wandb as _wandb
-        _wandb.login(key=cfg.wandb_key)
+    env_wandb_key = os.getenv("WANDB_API_KEY", "")
+    login_key = env_wandb_key or getattr(cfg, "wandb_key", "")
+    if login_key:
+        wandb.login(key=login_key)
 
     logger.info(f"Initializing wandb run={cfg.run_name}")
     run = wandb.init(
