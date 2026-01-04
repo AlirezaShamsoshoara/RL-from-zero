@@ -12,27 +12,37 @@
 
 ## What is DQN?
 Deep Q-Networks (DQN) use a neural network to approximate the action-value function for a Markov decision process. The return from time step $t$ is
+
 $$
 G_t = \sum_{k=0}^{\infty} \gamma^k r_{t+k+1},
 $$
+
 and the action-value function for policy $\pi$ is
+
 $$
 Q^\pi(s, a) = \mathbb{E}\left[ G_t \mid s_t = s, a_t = a \right].
 $$
+
 The optimal action-value function satisfies the Bellman optimality equation:
+
 $$
-Q^*(s, a) = \mathbb{E}\left[ r_{t+1} + \gamma \max_{a'} Q^*(s_{t+1}, a') \mid s_t = s, a_t = a \right].
+Q^{\star}(s, a) = \mathbb{E}\left[ r_{t+1} + \gamma \max_{a'} Q^{\star}(s_{t+1}, a') \mid s_t = s, a_t = a \right].
 $$
 
 DQN approximates $Q^*(s, a)$ with a neural network $Q(s, a; \theta)$ and learns $\theta$ by minimizing the temporal-difference (TD) error. Given a transition $(s, a, r, s', \text{done})$ sampled from a replay buffer, the target is
+
 $$
 y = r + \gamma (1 - \text{done}) \max_{a'} Q(s', a'; \theta^-),
 $$
+
 where $\theta^-$ denotes parameters of a separate target network held fixed for multiple updates. The loss is the mean-squared TD error:
+
 $$
 L(\theta) = \mathbb{E}_{(s,a,r,s') \sim \mathcal{D}} \left[ \left( y - Q(s, a; \theta) \right)^2 \right].
 $$
+
 Stochastic gradient descent (or a variant like Adam) minimizes $L(\theta)$ using minibatches from the replay buffer $\mathcal{D}$. The behavior policy is typically $\epsilon$-greedy:
+
 $$
 a_t =
 \begin{cases}
@@ -42,9 +52,11 @@ a_t =
 $$
 
 Optionally, Double DQN reduces overestimation by decoupling action selection and evaluation:
+
 $$
 y = r + \gamma (1 - \text{done}) Q\left(s', \arg\max_{a'} Q(s', a'; \theta); \theta^- \right).
 $$
+
 This implementation mirrors the repository structure used for PPO, A3C, SAC, and tabular Q-learning, delivering an off-policy value-based agent for discrete-action Gymnasium tasks such as `MountainCar-v0`.
 
 ## Features
