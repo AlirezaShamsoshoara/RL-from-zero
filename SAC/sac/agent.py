@@ -109,8 +109,8 @@ class SACAgent:
 
     def update(self, batch) -> SACStats:
         obs, actions, rewards, next_obs, dones = batch
-        rewards = rewards.squeeze(-1)
-        dones = dones.squeeze(-1)
+        rewards = rewards.reshape(-1, 1)
+        dones = dones.reshape(-1, 1)
 
         with torch.no_grad():
             next_actions, next_log_prob, _ = self.actor.sample(next_obs)

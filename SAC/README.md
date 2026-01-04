@@ -2,8 +2,83 @@
 
 # Soft Actor-Critic (SAC)
 
+<p align="center">
+    <img src="assets/sac_pendulum.gif" alt="SAC Pendulum Demo" width="520">
+</p>
+
 ## What is SAC?
 - Soft Actor-Critic is an off-policy actor-critic algorithm for continuous action spaces that optimizes expected reward while maximizing policy entropy, leveraging stochastic policies, twin Q-value critics, and automatic temperature tuning to balance exploration and stability.
+
+Below is a compact math view aligned with this repository's implementation (see `SAC/sac/agent.py`) and written to render in both VSCode Markdown preview and GitHub.
+
+**Maximum-entropy objective**
+
+$$
+J(\pi) = \mathbb{E}_{\pi}\left[\sum_{t=0}^{\infty} \gamma^t \left(r_t + \alpha \mathcal{H}(\pi(\cdot \mid s_t))\right)\right]
+$$
+
+$$
+\mathcal{H}(\pi(\cdot \mid s)) = -\mathbb{E}_{a \sim \pi}\left[\log \pi(a \mid s)\right]
+$$
+
+**Policy (squashed Gaussian with action scaling)**
+
+$$
+z = \mu_\theta(s) + \sigma_\theta(s) \odot \epsilon,\quad \epsilon \sim \mathcal{N}(0, I)
+$$
+
+$$
+u = \tanh(z),\quad a = u \odot c + b
+$$
+
+**Log-probability with tanh correction**
+
+$$
+\log \pi_\theta(a \mid s) = \sum_i \left[\log \mathcal{N}(z_i; \mu_i, \sigma_i) - \log c_i - \log(1 - \tanh(z_i)^2 + \varepsilon)\right]
+$$
+
+**Critic target and loss (twin Q)**
+
+$$
+y_t = r_t + \gamma (1 - d_t)\left(\min_{i=1,2} Q_{\bar{\phi}_i}(s_{t+1}, a_{t+1}) - \alpha \log \pi_\theta(a_{t+1} \mid s_{t+1})\right)
+$$
+
+$$
+L_Q = \mathbb{E}_{(s,a,r,s',d)\sim \mathcal{D}}\left[(Q_{\phi_1}(s,a) - y_t)^2 + (Q_{\phi_2}(s,a) - y_t)^2\right]
+$$
+
+**Actor loss**
+
+$$
+L_\pi = \mathbb{E}_{s\sim \mathcal{D},\, a\sim \pi_\theta}\left[\alpha \log \pi_\theta(a \mid s) - \min_{i=1,2} Q_{\phi_i}(s,a)\right]
+$$
+
+**Temperature (entropy) loss**
+
+$$
+L_\alpha = \mathbb{E}_{a\sim \pi_\theta}\left[-\log \alpha \left(\log \pi_\theta(a \mid s) + \mathcal{H}_{\text{target}}\right)\right]
+$$
+
+$$
+\mathcal{H}_{\text{target}} = -d_a \cdot \eta,\quad d_a = \dim(\mathcal{A})
+$$
+
+**Target-network update (Polyak averaging)**
+
+$$
+\bar{\phi} \leftarrow \tau \phi + (1 - \tau)\bar{\phi}
+$$
+
+**Parameter/term guide**
+- $s_t$, $a_t$, $r_t$: state, action, reward at time $t$; $s_{t+1}$ is the next state.
+- $\gamma$: discount factor; $\tau$: target network smoothing coefficient.
+- $\theta$: actor parameters; $\phi_1,\phi_2$: critic parameters; $\bar{\phi}_1,\bar{\phi}_2$: target critic parameters.
+- $\alpha$: temperature coefficient controlling entropy strength; $d_a$ is action dimension.
+- $\eta$: target entropy scale (config: `target_entropy_scale`).
+- $\mu_\theta(s)$, $\sigma_\theta(s)$: actor outputs (mean and std); $\odot$ is elementwise multiply.
+- $c = (a_{\max} - a_{\min})/2$, $b = (a_{\max} + a_{\min})/2$ are action scale/bias from env bounds.
+- $d_t \in \{0,1\}$: terminal indicator (1 if terminal, 0 otherwise); $\mathcal{D}$: replay buffer.
+- $\varepsilon$: small constant for numerical stability in the log-prob correction.
 
 This implementation mirrors the structure used for the existing PPO and Q-learning agents in this repository. It trains a Soft Actor-Critic agent on continuous-control tasks from Gymnasium, with default settings targeting `Pendulum-v1`.
 
@@ -12,6 +87,16 @@ This implementation mirrors the structure used for the existing PPO and Q-learni
 - Replay buffer with configurable capacity and warmup phase.
 - Automatic entropy tuning with configurable target scale.
 - WandB integration, logging utilities, and checkpointing consistent with the other algorithms.
+
+### Training charts
+ <p align="center">
+    <img src="assets/chart_01.png" alt="SAC stats chart" width="487">
+    <img src="assets/chart_03.png" alt="SAC Reward chart" width="251">
+ </p>
+ <p align="center">
+    <img src="assets/chart_02.png" alt="SAC Loss charts">
+ </p>
+
 
 ## Quickstart
 ```bash
@@ -22,6 +107,52 @@ Set `--wandb_key YOUR_KEY` if you need to authenticate programmatically. Checkpo
 To watch the trained policy:
 ```bash
 python -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/checkpoints/best.pt
+```
+
+Setup with uv (activate the venv if you want to call `python` directly; `uv run` does not require activation):
+
+Windows cmd:
+```cmd
+uv venv .venv
+uv sync
+.\.venv\Scripts\activate.bat
+python -m SAC.main train --config SAC/configs/pendulum.yaml
+python -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/checkpoints/best.pt --episodes 5
+```
+
+macOS/Linux (bash or zsh):
+```bash
+uv venv .venv
+uv sync
+source .venv/bin/activate
+python -m SAC.main train --config SAC/configs/pendulum.yaml
+python -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/checkpoints/best.pt --episodes 5
+```
+
+If you prefer `uv run` instead of activation:
+```bash
+uv run -m SAC.main train --config SAC/configs/pendulum.yaml
+uv run -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/checkpoints/best.pt --episodes 5
+```
+
+Setup without uv (standard venv + pip):
+
+Windows cmd:
+```cmd
+python -m venv .venv
+.\.venv\Scripts\activate.bat
+pip install -e .
+python -m SAC.main train --config SAC/configs/pendulum.yaml
+python -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/checkpoints/best.pt --episodes 5
+```
+
+macOS/Linux (bash or zsh):
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+python -m SAC.main train --config SAC/configs/pendulum.yaml
+python -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/checkpoints/best.pt --episodes 5
 ```
 
 ## Configuration

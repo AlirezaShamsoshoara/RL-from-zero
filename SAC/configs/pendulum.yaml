@@ -1,44 +1,47 @@
 # SAC config targeting Pendulum-v1
-project: rl-practice
-entity: null
-run_name: sac-pendulum
-seed: 42
+project: rl-hero  # wandb project name (any string)
+entity: null  # null or your wandb entity/team
+run_name: sac-pendulum  # wandb run name (any string)
+seed: 42  # any integer seed
 
 # Environment
+# env_id options: Pendulum-v1 (default), MountainCarContinuous-v0, Hopper-v4, Walker2d-v4,
+# HalfCheetah-v4 (MuJoCo), or other Gymnasium continuous env id
 env_id: Pendulum-v1
+# render_mode options: null (no render), human (window), rgb_array (frames)
 render_mode: null
-env_kwargs: {}
+env_kwargs: {}  # env-specific kwargs; Pendulum supports g, max_speed, max_torque, dt
 
 # Training
-total_steps: 200000
-start_steps: 10000
-batch_size: 256
-buffer_size: 1000000
-updates_per_step: 1
-gamma: 0.99
-tau: 0.005
-actor_lr: 0.0003
-critic_lr: 0.0003
-alpha_lr: 0.0003
-target_entropy_scale: 1.0
+total_steps: 200000  # total environment steps (int >= 1)
+start_steps: 10000  # steps of random actions before learning (int >= 0)
+batch_size: 256  # minibatch size (int >= 1)
+buffer_size: 1000000  # replay buffer capacity (int >= 1)
+updates_per_step: 1  # gradient updates per env step (int >= 1)
+gamma: 0.99  # discount factor (0 < gamma <= 1)
+tau: 0.005  # target network smoothing (0 < tau <= 1)
+actor_lr: 0.0003  # actor learning rate (positive float)
+critic_lr: 0.0003  # critic learning rate (positive float)
+alpha_lr: 0.0003  # temperature learning rate (positive float)
+target_entropy_scale: 1.0  # entropy target scale (e.g., 0.5, 1.0, 2.0)
 
 # Model
-hidden_sizes: [256, 256]
-activation: relu
+hidden_sizes: [256, 256]  # MLP hidden sizes (e.g., [128,128], [256,256,128], [])
+activation: relu  # relu, tanh, leaky_relu, elu
 
 # Logging & Checkpoints
-log_interval: 1000
-checkpoint_interval: 50000
-checkpoint_dir: SAC/checkpoints
-save_best: true
-log_level: INFO
-log_to_file: true
-log_file: SAC/logs/sac.log
-log_to_console: true
+log_interval: 1000  # log cadence in steps (int >= 1)
+checkpoint_interval: 50000  # checkpoint cadence in steps (int >= 1)
+checkpoint_dir: SAC/checkpoints  # checkpoint directory path
+save_best: true  # true or false
+log_level: INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+log_to_file: true  # true or false
+log_file: SAC/logs/sac.log  # log file path (used when log_to_file=true)
+log_to_console: true  # true or false
 
 # Inference
-inference_model_path: SAC/checkpoints/best.pt
-episodes: 5
+inference_model_path: SAC/checkpoints/best.pt  # checkpoint for demo/eval
+episodes: 5  # number of demo episodes (int >= 1)
 
 # Misc
-device: auto
+device: cpu  # auto, cpu, or cuda
