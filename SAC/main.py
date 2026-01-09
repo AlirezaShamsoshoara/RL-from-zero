@@ -17,8 +17,11 @@ from SAC.sac.logging_utils import setup_logger
 
 def train(config: str = "SAC/configs/pendulum.yaml", wandb_key: str = ""):
     cfg = Config.from_yaml(config)
+    env_wandb_key = os.getenv("WANDB_API_KEY", "")
     if wandb_key:
         cfg.wandb_key = wandb_key
+    elif env_wandb_key:
+        cfg.wandb_key = env_wandb_key
 
     logger = setup_logger(
         name="sac",
@@ -30,10 +33,8 @@ def train(config: str = "SAC/configs/pendulum.yaml", wandb_key: str = ""):
 
     set_seed(cfg.seed)
 
-    env_wandb_key = os.getenv("WANDB_API_KEY", "")
-    login_key = env_wandb_key or getattr(cfg, "wandb_key", "")
-    if login_key:
-        wandb.login(key=login_key)
+    if getattr(cfg, "wandb_key", ""):
+        wandb.login(key=cfg.wandb_key)
 
     logger.info(f"Initializing wandb run={cfg.run_name}")
     run = wandb.init(
