@@ -60,6 +60,7 @@ $$
 $$
 
 **Target-network update (Polyak averaging)**
+
 $$
 \bar{\phi} \leftarrow \tau \phi + (1 - \tau)\bar{\phi}
 $$
