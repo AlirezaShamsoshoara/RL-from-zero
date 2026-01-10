@@ -56,7 +56,7 @@ L_\alpha = \mathbb{E}_{a\sim \pi_\theta}\left[-\log \alpha \left(\log \pi_\theta
 $$
 
 $$
-\mathcal{H}_{\text{target}} = -|A| \cdot \text{target\_entropy\_scale}
+\mathcal{H}_{\text{target}} = -d_a \cdot \eta,\quad d_a = \dim(\mathcal{A})
 $$
 
 **Target-network update (Polyak averaging)**
@@ -69,7 +69,8 @@ $$
 - $s_t$, $a_t$, $r_t$: state, action, reward at time $t$; $s_{t+1}$ is the next state.
 - $\gamma$: discount factor; $\tau$: target network smoothing coefficient.
 - $\theta$: actor parameters; $\phi_1,\phi_2$: critic parameters; $\bar{\phi}_1,\bar{\phi}_2$: target critic parameters.
-- $\alpha$: temperature coefficient controlling entropy strength; $|A|$ is action dimension.
+- $\alpha$: temperature coefficient controlling entropy strength; $d_a$ is action dimension.
+- $\eta$: target entropy scale (config: `target_entropy_scale`).
 - $\mu_\theta(s)$, $\sigma_\theta(s)$: actor outputs (mean and std); $\odot$ is elementwise multiply.
 - $c = (a_{\max} - a_{\min})/2$, $b = (a_{\max} + a_{\min})/2$ are action scale/bias from env bounds.
 - $d_t \in \{0,1\}$: terminal indicator (1 if terminal, 0 otherwise); $\mathcal{D}$: replay buffer.
