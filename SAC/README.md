@@ -8,43 +8,53 @@
 Below is a compact math view aligned with this repository's implementation (see `SAC/sac/agent.py`) and written to render in both VSCode Markdown preview and GitHub.
 
 **Maximum-entropy objective**
+
 $$
 J(\pi) = \mathbb{E}_{\pi}\left[\sum_{t=0}^{\infty} \gamma^t \left(r_t + \alpha \mathcal{H}(\pi(\cdot \mid s_t))\right)\right]
 $$
+
 $$
 \mathcal{H}(\pi(\cdot \mid s)) = -\mathbb{E}_{a \sim \pi}\left[\log \pi(a \mid s)\right]
 $$
 
 **Policy (squashed Gaussian with action scaling)**
+
 $$
 z = \mu_\theta(s) + \sigma_\theta(s) \odot \epsilon,\quad \epsilon \sim \mathcal{N}(0, I)
 $$
+
 $$
 u = \tanh(z),\quad a = u \odot c + b
 $$
 
 **Log-probability with tanh correction**
+
 $$
 \log \pi_\theta(a \mid s) = \sum_i \left[\log \mathcal{N}(z_i; \mu_i, \sigma_i) - \log c_i - \log(1 - \tanh(z_i)^2 + \varepsilon)\right]
 $$
 
 **Critic target and loss (twin Q)**
+
 $$
 y_t = r_t + \gamma (1 - d_t)\left(\min_{i=1,2} Q_{\bar{\phi}_i}(s_{t+1}, a_{t+1}) - \alpha \log \pi_\theta(a_{t+1} \mid s_{t+1})\right)
 $$
+
 $$
 L_Q = \mathbb{E}_{(s,a,r,s',d)\sim \mathcal{D}}\left[(Q_{\phi_1}(s,a) - y_t)^2 + (Q_{\phi_2}(s,a) - y_t)^2\right]
 $$
 
 **Actor loss**
+
 $$
 L_\pi = \mathbb{E}_{s\sim \mathcal{D},\, a\sim \pi_\theta}\left[\alpha \log \pi_\theta(a \mid s) - \min_{i=1,2} Q_{\phi_i}(s,a)\right]
 $$
 
 **Temperature (entropy) loss**
+
 $$
 L_\alpha = \mathbb{E}_{a\sim \pi_\theta}\left[-\log \alpha \left(\log \pi_\theta(a \mid s) + \mathcal{H}_{\text{target}}\right)\right]
 $$
+
 $$
 \mathcal{H}_{\text{target}} = -|A| \cdot \text{target\_entropy\_scale}
 $$
