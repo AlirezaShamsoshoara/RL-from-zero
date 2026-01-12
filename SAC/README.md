@@ -2,6 +2,10 @@
 
 # Soft Actor-Critic (SAC)
 
+<p align="center">
+    <img src="assets/sac_pendulum.gif" alt="SAC Pendulum Demo" width="520">
+</p>
+
 ## What is SAC?
 - Soft Actor-Critic is an off-policy actor-critic algorithm for continuous action spaces that optimizes expected reward while maximizing policy entropy, leveraging stochastic policies, twin Q-value critics, and automatic temperature tuning to balance exploration and stability.
 
@@ -93,6 +97,52 @@ Set `--wandb_key YOUR_KEY` if you need to authenticate programmatically. Checkpo
 To watch the trained policy:
 ```bash
 python -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/checkpoints/best.pt
+```
+
+Setup with uv (activate the venv if you want to call `python` directly; `uv run` does not require activation):
+
+Windows cmd:
+```cmd
+uv venv .venv
+uv sync
+.\.venv\Scripts\activate.bat
+python -m SAC.main train --config SAC/configs/pendulum.yaml
+python -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/checkpoints/best.pt --episodes 5
+```
+
+macOS/Linux (bash or zsh):
+```bash
+uv venv .venv
+uv sync
+source .venv/bin/activate
+python -m SAC.main train --config SAC/configs/pendulum.yaml
+python -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/checkpoints/best.pt --episodes 5
+```
+
+If you prefer `uv run` instead of activation:
+```bash
+uv run -m SAC.main train --config SAC/configs/pendulum.yaml
+uv run -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/checkpoints/best.pt --episodes 5
+```
+
+Setup without uv (standard venv + pip):
+
+Windows cmd:
+```cmd
+python -m venv .venv
+.\.venv\Scripts\activate.bat
+pip install -e .
+python -m SAC.main train --config SAC/configs/pendulum.yaml
+python -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/checkpoints/best.pt --episodes 5
+```
+
+macOS/Linux (bash or zsh):
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+python -m SAC.main train --config SAC/configs/pendulum.yaml
+python -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/checkpoints/best.pt --episodes 5
 ```
 
 ## Configuration
