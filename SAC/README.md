@@ -88,6 +88,16 @@ This implementation mirrors the structure used for the existing PPO and Q-learni
 - Automatic entropy tuning with configurable target scale.
 - WandB integration, logging utilities, and checkpointing consistent with the other algorithms.
 
+### Training charts
+ <p align="center">
+    <img src="assets/chart_01.png" alt="SAC stats chart" width="487">
+    <img src="assets/chart_03.png" alt="SAC Reward chart" width="251">
+ </p>
+ <p align="center">
+    <img src="assets/chart_02.png" alt="SAC Loss charts">
+ </p>
+
+
 ## Quickstart
 ```bash
 python -m SAC.main train --config SAC/configs/pendulum.yaml
