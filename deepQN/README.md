@@ -26,7 +26,7 @@ $$
 The optimal action-value function satisfies the Bellman optimality equation:
 
 $$
-Q^*(s, a) = \mathbb{E}\left[ r_{t+1} + \gamma \max_{a'} Q^*(s_{t+1}, a') \mid s_t = s, a_t = a \right].
+Q^{\star}(s, a) = \mathbb{E}\left[ r_{t+1} + \gamma \max_{a'} Q^{\star}(s_{t+1}, a') \mid s_t = s, a_t = a \right].
 $$
 
 DQN approximates $Q^*(s, a)$ with a neural network $Q(s, a; \theta)$ and learns $\theta$ by minimizing the temporal-difference (TD) error. Given a transition $(s, a, r, s', \text{done})$ sampled from a replay buffer, the target is
