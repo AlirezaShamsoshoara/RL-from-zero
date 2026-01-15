@@ -47,7 +47,7 @@ All agents expose a two-command Fire CLI (`train` and `demo`), use PyTorch under
 
 ## Common toolkit
 - **Configuration:** YAML files under each `<algo>/configs/` folder feed into a typed `Config` object for reproducible experiments.
-- **Logging:** Python logging configured per algorithm, `tqdm` progress bars, and optional Weights & Biases integration (`--wandb_key` argument or value in config).
+- **Logging:** Python logging configured per algorithm, `tqdm` progress bars, and optional Weights & Biases integration (`--wandb_key` argument, `wandb_key` in config, or `WANDB_API_KEY` in your environment for trainers that read it).
 - **Checkpoints:** `best.pt` stores the top-performing policy by rolling average return; numbered checkpoints capture intermediate progress.
 - **Demos:** `demo` commands load a saved checkpoint, run evaluation rollouts, and render to the screen or console depending on the environment.
 
@@ -144,7 +144,7 @@ python -m IQL.main demo --config IQL/configs/pendulum_random.yaml --model_path I
 ```
 
 ### Optional Weights & Biases logging
-Add `--wandb_key YOUR_KEY` to any `train` command or set `wandb_key` in the YAML config to authenticate and push metrics, losses, and episode returns to W&B.
+Add `--wandb_key YOUR_KEY` to any `train` command or set `wandb_key` in the YAML config to authenticate and push metrics, losses, and episode returns to W&B. If `WANDB_API_KEY` is set in your environment, trainers that check the env var (for example, PPO and SAC) will read it automatically.
 
 ## Configuring experiments
 - Duplicate a baseline YAML file (for example `PPO/configs/cartpole.yaml`) and edit environment ids, learning rates, rollout lengths, or logging cadence.
