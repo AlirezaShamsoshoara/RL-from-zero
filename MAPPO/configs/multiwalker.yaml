@@ -12,6 +12,8 @@ env_id: multiwalker_v9
 # render_mode options: null (no render), human (window), rgb_array (frames)
 render_mode: human
 n_walkers: 3  # number of walker agents (int >= 1)
+discretize_actions: true  # true to map continuous actions to discrete bins
+action_bins: 3  # bins per action dimension; total actions = action_bins ** action_dim
 
 # Multi-Agent Settings
 n_agents: 3  # number of agents (should match n_walkers)
@@ -52,4 +54,4 @@ inference_model_path: MAPPO/checkpoints/best.pt  # model path for demo/eval
 episodes: 5  # number of demo episodes (int >= 1)
 
 # Misc
-device: auto  # auto, cpu, or cuda
+device: cpu  # auto, cpu, or cuda
