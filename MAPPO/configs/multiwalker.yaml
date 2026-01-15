@@ -1,5 +1,5 @@
 # MAPPO Config for MultiWalker-v9 (PettingZoo)
-project: rl-practice
+project: rl-hero
 entity: null  # set your WandB entity if needed
 run_name: mappo-multiwalker
 seed: 42
