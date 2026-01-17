@@ -211,6 +211,12 @@ MAPPO addresses the non-stationarity problem of independent learning by using a 
 - **Training unstable**: Reduce `learning_rate`, increase `minibatch_size`, or increase `max_grad_norm`
 - **Slow convergence**: Enable `share_policy: true` to share parameters across agents, or increase `update_iterations`
 - **High KL divergence warnings**: Decrease `learning_rate` or `clip_coef` to make updates more conservative
+- **`ModuleNotFoundError: No module named 'Box2D'`**: Install the SISL extras or Box2D in your env:
+  ```bash
+  python -m pip install "pettingzoo[sisl]"
+  # or, if pip fails on your Python version:
+  conda install -c conda-forge box2d-py
+  ```
 
 ## Environment Requirements
 
