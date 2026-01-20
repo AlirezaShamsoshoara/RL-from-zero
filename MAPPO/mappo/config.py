@@ -30,6 +30,8 @@ class Config:
     render_mode: Optional[str] = None
     n_walkers: int = 3
     seed: int = 42
+    discretize_actions: bool = True
+    action_bins: int = 3
 
     # Multi-Agent Settings
     n_agents: int = 3
@@ -80,6 +82,13 @@ class Config:
         for k, v in data.items():
             if hasattr(cfg, k):
                 setattr(cfg, k, v)
+        if isinstance(cfg.learning_rate, str):
+            try:
+                cfg.learning_rate = float(cfg.learning_rate)
+            except ValueError as exc:
+                raise ValueError(
+                    f"learning_rate must be a float, got {cfg.learning_rate!r}"
+                ) from exc
         cfg.device = _get_device(cfg.device)
         # Normalize checkpoint paths to be workspace-root relative
         cfg.checkpoint_dir = os.path.normpath(cfg.checkpoint_dir)
@@ -98,6 +107,8 @@ class Config:
             "render_mode": self.render_mode,
             "n_walkers": self.n_walkers,
             "seed": self.seed,
+            "discretize_actions": self.discretize_actions,
+            "action_bins": self.action_bins,
             "n_agents": self.n_agents,
             "share_policy": self.share_policy,
             "use_centralized_critic": self.use_centralized_critic,
