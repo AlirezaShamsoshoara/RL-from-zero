@@ -4,6 +4,7 @@ import random
 from typing import Optional, Dict, List
 import numpy as np
 import torch
+from gymnasium import spaces
 from pettingzoo.sisl import multiwalker_v9
 
 
@@ -14,13 +15,84 @@ def set_seed(seed: int):
     torch.cuda.manual_seed_all(seed)
 
 
-def make_multiwalker_env(n_walkers: int = 3, seed: int = 42, render_mode: Optional[str] = None):
+def _build_action_grid(act_space: spaces.Box, bins: int) -> np.ndarray:
+    low = np.asarray(act_space.low, dtype=np.float32).reshape(-1)
+    high = np.asarray(act_space.high, dtype=np.float32).reshape(-1)
+    axes = [np.linspace(lo, hi, bins).astype(np.float32) for lo, hi in zip(low, high)]
+    mesh = np.meshgrid(*axes, indexing="ij")
+    return np.stack([m.reshape(-1) for m in mesh], axis=1)
+
+
+class DiscreteActionWrapper:
+    def __init__(self, env, bins: int = 3):
+        self.env = env
+        self.possible_agents = getattr(env, "possible_agents", [])
+        if not self.possible_agents:
+            raise ValueError("Cannot discretize actions without possible_agents.")
+
+        if bins < 2:
+            raise ValueError("action_bins must be >= 2.")
+
+        first_agent = self.possible_agents[0]
+        act_space = env.action_space(first_agent)
+        if not isinstance(act_space, spaces.Box):
+            raise ValueError("DiscreteActionWrapper expects a Box action space.")
+        if act_space.shape is None or len(act_space.shape) != 1:
+            raise ValueError("Only 1D Box action spaces are supported for discretization.")
+
+        self._action_vectors = _build_action_grid(act_space, bins)
+        self._action_space = spaces.Discrete(self._action_vectors.shape[0])
+
+    def action_space(self, agent_id):
+        return self._action_space
+
+    def observation_space(self, agent_id):
+        return self.env.observation_space(agent_id)
+
+    def reset(self, *args, **kwargs):
+        return self.env.reset(*args, **kwargs)
+
+    def step(self, actions):
+        mapped = {agent_id: self._map_action(action) for agent_id, action in actions.items()}
+        return self.env.step(mapped)
+
+    def close(self):
+        return self.env.close()
+
+    def _map_action(self, action):
+        if isinstance(action, (int, np.integer)):
+            idx = int(action)
+        elif isinstance(action, np.ndarray) and action.shape == ():
+            idx = int(action.item())
+        else:
+            action_arr = np.asarray(action, dtype=np.float32)
+            if action_arr.shape == self._action_vectors.shape[1:]:
+                return action_arr
+            raise ValueError("Expected discrete action index or action vector.")
+
+        if idx < 0 or idx >= self._action_vectors.shape[0]:
+            raise ValueError("Discrete action index out of range.")
+        return self._action_vectors[idx]
+
+    def __getattr__(self, name):
+        return getattr(self.env, name)
+
+
+def make_multiwalker_env(
+    n_walkers: int = 3,
+    seed: int = 42,
+    render_mode: Optional[str] = None,
+    discretize_actions: bool = True,
+    action_bins: int = 3,
+):
     """
     Create a MultiWalker environment from PettingZoo.
     Args:
         n_walkers: Number of walker agents (default: 3)
         seed: Random seed
         render_mode: Render mode ('human' for visualization, None for training)
+        discretize_actions: Discretize continuous actions for categorical policy
+        action_bins: Bins per action dimension when discretizing
     Returns:
         env: PettingZoo parallel environment
     """
@@ -37,6 +109,11 @@ def make_multiwalker_env(n_walkers: int = 3, seed: int = 42, render_mode: Option
         max_cycles=500,
         render_mode=render_mode,
     )
+    if discretize_actions:
+        first_agent = env.possible_agents[0]
+        act_space = env.action_space(first_agent)
+        if isinstance(act_space, spaces.Box):
+            env = DiscreteActionWrapper(env, bins=action_bins)
     env.reset(seed=seed)
     return env
 
@@ -59,7 +136,15 @@ def get_space_dims(env):
     act_space = env.action_space(first_agent)
 
     obs_dim = obs_space.shape[0]
-    act_dim = act_space.n
+    if hasattr(act_space, "n"):
+        act_dim = act_space.n
+    elif isinstance(act_space, spaces.Box):
+        raise ValueError(
+            "MAPPO expects discrete actions. Enable discretize_actions or add a "
+            "continuous-action policy."
+        )
+    else:
+        raise ValueError("Unsupported action space type.")
 
     # State dimension is concatenation of all agent observations
     state_dim = obs_dim * n_agents
