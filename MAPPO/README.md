@@ -135,7 +135,7 @@ Key hyperparameters in `MAPPO/configs/multiwalker.yaml`:
 
 ## Implementation Notes
 
-- **Discrete actions**: Current implementation supports discrete action spaces (Categorical distribution)
+- **Action spaces**: Supports discrete (Categorical) and continuous (tanh-squashed Gaussian) actions
 - **Continuous observations**: Supports continuous observation spaces of any dimension
 - **Agent removal**: Handles environments where agents can be removed (e.g., fallen walkers)
 - **Shared rewards**: Optimized for cooperative tasks with shared reward structure
@@ -181,9 +181,8 @@ MAPPO addresses the non-stationarity problem of independent learning by using a 
 
 ## Extensions and Future Work
 
-1. **Continuous action spaces**: Extend to continuous actions using Gaussian distributions
-   - Replace Categorical with Normal/MultivariateNormal distribution
-   - Useful for robotics and continuous control tasks
+1. **Continuous action improvements**: Tune action rescaling, entropy handling, or std schedules
+   - Consider per-agent std bounds or adaptive exploration schedules
 
 2. **Communication mechanisms**: Add inter-agent communication channels
    - Agents can share information beyond observations
@@ -234,7 +233,7 @@ The implementation has been tested with:
 ## Notes
 
 - This implementation follows the same structure as other algorithms in the RL-from-Zero repository
-- Only discrete action spaces are currently supported (MultiWalker uses discrete approximation)
+- Supports discrete and continuous action spaces (MultiWalker can run with continuous actions)
 - Rendering requires pygame and works best with a local display
 - For headless servers, set `render_mode: null` in config during training
 - Checkpoints store all agent networks (or single shared network if `share_policy: true`)
