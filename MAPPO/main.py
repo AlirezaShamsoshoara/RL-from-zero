@@ -52,7 +52,15 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
         discretize_actions=cfg.discretize_actions,
         action_bins=cfg.action_bins,
     )
-    obs_dim, act_dim, state_dim, n_agents = get_space_dims(env)
+    obs_dim, act_dim, state_dim, n_agents, act_space = get_space_dims(
+        env, return_action_space=True
+    )
+    action_type = "discrete" if hasattr(act_space, "n") else "continuous"
+    action_low = None
+    action_high = None
+    if action_type == "continuous":
+        action_low = np.asarray(act_space.low, dtype=np.float32)
+        action_high = np.asarray(act_space.high, dtype=np.float32)
 
     # Verify n_agents matches config
     if n_agents != cfg.n_agents:
@@ -62,7 +70,7 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
         cfg.n_agents = n_agents
 
     logger.info(
-        f"Env={cfg.env_id} | n_agents={n_agents} | obs_dim={obs_dim} | act_dim={act_dim} | state_dim={state_dim}"
+        f"Env={cfg.env_id} | n_agents={n_agents} | obs_dim={obs_dim} | act_dim={act_dim} | state_dim={state_dim} | action_type={action_type}"
     )
 
     # Create MAPPO agent
@@ -82,6 +90,9 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
         device=cfg.device,
         share_policy=cfg.share_policy,
         use_centralized_critic=cfg.use_centralized_critic,
+        action_type=action_type,
+        action_low=action_low,
+        action_high=action_high,
     )
 
     num_updates = cfg.total_timesteps // cfg.rollout_steps
@@ -97,9 +108,15 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
         np.zeros((cfg.rollout_steps, obs_dim), dtype=np.float32) for _ in range(n_agents)
     ]
     state_bufs = np.zeros((cfg.rollout_steps, state_dim), dtype=np.float32)
-    actions_bufs = [
-        np.zeros(cfg.rollout_steps, dtype=np.int64) for _ in range(n_agents)
-    ]
+    if action_type == "continuous":
+        actions_bufs = [
+            np.zeros((cfg.rollout_steps, act_dim), dtype=np.float32)
+            for _ in range(n_agents)
+        ]
+    else:
+        actions_bufs = [
+            np.zeros(cfg.rollout_steps, dtype=np.int64) for _ in range(n_agents)
+        ]
     logprobs_bufs = [
         np.zeros(cfg.rollout_steps, dtype=np.float32) for _ in range(n_agents)
     ]
@@ -115,7 +132,8 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
 
     # Reset environment
     observations, infos = env.reset(seed=cfg.seed)
-    agent_ids = list(observations.keys())
+    agent_order = list(env.possible_agents)
+    zero_obs = np.zeros(obs_dim, dtype=np.float32)
 
     # Episode tracking variables
     episode_return = 0.0
@@ -128,7 +146,10 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
         # Collect rollouts
         for step in range(cfg.rollout_steps):
             # Convert observations to list and create state
-            obs_list = [observations[agent_id] for agent_id in agent_ids]
+            active_agents = set(observations.keys())
+            obs_list = [
+                observations.get(agent_id, zero_obs) for agent_id in agent_order
+            ]
             state = np.concatenate(obs_list, axis=0)
 
             # Get actions from agents
@@ -143,13 +164,20 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
             state_bufs[step] = state
 
             # Convert actions to dict for environment
-            actions_dict = {agent_id: int(actions_array[i]) for i, agent_id in enumerate(agent_ids)}
+            actions_dict = {}
+            for i, agent_id in enumerate(agent_order):
+                if agent_id not in active_agents:
+                    continue
+                action = actions_array[i]
+                if action_type == "discrete":
+                    action = int(action)
+                actions_dict[agent_id] = action
 
             # Step environment
             next_observations, rewards, terminations, truncations, infos = env.step(actions_dict)
 
             # Store rewards and dones
-            for i, agent_id in enumerate(agent_ids):
+            for i, agent_id in enumerate(agent_order):
                 if agent_id in rewards:
                     rewards_bufs[i][step] = rewards[agent_id]
                     dones_bufs[i][step] = float(terminations.get(agent_id, False) or truncations.get(agent_id, False))
@@ -158,8 +186,9 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
                     rewards_bufs[i][step] = 0.0
                     dones_bufs[i][step] = 1.0
 
-            # Track episode statistics (use first agent as representative)
-            episode_return += rewards.get(agent_ids[0], 0.0)
+            # Track episode statistics
+            if rewards:
+                episode_return += float(np.mean(list(rewards.values())))
             episode_length += 1
 
             # Check if episode ended
@@ -170,14 +199,15 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
                 episode_return = 0.0
                 episode_length = 0
                 next_observations, infos = env.reset()
-                agent_ids = list(next_observations.keys())
 
             observations = next_observations
             global_step += 1
 
         # Bootstrap value for next state
         with torch.no_grad():
-            next_obs_list = [observations.get(agent_id, np.zeros(obs_dim)) for agent_id in agent_ids]
+            next_obs_list = [
+                observations.get(agent_id, zero_obs) for agent_id in agent_order
+            ]
             next_state = np.concatenate(next_obs_list, axis=0)
             _, _, next_values = agent.act(next_obs_list, next_state)
 
@@ -199,10 +229,11 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
             returns_flat = returns.reshape(-1)
 
             # Create batch for this agent
+            action_dtype = torch.float32 if action_type == "continuous" else torch.int64
             batch = Batch(
                 obs=torch.as_tensor(obs_bufs[i], dtype=torch.float32, device=agent.device),
                 state=torch.as_tensor(state_bufs, dtype=torch.float32, device=agent.device),
-                actions=torch.as_tensor(actions_bufs[i], dtype=torch.int64, device=agent.device),
+                actions=torch.as_tensor(actions_bufs[i], dtype=action_dtype, device=agent.device),
                 logprobs=torch.as_tensor(logprobs_bufs[i], dtype=torch.float32, device=agent.device),
                 returns=torch.as_tensor(returns_flat, dtype=torch.float32, device=agent.device),
                 advantages=torch.as_tensor(advantages_flat, dtype=torch.float32, device=agent.device),
@@ -212,6 +243,14 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
 
         # Optimize for K epochs
         total_samples = cfg.rollout_steps
+        stats_accum = {
+            "loss/policy": 0.0,
+            "loss/value": 0.0,
+            "loss/total": 0.0,
+            "stats/entropy": 0.0,
+            "stats/approx_kl": 0.0,
+        }
+        stats_count = 0
         for epoch in range(cfg.update_iterations):
             # Shuffle indices
             idxs = np.arange(total_samples)
@@ -237,6 +276,14 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
                     mini_batches.append(mini_batch)
 
                 stats = agent.update(mini_batches)
+                for key, value in stats.items():
+                    stats_accum[key] += value
+                stats_count += 1
+
+        if stats_count > 0:
+            stats = {k: v / stats_count for k, v in stats_accum.items()}
+        else:
+            stats = stats_accum
 
         # Logging
         if len(ep_returns_hist) > 0:
@@ -316,10 +363,18 @@ def demo(
         discretize_actions=cfg.discretize_actions,
         action_bins=cfg.action_bins,
     )
-    obs_dim, act_dim, state_dim, n_agents = get_space_dims(env)
+    obs_dim, act_dim, state_dim, n_agents, act_space = get_space_dims(
+        env, return_action_space=True
+    )
+    action_type = "discrete" if hasattr(act_space, "n") else "continuous"
+    action_low = None
+    action_high = None
+    if action_type == "continuous":
+        action_low = np.asarray(act_space.low, dtype=np.float32)
+        action_high = np.asarray(act_space.high, dtype=np.float32)
 
     logger.info(
-        f"Demo: Env={cfg.env_id} | n_agents={n_agents} | obs_dim={obs_dim} | act_dim={act_dim}"
+        f"Demo: Env={cfg.env_id} | n_agents={n_agents} | obs_dim={obs_dim} | act_dim={act_dim} | action_type={action_type}"
     )
 
     # Create agent
@@ -339,6 +394,9 @@ def demo(
         device=cfg.device,
         share_policy=cfg.share_policy,
         use_centralized_critic=cfg.use_centralized_critic,
+        action_type=action_type,
+        action_low=action_low,
+        action_high=action_high,
     )
 
     # Load checkpoint
@@ -348,25 +406,34 @@ def demo(
     logger.info(f"Loaded model from {model_path}")
 
     returns = []
+    agent_order = list(env.possible_agents)
+    zero_obs = np.zeros(obs_dim, dtype=np.float32)
     for ep in range(episodes):
         observations, _ = env.reset(seed=cfg.seed + ep)
-        agent_ids = list(observations.keys())
         ep_ret = 0.0
         done = False
 
         while not done and observations:
-            obs_list = [observations.get(agent_id, np.zeros(obs_dim)) for agent_id in agent_ids]
+            active_agents = set(observations.keys())
+            obs_list = [observations.get(agent_id, zero_obs) for agent_id in agent_order]
             state = np.concatenate(obs_list, axis=0)
 
             with torch.no_grad():
-                actions_array, _, _ = agent.act(obs_list, state)
+                actions_array, _, _ = agent.act(obs_list, state, deterministic=True)
 
-            actions_dict = {agent_id: int(actions_array[i]) for i, agent_id in enumerate(agent_ids)}
+            actions_dict = {}
+            for i, agent_id in enumerate(agent_order):
+                if agent_id not in active_agents:
+                    continue
+                action = actions_array[i]
+                if action_type == "discrete":
+                    action = int(action)
+                actions_dict[agent_id] = action
             observations, rewards, terminations, truncations, infos = env.step(actions_dict)
 
-            # Accumulate reward from first agent
-            if agent_ids[0] in rewards:
-                ep_ret += rewards[agent_ids[0]]
+            # Accumulate reward
+            if rewards:
+                ep_ret += float(np.mean(list(rewards.values())))
 
             # Check if episode ended
             if not observations or len(observations) == 0:
