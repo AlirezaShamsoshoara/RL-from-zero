@@ -14,7 +14,7 @@ from .networks import ActorCritic
 class Batch:
     obs: torch.Tensor  # [batch_size, obs_dim]
     state: torch.Tensor  # [batch_size, state_dim] for centralized critic
-    actions: torch.Tensor  # [batch_size]
+    actions: torch.Tensor  # [batch_size] or [batch_size, act_dim]
     logprobs: torch.Tensor  # [batch_size]
     returns: torch.Tensor  # [batch_size]
     advantages: torch.Tensor  # [batch_size]
@@ -45,6 +45,9 @@ class MAPPOAgent:
         device: str,
         share_policy: bool = False,
         use_centralized_critic: bool = True,
+        action_type: str = "discrete",
+        action_low=None,
+        action_high=None,
     ):
         self.n_agents = n_agents
         self.device = device
@@ -66,6 +69,9 @@ class MAPPOAgent:
                 critic_hidden_sizes,
                 activation,
                 use_centralized_critic,
+                action_type=action_type,
+                action_low=action_low,
+                action_high=action_high,
             ).to(device)
             self.models = [shared_model for _ in range(n_agents)]
             # Single optimizer for shared parameters
@@ -81,6 +87,9 @@ class MAPPOAgent:
                     critic_hidden_sizes,
                     activation,
                     use_centralized_critic,
+                    action_type=action_type,
+                    action_low=action_low,
+                    action_high=action_high,
                 ).to(device)
                 for _ in range(n_agents)
             ]
@@ -90,7 +99,9 @@ class MAPPOAgent:
             ]
 
     @torch.no_grad()
-    def act(self, obs_list: List[np.ndarray], state: np.ndarray = None):
+    def act(
+        self, obs_list: List[np.ndarray], state: np.ndarray = None, deterministic: bool = False
+    ):
         """
         Sample actions for all agents.
         Args:
@@ -107,7 +118,7 @@ class MAPPOAgent:
 
         for i, obs in enumerate(obs_list):
             obs_t = torch.as_tensor(obs, dtype=torch.float32, device=self.device)
-            action, logprob, _ = self.models[i].act(obs_t)
+            action, logprob, _ = self.models[i].act(obs_t, deterministic=deterministic)
 
             # Get value based on centralized or decentralized critic
             if self.use_centralized_critic and state is not None:
