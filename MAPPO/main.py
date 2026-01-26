@@ -20,9 +20,12 @@ from MAPPO.mappo.logging_utils import setup_logger
 
 def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
     cfg = Config.from_yaml(config)
-    # Allow providing the key via CLI arg; default remains blank
+    env_wandb_key = os.getenv("WANDB_API_KEY", "")
+    # Allow providing the key via CLI arg or env var; default remains blank
     if wandb_key:
         cfg.wandb_key = wandb_key
+    elif env_wandb_key:
+        cfg.wandb_key = env_wandb_key
     logger = setup_logger(
         name="mappo",
         level=cfg.log_level,
@@ -32,11 +35,9 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
     )
     set_seed(cfg.seed)
 
-    # Login to Weights & Biases at Python level if a key is provided
+    # Login to Weights & Biases if a key is provided
     if getattr(cfg, "wandb_key", ""):
-        import wandb as _wandb
-
-        _wandb.login(key=cfg.wandb_key)
+        wandb.login(key=cfg.wandb_key)
 
     logger.info(f"Initializing wandb run={cfg.run_name}")
     run = wandb.init(
@@ -44,7 +45,13 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
     )
 
     # Create environment
-    env = make_multiwalker_env(n_walkers=cfg.n_walkers, seed=cfg.seed, render_mode=None)
+    env = make_multiwalker_env(
+        n_walkers=cfg.n_walkers,
+        seed=cfg.seed,
+        render_mode=None,
+        discretize_actions=cfg.discretize_actions,
+        action_bins=cfg.action_bins,
+    )
     obs_dim, act_dim, state_dim, n_agents = get_space_dims(env)
 
     # Verify n_agents matches config
@@ -303,7 +310,11 @@ def demo(
 
     # Create environment with rendering
     env = make_multiwalker_env(
-        n_walkers=cfg.n_walkers, seed=cfg.seed, render_mode=cfg.render_mode or "human"
+        n_walkers=cfg.n_walkers,
+        seed=cfg.seed,
+        render_mode=cfg.render_mode or "human",
+        discretize_actions=cfg.discretize_actions,
+        action_bins=cfg.action_bins,
     )
     obs_dim, act_dim, state_dim, n_agents = get_space_dims(env)
 

@@ -1,51 +1,57 @@
 # MAPPO Config for MultiWalker-v9 (PettingZoo)
-project: rl-practice
-entity: null  # set your WandB entity if needed
-run_name: mappo-multiwalker
-seed: 42
+# Experiment tracking
+project: rl-hero  # wandb project name (any string)
+entity: null  # null or your wandb entity/team
+run_name: mappo-multiwalker  # wandb run name (any string)
+wandb_key: ""  # optional API key for wandb login (or set WANDB_API_KEY)
+seed: 42  # any integer seed
 
 # Environment
+# env_id options: multiwalker_v9 (label only; env created via make_multiwalker_env)
 env_id: multiwalker_v9
-render_mode: human  # 'human' for on-screen rendering during demo/inference
-n_walkers: 3
+# render_mode options: null (no render), human (window), rgb_array (frames)
+render_mode: human
+n_walkers: 3  # number of walker agents (int >= 1)
+discretize_actions: true  # true to map continuous actions to discrete bins
+action_bins: 3  # bins per action dimension; total actions = action_bins ** action_dim
 
 # Multi-Agent Settings
-n_agents: 3
-share_policy: false  # If true, all agents share the same policy network
-use_centralized_critic: true  # Use centralized critic with full state information
+n_agents: 3  # number of agents (should match n_walkers)
+share_policy: false  # true or false; share one policy across agents
+use_centralized_critic: true  # true or false; centralized critic with full state
 
 # Training
-total_timesteps: 1000000
-rollout_steps: 400
-update_iterations: 10
-minibatch_size: 128
-learning_rate: 5e-4
-gamma: 0.99
-gae_lambda: 0.95
-clip_coef: 0.2
-ent_coef: 0.01
-vf_coef: 1.0
-max_grad_norm: 10.0
+total_timesteps: 1000000  # total environment steps
+rollout_steps: 400  # steps per rollout
+update_iterations: 10  # policy update epochs per rollout
+minibatch_size: 128  # minibatch size (int >= 1)
+learning_rate: 5e-4  # optimizer learning rate
+gamma: 0.99  # discount factor (0 < gamma <= 1)
+gae_lambda: 0.95  # GAE lambda (0 <= lambda <= 1)
+clip_coef: 0.2  # PPO clip parameter
+ent_coef: 0.01  # entropy bonus coefficient
+vf_coef: 1.0  # value loss coefficient
+max_grad_norm: 10.0  # gradient clip norm
 
 # Model Architecture
-actor_hidden_sizes: [256, 128]
-critic_hidden_sizes: [256, 128]
-activation: relu
+actor_hidden_sizes: [256, 128]  # MLP hidden sizes (e.g., [128,128], [256,256,128], [])
+critic_hidden_sizes: [256, 128]  # MLP hidden sizes (e.g., [128,128], [256,256,128], [])
+activation: relu  # relu or tanh
 
 # Logging & Checkpoints
-log_interval: 10
-checkpoint_interval: 50
-checkpoint_dir: MAPPO/checkpoints
-save_best: true
+log_interval: 10  # log cadence in updates
+checkpoint_interval: 50  # checkpoint cadence in updates
+checkpoint_dir: MAPPO/checkpoints  # checkpoint directory
+save_best: true  # true or false
 # Python logger
-log_level: INFO
-log_to_file: true
-log_file: MAPPO/logs/mappo.log
-log_to_console: true
+log_level: INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+log_to_file: true  # true or false
+log_file: MAPPO/logs/mappo.log  # log file path (used when log_to_file=true)
+log_to_console: true  # true or false
 
 # Inference/Demo
-inference_model_path: MAPPO/checkpoints/best.pt
-episodes: 5
+inference_model_path: MAPPO/checkpoints/best.pt  # model path for demo/eval
+episodes: 5  # number of demo episodes (int >= 1)
 
 # Misc
-device: auto  # 'cpu', 'cuda', or 'auto'
+device: cpu  # auto, cpu, or cuda
