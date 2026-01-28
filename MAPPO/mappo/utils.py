@@ -118,7 +118,7 @@ def make_multiwalker_env(
     return env
 
 
-def get_space_dims(env):
+def get_space_dims(env, return_action_space: bool = False):
     """
     Get observation and action space dimensions for multi-agent env.
     Returns:
@@ -126,6 +126,7 @@ def get_space_dims(env):
         act_dim: Action dimension for single agent
         state_dim: Full state dimension (concatenated observations)
         n_agents: Number of agents
+        act_space: Action space (if return_action_space=True)
     """
     agent_ids = env.possible_agents
     n_agents = len(agent_ids)
@@ -139,16 +140,17 @@ def get_space_dims(env):
     if hasattr(act_space, "n"):
         act_dim = act_space.n
     elif isinstance(act_space, spaces.Box):
-        raise ValueError(
-            "MAPPO expects discrete actions. Enable discretize_actions or add a "
-            "continuous-action policy."
-        )
+        if act_space.shape is None or len(act_space.shape) != 1:
+            raise ValueError("Only 1D Box action spaces are supported.")
+        act_dim = act_space.shape[0]
     else:
         raise ValueError("Unsupported action space type.")
 
     # State dimension is concatenation of all agent observations
     state_dim = obs_dim * n_agents
 
+    if return_action_space:
+        return obs_dim, act_dim, state_dim, n_agents, act_space
     return obs_dim, act_dim, state_dim, n_agents
 
 
