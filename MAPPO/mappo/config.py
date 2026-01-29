@@ -30,7 +30,7 @@ class Config:
     render_mode: Optional[str] = None
     n_walkers: int = 3
     seed: int = 42
-    discretize_actions: bool = True
+    discretize_actions: bool = False
     action_bins: int = 3
 
     # Multi-Agent Settings
