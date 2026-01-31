@@ -4,6 +4,10 @@
 
 # Multi-Agent Proximal Policy Optimization (MAPPO)
 
+<p align="center">
+  <img src="assets/mappo_multiwalker.gif" alt="MAPPO MultiWalker Demo" width="520">
+</p>
+
 MAPPO is a multi-agent reinforcement learning algorithm that extends PPO to cooperative multi-agent settings. It features decentralized actor policies with a centralized critic that has access to the full state information, enabling better coordination among agents while maintaining decentralized execution.
 
 ## Algorithm Overview
