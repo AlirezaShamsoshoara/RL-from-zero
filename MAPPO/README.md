@@ -58,6 +58,18 @@ uv run -m MAPPO.main train --config MAPPO/configs/multiwalker.yaml
 uv run -m MAPPO.main demo --config MAPPO/configs/multiwalker.yaml --model_path MAPPO/checkpoints/best.pt --episodes 5
 ```
 
+### Training charts
+
+<p align="center">
+  <img src="assets/chart_01.png" alt="DQN training td_error" width="520" />
+</p>
+<p align="center">
+  <img src="assets/chart_02.png" alt="DQN training q_loss" width="590" />
+</p>
+<p align="center">
+  <img src="assets/chart_03.png" alt="DQN training avg length" width="520" />
+</p>
+
 ## Default Environment: MultiWalker-v9
 
 MultiWalker is a continuous control environment where multiple bipedal walkers must coordinate to carry a package across terrain:
