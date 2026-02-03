@@ -98,30 +98,61 @@ This environment tests MAPPO's ability to:
 - Output: State value $V_\phi(s)$
 - Centralized: Uses information from all agents during training
 
-### Update Rule
+### Multi-Agent Objective (CTDE)
 
-For each agent $i$, the policy is updated using PPO's clipped objective:
+Let $N$ agents have local observations $o_t^i$, joint action $\mathbf{a}_t=(a_t^1,\dots,a_t^N)$, and centralized state $s_t=[o_t^1;\dots;o_t^N]$.
 
-$$L^{CLIP}(\theta) = \mathbb{E}_t \left[ \min(r_t(\theta) \hat{A}_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon) \hat{A}_t) \right]$$
+With decentralized actors, the joint policy factorizes as:
+
+$$\pi_{\Theta}(\mathbf{a}_t \mid \mathbf{o}_t)=\prod_{i=1}^{N}\pi_{\theta_i}(a_t^i \mid o_t^i)$$
+
+If policies are shared (`share_policy: true`), then $\theta_1=\cdots=\theta_N=\theta$.
+
+For each agent:
+
+$$r_t^i(\theta_i)=\frac{\pi_{\theta_i}(a_t^i \mid o_t^i)}{\pi_{\theta_i,\text{old}}(a_t^i \mid o_t^i)}$$
+
+and the MAPPO actor objective aggregates clipped PPO objectives across agents:
+
+$$L_{\text{actor}}(\Theta)=\frac{1}{N}\sum_{i=1}^{N}\mathbb{E}_t\left[\min\left(r_t^i\hat{A}_t^i,\ \text{clip}(r_t^i,1-\epsilon,1+\epsilon)\hat{A}_t^i\right)\right]$$
+
+The centralized critic is trained from the global state:
+
+$$L_{\text{value}}(\phi)=\mathbb{E}_t\left[\max\left((V_\phi(s_t)-R_t)^2,\ (V_\phi^{\text{clip}}(s_t)-R_t)^2\right)\right]$$
 
 where:
-- $r_t(\theta) = \frac{\pi_\theta(a_t | o_t)}{\pi_{\theta_{old}}(a_t | o_t)}$ is the probability ratio
-- $\hat{A}_t$ is the advantage estimate computed using GAE
-- $\epsilon$ is the clipping parameter (default: 0.2)
+- $V_\phi^{\text{clip}}(s_t)=V_{\phi,\text{old}}(s_t)+\text{clip}(V_\phi(s_t)-V_{\phi,\text{old}}(s_t),-\epsilon,\epsilon)$
+- $R_t$ is the return target
 
-The value function is updated using:
+Total loss in implementation form:
 
-$$L^{VF}(\phi) = \mathbb{E}_t \left[ \max((V_\phi(s_t) - V^{targ}_t)^2, (\text{clip}(V_\phi(s_t), V_{old}(s_t) - \epsilon, V_{old}(s_t) + \epsilon) - V^{targ}_t)^2) \right]$$
+$$L_{\text{total}}=-L_{\text{actor}}+c_vL_{\text{value}}-c_e\frac{1}{N}\sum_{i=1}^{N}\mathbb{E}_t[\mathcal{H}(\pi_{\theta_i}(\cdot\mid o_t^i))]$$
 
-### Advantage Estimation
+### Advantage Estimation with Centralized Critic
 
-MAPPO uses Generalized Advantage Estimation (GAE) for each agent:
+For each agent $i$:
 
-$$\hat{A}_t = \sum_{l=0}^{\infty} (\gamma \lambda)^l \delta_{t+l}$$
+$$\delta_t^i=r_t^i+\gamma(1-d_t^i)V_\phi(s_{t+1})-V_\phi(s_t)$$
 
-where $\delta_t = r_t + \gamma V(s_{t+1}) - V(s_t)$ is the TD error.
+$$\hat{A}_t^i=\sum_{l=0}^{T-t-1}(\gamma\lambda)^l\delta_{t+l}^i,\quad R_t^i=\hat{A}_t^i+V_\phi(s_t)$$
 
-The centralized critic provides more accurate value estimates by considering the full state, leading to better advantage estimates and faster convergence.
+The centralized baseline reduces non-stationarity because the critic conditions on all agents.
+
+### Knowledge Sharing by Parameter Sharing
+
+When policies are shared, MAPPO optimizes one parameter vector $\theta$ with a team-averaged gradient:
+
+$$\nabla_\theta L_{\text{actor}}(\theta)=\frac{1}{N}\sum_{i=1}^{N}\mathbb{E}_t\left[\nabla_\theta \log \pi_\theta(a_t^i\mid o_t^i)\,\tilde{A}_t^i\right]$$
+
+where $\tilde{A}_t^i$ denotes the clipped-importance-weighted advantage term. This is the explicit "knowledge sharing" mechanism in homogeneous-agent MAPPO.
+
+### Convergence Notes (Practical, Not Global-Optimal Guarantees)
+
+For deep multi-agent PPO, there is generally no theorem guaranteeing convergence to the globally best joint policy for all agents. In practice, convergence is improved when:
+- policy updates remain small (monitor/limit KL),
+- critic targets are stable (centralized value with correct terminal handling),
+- gradients are clipped and learning rate is annealed,
+- results are validated across multiple random seeds.
 
 ## Configuration Options
 
@@ -143,6 +174,9 @@ Key hyperparameters in `MAPPO/configs/multiwalker.yaml`:
 - `clip_coef`: PPO clipping parameter
 - `ent_coef`: Entropy bonus coefficient (encourages exploration)
 - `vf_coef`: Value function loss coefficient
+- `max_grad_norm`: Gradient clipping threshold
+- `target_kl`: Early-stop threshold for PPO epochs
+- `anneal_lr`: Whether to linearly anneal learning rate across updates
 
 ### Network Architecture
 - `actor_hidden_sizes`: Hidden layer sizes for actor networks
@@ -222,10 +256,10 @@ MAPPO addresses the non-stationarity problem of independent learning by using a 
 
 ## Troubleshooting
 
-- **Agents not coordinating**: Try enabling centralized critic (`use_centralized_critic: true`) and increasing `rollout_steps`
-- **Training unstable**: Reduce `learning_rate`, increase `minibatch_size`, or increase `max_grad_norm`
-- **Slow convergence**: Enable `share_policy: true` to share parameters across agents, or increase `update_iterations`
-- **High KL divergence warnings**: Decrease `learning_rate` or `clip_coef` to make updates more conservative
+- **Agents not coordinating**: Enable centralized critic (`use_centralized_critic: true`) and shared policy (`share_policy: true`) for homogeneous teams
+- **Training unstable**: Reduce `learning_rate`, lower `max_grad_norm`, and use `anneal_lr: true`
+- **Slow convergence**: Increase `rollout_steps`, tune `ent_coef`, and verify GAE/terminal handling
+- **High KL divergence warnings**: Lower `learning_rate` or `clip_coef`, and set a stricter `target_kl`
 - **`ModuleNotFoundError: No module named 'Box2D'`**: Install the SISL extras or Box2D in your env:
   ```bash
   python -m pip install "pettingzoo[sisl]"
