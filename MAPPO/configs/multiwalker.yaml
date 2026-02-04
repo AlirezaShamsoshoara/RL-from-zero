@@ -17,21 +17,23 @@ action_bins: 3  # bins per action dimension; total actions = action_bins ** acti
 
 # Multi-Agent Settings
 n_agents: 3  # number of agents (should match n_walkers)
-share_policy: false  # true or false; share one policy across agents
+share_policy: true  # true or false; share one policy across agents (recommended for homogeneous teams)
 use_centralized_critic: true  # true or false; centralized critic with full state
 
 # Training
 total_timesteps: 1000000  # total environment steps
-rollout_steps: 400  # steps per rollout
+rollout_steps: 1024  # steps per rollout
 update_iterations: 10  # policy update epochs per rollout
-minibatch_size: 128  # minibatch size (int >= 1)
-learning_rate: 5e-4  # optimizer learning rate
+minibatch_size: 256  # minibatch size (int >= 1)
+learning_rate: 3e-4  # optimizer learning rate
 gamma: 0.99  # discount factor (0 < gamma <= 1)
 gae_lambda: 0.95  # GAE lambda (0 <= lambda <= 1)
 clip_coef: 0.2  # PPO clip parameter
-ent_coef: 0.01  # entropy bonus coefficient
-vf_coef: 1.0  # value loss coefficient
-max_grad_norm: 10.0  # gradient clip norm
+ent_coef: 0.005  # entropy bonus coefficient
+vf_coef: 0.5  # value loss coefficient
+max_grad_norm: 0.5  # gradient clip norm
+target_kl: 0.02  # early-stop PPO epochs when approximate KL exceeds this value
+anneal_lr: true  # linearly anneal learning rate across updates
 
 # Model Architecture
 actor_hidden_sizes: [256, 128]  # MLP hidden sizes (e.g., [128,128], [256,256,128], [])
