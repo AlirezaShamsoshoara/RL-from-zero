@@ -35,21 +35,23 @@ class Config:
 
     # Multi-Agent Settings
     n_agents: int = 3
-    share_policy: bool = False  # Whether all agents share the same policy network
+    share_policy: bool = True  # Whether all agents share the same policy network
     use_centralized_critic: bool = True  # Use centralized critic with full state
 
     # Training
     total_timesteps: int = 1_000_000
-    rollout_steps: int = 400
+    rollout_steps: int = 1024
     update_iterations: int = 10
-    minibatch_size: int = 128
-    learning_rate: float = 5e-4
+    minibatch_size: int = 256
+    learning_rate: float = 3e-4
     gamma: float = 0.99
     gae_lambda: float = 0.95
     clip_coef: float = 0.2
-    ent_coef: float = 0.01
-    vf_coef: float = 1.0
-    max_grad_norm: float = 10.0
+    ent_coef: float = 0.005
+    vf_coef: float = 0.5
+    max_grad_norm: float = 0.5
+    target_kl: float = 0.02
+    anneal_lr: bool = True
 
     # Model
     actor_hidden_sizes: List[int] = field(default_factory=lambda: [256, 128])
@@ -123,6 +125,8 @@ class Config:
             "ent_coef": self.ent_coef,
             "vf_coef": self.vf_coef,
             "max_grad_norm": self.max_grad_norm,
+            "target_kl": self.target_kl,
+            "anneal_lr": self.anneal_lr,
             "actor_hidden_sizes": self.actor_hidden_sizes,
             "critic_hidden_sizes": self.critic_hidden_sizes,
             "activation": self.activation,
