@@ -129,6 +129,9 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
     values_bufs = [
         np.zeros(cfg.rollout_steps, dtype=np.float32) for _ in range(n_agents)
     ]
+    alive_bufs = [
+        np.zeros(cfg.rollout_steps, dtype=np.float32) for _ in range(n_agents)
+    ]
 
     # Reset environment
     observations, infos = env.reset(seed=cfg.seed)
@@ -181,10 +184,12 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
                 if agent_id in rewards:
                     rewards_bufs[i][step] = rewards[agent_id]
                     dones_bufs[i][step] = float(terminations.get(agent_id, False) or truncations.get(agent_id, False))
+                    alive_bufs[i][step] = 1.0
                 else:
                     # Agent removed from environment (e.g., fell in multiwalker)
                     rewards_bufs[i][step] = 0.0
                     dones_bufs[i][step] = 1.0
+                    alive_bufs[i][step] = 0.0
 
             # Track episode statistics
             if rewards:
@@ -218,7 +223,12 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
             rewards_2d = rewards_bufs[i].reshape(-1, 1)
             dones_2d = dones_bufs[i].reshape(-1, 1)
             values_2d = values_bufs[i].reshape(-1, 1)
-            next_values_1d = next_values[i:i+1]
+            alive_2d = alive_bufs[i].reshape(-1, 1)
+            next_values_1d = next_values[i:i+1] * alive_2d[-1]
+
+            rewards_2d = rewards_2d * alive_2d
+            values_2d = values_2d * alive_2d
+            dones_2d = np.where(alive_2d > 0.5, dones_2d, 1.0)
 
             advantages, returns = MAPPOAgent.compute_gae(
                 rewards_2d, dones_2d, values_2d, next_values_1d, cfg.gamma, cfg.gae_lambda
@@ -238,6 +248,7 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
                 returns=torch.as_tensor(returns_flat, dtype=torch.float32, device=agent.device),
                 advantages=torch.as_tensor(advantages_flat, dtype=torch.float32, device=agent.device),
                 values=torch.as_tensor(values_bufs[i], dtype=torch.float32, device=agent.device),
+                alive_mask=torch.as_tensor(alive_bufs[i], dtype=torch.float32, device=agent.device),
             )
             batches.append(batch)
 
@@ -272,13 +283,15 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
                         returns=batch.returns[mb_idx],
                         advantages=batch.advantages[mb_idx],
                         values=batch.values[mb_idx],
+                        alive_mask=batch.alive_mask[mb_idx],
                     )
                     mini_batches.append(mini_batch)
 
-                stats = agent.update(mini_batches)
-                for key, value in stats.items():
-                    stats_accum[key] += value
-                stats_count += 1
+                stats, update_steps = agent.update(mini_batches)
+                if update_steps > 0:
+                    for key, value in stats.items():
+                        stats_accum[key] += value * update_steps
+                    stats_count += update_steps
 
         if stats_count > 0:
             stats = {k: v / stats_count for k, v in stats_accum.items()}

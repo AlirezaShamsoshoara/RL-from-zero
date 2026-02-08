@@ -19,6 +19,7 @@ class Batch:
     returns: torch.Tensor  # [batch_size]
     advantages: torch.Tensor  # [batch_size]
     values: torch.Tensor  # [batch_size]
+    alive_mask: torch.Tensor  # [batch_size]
 
 
 class MAPPOAgent:
@@ -135,13 +136,13 @@ class MAPPOAgent:
 
         return np.array(actions), np.array(logprobs), np.array(values)
 
-    def update(self, batches: List[Batch]) -> Dict[str, float]:
+    def update(self, batches: List[Batch]) -> Tuple[Dict[str, float], int]:
         """
         Update policy and value networks for all agents.
         Args:
             batches: List of batches, one per agent
         Returns:
-            Dictionary of loss statistics
+            Dictionary of loss statistics and number of agent updates performed
         """
         total_stats = {
             "loss/policy": 0.0,
@@ -150,10 +151,11 @@ class MAPPOAgent:
             "stats/entropy": 0.0,
             "stats/approx_kl": 0.0,
         }
+        update_steps = 0
 
         # Update each agent's policy
         for agent_id, batch in enumerate(batches):
-            obs, state, actions, old_logprobs, returns, advantages, old_values = (
+            obs, state, actions, old_logprobs, returns, advantages, old_values, alive_mask = (
                 batch.obs,
                 batch.state,
                 batch.actions,
@@ -161,7 +163,20 @@ class MAPPOAgent:
                 batch.returns,
                 batch.advantages,
                 batch.values,
+                batch.alive_mask,
             )
+
+            alive_idx = alive_mask > 0.5
+            if not torch.any(alive_idx):
+                continue
+
+            obs = obs[alive_idx]
+            state = state[alive_idx]
+            actions = actions[alive_idx]
+            old_logprobs = old_logprobs[alive_idx]
+            returns = returns[alive_idx]
+            advantages = advantages[alive_idx]
+            old_values = old_values[alive_idx]
 
             # Normalize advantages
             advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
@@ -222,12 +237,14 @@ class MAPPOAgent:
             total_stats["loss/total"] += loss.item()
             total_stats["stats/entropy"] += entropy.mean().item()
             total_stats["stats/approx_kl"] += approx_kl
+            update_steps += 1
 
-        # Average across agents
-        for key in total_stats:
-            total_stats[key] /= self.n_agents
+        # Average across agent updates
+        if update_steps > 0:
+            for key in total_stats:
+                total_stats[key] /= update_steps
 
-        return total_stats
+        return total_stats, update_steps
 
     @staticmethod
     def compute_gae(
