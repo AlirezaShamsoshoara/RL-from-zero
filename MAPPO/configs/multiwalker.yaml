@@ -10,9 +10,9 @@ seed: 42  # any integer seed
 # env_id options: multiwalker_v9 (label only; env created via make_multiwalker_env)
 env_id: multiwalker_v9
 # render_mode options: null (no render), human (window), rgb_array (frames)
-render_mode: human
+render_mode: null
 n_walkers: 3  # number of walker agents (int >= 1)
-discretize_actions: true  # true to map continuous actions to discrete bins
+discretize_actions: false  # false for continuous control (recommended)
 action_bins: 3  # bins per action dimension; total actions = action_bins ** action_dim
 
 # Multi-Agent Settings

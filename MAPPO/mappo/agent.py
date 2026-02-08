@@ -14,11 +14,12 @@ from .networks import ActorCritic
 class Batch:
     obs: torch.Tensor  # [batch_size, obs_dim]
     state: torch.Tensor  # [batch_size, state_dim] for centralized critic
-    actions: torch.Tensor  # [batch_size]
+    actions: torch.Tensor  # [batch_size] or [batch_size, act_dim]
     logprobs: torch.Tensor  # [batch_size]
     returns: torch.Tensor  # [batch_size]
     advantages: torch.Tensor  # [batch_size]
     values: torch.Tensor  # [batch_size]
+    alive_mask: torch.Tensor  # [batch_size]
 
 
 class MAPPOAgent:
@@ -45,6 +46,9 @@ class MAPPOAgent:
         device: str,
         share_policy: bool = False,
         use_centralized_critic: bool = True,
+        action_type: str = "discrete",
+        action_low=None,
+        action_high=None,
     ):
         self.n_agents = n_agents
         self.device = device
@@ -66,6 +70,9 @@ class MAPPOAgent:
                 critic_hidden_sizes,
                 activation,
                 use_centralized_critic,
+                action_type=action_type,
+                action_low=action_low,
+                action_high=action_high,
             ).to(device)
             self.models = [shared_model for _ in range(n_agents)]
             # Single optimizer for shared parameters
@@ -81,6 +88,9 @@ class MAPPOAgent:
                     critic_hidden_sizes,
                     activation,
                     use_centralized_critic,
+                    action_type=action_type,
+                    action_low=action_low,
+                    action_high=action_high,
                 ).to(device)
                 for _ in range(n_agents)
             ]
@@ -90,7 +100,9 @@ class MAPPOAgent:
             ]
 
     @torch.no_grad()
-    def act(self, obs_list: List[np.ndarray], state: np.ndarray = None):
+    def act(
+        self, obs_list: List[np.ndarray], state: np.ndarray = None, deterministic: bool = False
+    ):
         """
         Sample actions for all agents.
         Args:
@@ -107,7 +119,7 @@ class MAPPOAgent:
 
         for i, obs in enumerate(obs_list):
             obs_t = torch.as_tensor(obs, dtype=torch.float32, device=self.device)
-            action, logprob, _ = self.models[i].act(obs_t)
+            action, logprob, _ = self.models[i].act(obs_t, deterministic=deterministic)
 
             # Get value based on centralized or decentralized critic
             if self.use_centralized_critic and state is not None:
@@ -124,13 +136,13 @@ class MAPPOAgent:
 
         return np.array(actions), np.array(logprobs), np.array(values)
 
-    def update(self, batches: List[Batch]) -> Dict[str, float]:
+    def update(self, batches: List[Batch]) -> Tuple[Dict[str, float], int]:
         """
         Update policy and value networks for all agents.
         Args:
             batches: List of batches, one per agent
         Returns:
-            Dictionary of loss statistics
+            Dictionary of loss statistics and number of agent updates performed
         """
         total_stats = {
             "loss/policy": 0.0,
@@ -139,10 +151,11 @@ class MAPPOAgent:
             "stats/entropy": 0.0,
             "stats/approx_kl": 0.0,
         }
+        update_steps = 0
 
         # Update each agent's policy
         for agent_id, batch in enumerate(batches):
-            obs, state, actions, old_logprobs, returns, advantages, old_values = (
+            obs, state, actions, old_logprobs, returns, advantages, old_values, alive_mask = (
                 batch.obs,
                 batch.state,
                 batch.actions,
@@ -150,7 +163,20 @@ class MAPPOAgent:
                 batch.returns,
                 batch.advantages,
                 batch.values,
+                batch.alive_mask,
             )
+
+            alive_idx = alive_mask > 0.5
+            if not torch.any(alive_idx):
+                continue
+
+            obs = obs[alive_idx]
+            state = state[alive_idx]
+            actions = actions[alive_idx]
+            old_logprobs = old_logprobs[alive_idx]
+            returns = returns[alive_idx]
+            advantages = advantages[alive_idx]
+            old_values = old_values[alive_idx]
 
             # Normalize advantages
             advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
@@ -211,12 +237,14 @@ class MAPPOAgent:
             total_stats["loss/total"] += loss.item()
             total_stats["stats/entropy"] += entropy.mean().item()
             total_stats["stats/approx_kl"] += approx_kl
+            update_steps += 1
 
-        # Average across agents
-        for key in total_stats:
-            total_stats[key] /= self.n_agents
+        # Average across agent updates
+        if update_steps > 0:
+            for key in total_stats:
+                total_stats[key] /= update_steps
 
-        return total_stats
+        return total_stats, update_steps
 
     @staticmethod
     def compute_gae(
