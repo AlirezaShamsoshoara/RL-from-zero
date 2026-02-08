@@ -86,6 +86,21 @@ class TestMAPPOAgent(unittest.TestCase):
         np.testing.assert_allclose(advantages, expected_advantages, atol=1e-6)
         np.testing.assert_allclose(returns, rewards, atol=1e-6)
 
+    def test_compute_gae_does_not_bootstrap_across_episode_boundary(self) -> None:
+        # t=0 is terminal, t=1 is next episode. Return at t=0 should not include
+        # value/reward information from t=1.
+        rewards = np.array([[1.0], [0.0]], dtype=np.float32)
+        dones = np.array([[1.0], [0.0]], dtype=np.float32)
+        values = np.array([[0.5], [0.2]], dtype=np.float32)
+        next_values = np.array([0.3], dtype=np.float32)
+
+        advantages, returns = MAPPOAgent.compute_gae(
+            rewards, dones, values, next_values, gamma=0.99, gae_lambda=0.95
+        )
+
+        np.testing.assert_allclose(advantages[0, 0], rewards[0, 0] - values[0, 0], atol=1e-6)
+        np.testing.assert_allclose(returns[0, 0], rewards[0, 0], atol=1e-6)
+
     def test_update_changes_parameters_and_returns_stats(self) -> None:
         torch.manual_seed(0)
         batch_size = 6
@@ -110,17 +125,19 @@ class TestMAPPOAgent(unittest.TestCase):
                     returns=returns.detach(),
                     advantages=advantages,
                     values=values.detach(),
+                    alive_mask=torch.ones((batch_size,), dtype=torch.float32),
                 )
             )
 
         before = [p.detach().clone() for p in self.agent.models[0].parameters()]
-        stats = self.agent.update(batches)
+        stats, update_steps = self.agent.update(batches)
 
         changed = any(
             not torch.allclose(b, a)
             for b, a in zip(before, self.agent.models[0].parameters())
         )
         self.assertTrue(changed)
+        self.assertGreater(update_steps, 0)
         self.assertIn("loss/total", stats)
         self.assertIn("loss/policy", stats)
         self.assertIn("loss/value", stats)
