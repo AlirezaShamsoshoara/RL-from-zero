@@ -1,7 +1,6 @@
 from __future__ import annotations
 import os
-import time
-from typing import Optional, Dict
+from typing import Optional
 import numpy as np
 import torch
 from tqdm import tqdm
@@ -146,6 +145,15 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
     best_avg_return = -np.inf
 
     for update in pbar:
+        if cfg.anneal_lr and num_updates > 0:
+            frac = 1.0 - (update / num_updates)
+            current_lr = cfg.learning_rate * frac
+            for optimizer in agent.optimizers:
+                for param_group in optimizer.param_groups:
+                    param_group["lr"] = current_lr
+        else:
+            current_lr = cfg.learning_rate
+
         # Collect rollouts
         for step in range(cfg.rollout_steps):
             # Convert observations to list and create state
@@ -262,6 +270,7 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
             "stats/approx_kl": 0.0,
         }
         stats_count = 0
+        early_stop_due_to_kl = False
         for epoch in range(cfg.update_iterations):
             # Shuffle indices
             idxs = np.arange(total_samples)
@@ -292,11 +301,21 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
                     for key, value in stats.items():
                         stats_accum[key] += value * update_steps
                     stats_count += update_steps
+                    if cfg.target_kl > 0.0 and stats["stats/approx_kl"] > cfg.target_kl:
+                        early_stop_due_to_kl = True
+                        break
+            if early_stop_due_to_kl:
+                break
 
         if stats_count > 0:
             stats = {k: v / stats_count for k, v in stats_accum.items()}
         else:
             stats = stats_accum
+
+        if early_stop_due_to_kl:
+            logger.info(
+                f"Early stop update {update} due to KL {stats['stats/approx_kl']:.4f} > target_kl {cfg.target_kl:.4f}"
+            )
 
         # Logging
         if len(ep_returns_hist) > 0:
@@ -315,6 +334,8 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
                 "loss/total": stats["loss/total"],
                 "stats/entropy": stats["stats/entropy"],
                 "stats/approx_kl": stats["stats/approx_kl"],
+                "stats/early_stop_kl": float(early_stop_due_to_kl),
+                "charts/learning_rate": current_lr,
                 "progress/global_step": global_step,
                 "progress/update": update,
             }
@@ -326,7 +347,7 @@ def train(config: str = "MAPPO/configs/multiwalker.yaml", wandb_key: str = ""):
             }
         )
 
-        if stats["stats/approx_kl"] > 0.03:
+        if stats["stats/approx_kl"] > max(0.03, cfg.target_kl):
             logger.warning(f"High KL detected: {stats['stats/approx_kl']:.4f}")
 
         # Checkpointing

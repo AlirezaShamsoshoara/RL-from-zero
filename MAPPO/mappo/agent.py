@@ -254,7 +254,7 @@ class MAPPOAgent:
         Compute Generalized Advantage Estimation (GAE).
         Args:
             rewards: [T, n_agents]
-            dones: [T, n_agents]
+            dones: [T, n_agents] where dones[t] marks termination after transition t
             values: [T, n_agents]
             next_values: [n_agents]
             gamma: discount factor
@@ -273,7 +273,9 @@ class MAPPOAgent:
                 nextnonterminal = 1.0 - dones[t]
                 nextvalues = next_values
             else:
-                nextnonterminal = 1.0 - dones[t + 1]
+                # Use dones[t] (termination after transition t). Using dones[t+1]
+                # incorrectly bootstraps across episode boundaries.
+                nextnonterminal = 1.0 - dones[t]
                 nextvalues = values[t + 1]
             delta = rewards[t] + gamma * nextvalues * nextnonterminal - values[t]
             lastgaelam = delta + gamma * gae_lambda * nextnonterminal * lastgaelam
