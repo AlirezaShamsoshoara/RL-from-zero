@@ -131,8 +131,8 @@ python -m DDPG.main train --config DDPG/configs/pendulum.yaml
 python -m DDPG.main demo --config DDPG/configs/pendulum.yaml --model_path DDPG/checkpoints/best.pt
 
 # Twin Delayed DDPG
-python -m TD3.main train --config TD3/configs/pendulum.yaml
-python -m TD3.main demo --config TD3/configs/pendulum.yaml --model_path TD3/checkpoints/best.pt
+python -m TD3.main train --config TD3/configs/mountaincar_continuous.yaml
+python -m TD3.main demo --config TD3/configs/mountaincar_continuous.yaml --model_path TD3/checkpoints/best.pt
 
 # Trust Region Policy Optimization
 python -m TRPO.main train --config TRPO/configs/pendulum.yaml
