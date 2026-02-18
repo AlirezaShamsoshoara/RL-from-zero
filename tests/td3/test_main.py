@@ -189,6 +189,40 @@ class TestMain(unittest.TestCase):
         self.assertTrue(load_ckpt.called)
         self.assertTrue(dummy_env.close_called)
 
+    def test_train_can_force_random_action_pulses(self) -> None:
+        cfg = Config()
+        cfg.total_steps = 3
+        cfg.start_steps = 0
+        cfg.batch_size = 1
+        cfg.buffer_size = 10
+        cfg.updates_per_step = 1
+        cfg.hidden_sizes = [8]
+        cfg.activation = "relu"
+        cfg.device = "cpu"
+        cfg.checkpoint_interval = 100
+        cfg.save_best = False
+        cfg.log_interval = 1
+        cfg.log_to_console = False
+        cfg.log_to_file = False
+        cfg.wandb_key = ""
+        cfg.random_action_prob = 1.0
+        cfg.random_action_hold_min = 10
+        cfg.random_action_hold_max = 10
+
+        dummy_env = DummyEnv(obs_dim=3, act_dim=2, episode_length=10)
+        dummy_wandb = DummyWandb()
+
+        with patch("TD3.main.Config.from_yaml", return_value=cfg), patch(
+            "TD3.main.make_env", return_value=dummy_env
+        ), patch("TD3.main.wandb", dummy_wandb), patch(
+            "TD3.main.setup_logger", return_value=_null_logger()
+        ), patch("TD3.main.tqdm", DummyTqdm), patch(
+            "TD3.main.TD3Agent.act", side_effect=AssertionError("act should not be called")
+        ):
+            td3_main.train(config="unused.yaml", wandb_key="")
+
+        self.assertTrue(dummy_env.close_called)
+
 
 if __name__ == "__main__":
     unittest.main()
