@@ -9,17 +9,17 @@ TD3 is an off-policy actor-critic algorithm for continuous action spaces that im
 
 ## Highlights
 - Deterministic policy network with twin critics and Polyak-averaged targets.
-- Configurable policy delay, exploration noise, and target smoothing noise.
+- Configurable policy delay, exploration noise, target smoothing noise, and random-action exploration pulses for sparse-reward tasks.
 - Replay buffer and warm-up phase shared with the other off-policy agents.
 - Built-in WandB logging, tqdm-aware logging utilities, and checkpoint management.
 
 ## Quickstart
 ```bash
-python -m TD3.main train --config TD3/configs/pendulum.yaml
+python -m TD3.main train --config TD3/configs/mountaincar_continuous.yaml
 
-python -m TD3.main demo --config TD3/configs/pendulum.yaml --model_path TD3/checkpoints/best.pt
+python -m TD3.main demo --config TD3/configs/mountaincar_continuous.yaml --model_path TD3/checkpoints/best.pt
 ```
-Use <code>--wandb_key YOUR_KEY</code> to authenticate for logging. Checkpoints live in <code>TD3/checkpoints</code>, and the moving-average best checkpoint is written to <code>best.pt</code>.
+Use <code>--wandb_key YOUR_KEY</code> to authenticate for logging, or set <code>WANDB_API_KEY</code> in your environment. Checkpoints live in <code>TD3/checkpoints</code>, and the moving-average best checkpoint is written to <code>best.pt</code>.
 
 ## Configuration
 YAML files under <code>TD3/configs/</code> expose the hyper-parameters:
@@ -29,7 +29,7 @@ YAML files under <code>TD3/configs/</code> expose the hyper-parameters:
 - <strong>Logging</strong>: intervals, checkpoint cadence, output paths, and logger behaviour.
 - <strong>Inference</strong>: default checkpoint and number of evaluation episodes.
 
-Clone the provided <code>pendulum.yaml</code> to target other continuous-control tasks.
+Clone the provided TD3 config in <code>TD3/configs/</code> to target other continuous-control tasks.
 
 ## References
 - Fujimoto et al., Addressing Function Approximation Error in Actor-Critic Methods, ICML 2018.
