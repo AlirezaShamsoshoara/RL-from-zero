@@ -25,7 +25,7 @@ class Config:
     wandb_key: str = ""
 
     # Environment
-    env_id: str = "Pendulum-v1"
+    env_id: str = "MountainCarContinuous-v0"
     render_mode: Optional[str] = None
     seed: int = 42
     env_kwargs: Dict[str, Any] = field(default_factory=dict)
@@ -42,6 +42,9 @@ class Config:
     target_noise: float = 0.2
     noise_clip: float = 0.5
     exploration_noise: float = 0.1
+    random_action_prob: float = 0.0
+    random_action_hold_min: int = 1
+    random_action_hold_max: int = 1
     actor_lr: float = 3e-4
     critic_lr: float = 3e-4
 
@@ -101,6 +104,9 @@ class Config:
             "target_noise": self.target_noise,
             "noise_clip": self.noise_clip,
             "exploration_noise": self.exploration_noise,
+            "random_action_prob": self.random_action_prob,
+            "random_action_hold_min": self.random_action_hold_min,
+            "random_action_hold_max": self.random_action_hold_max,
             "actor_lr": self.actor_lr,
             "critic_lr": self.critic_lr,
             "hidden_sizes": self.hidden_sizes,
