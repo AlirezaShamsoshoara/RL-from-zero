@@ -22,10 +22,13 @@ def _stats_to_dict(stats: TD3Stats) -> Dict[str, float]:
     return data
 
 
-def train(config: str = "TD3/configs/pendulum.yaml", wandb_key: str = ""):
+def train(config: str = "TD3/configs/mountaincar_continuous.yaml", wandb_key: str = ""):
     cfg = Config.from_yaml(config)
+    env_wandb_key = os.getenv("WANDB_API_KEY", "")
     if wandb_key:
         cfg.wandb_key = wandb_key
+    elif env_wandb_key:
+        cfg.wandb_key = env_wandb_key
 
     logger = setup_logger(
         name="td3",
@@ -38,8 +41,7 @@ def train(config: str = "TD3/configs/pendulum.yaml", wandb_key: str = ""):
     set_seed(cfg.seed)
 
     if getattr(cfg, "wandb_key", ""):
-        import wandb as _wandb
-        _wandb.login(key=cfg.wandb_key)
+        wandb.login(key=cfg.wandb_key)
 
     logger.info(f"Initializing wandb run={cfg.run_name}")
     run = wandb.init(
@@ -82,13 +84,30 @@ def train(config: str = "TD3/configs/pendulum.yaml", wandb_key: str = ""):
     episode_returns: List[float] = []
     episode_lengths: List[int] = []
     update_metrics: List[Dict[str, float]] = []
+    random_action_prob = float(
+        max(0.0, min(1.0, getattr(cfg, "random_action_prob", 0.0)))
+    )
+    hold_min = max(1, int(getattr(cfg, "random_action_hold_min", 1)))
+    hold_max = max(hold_min, int(getattr(cfg, "random_action_hold_max", hold_min)))
+    pulse_action: Optional[np.ndarray] = None
+    pulse_steps_remaining = 0
 
     pbar = tqdm(range(1, cfg.total_steps + 1), desc="TD3 Steps")
     for step in pbar:
         if step <= cfg.start_steps:
             action = env.action_space.sample()
         else:
-            action = agent.act(obs, noise=cfg.exploration_noise, deterministic=False)
+            if pulse_steps_remaining <= 0 and random_action_prob > 0.0:
+                if np.random.rand() < random_action_prob:
+                    pulse_action = env.action_space.sample()
+                    pulse_steps_remaining = int(
+                        np.random.randint(hold_min, hold_max + 1)
+                    )
+            if pulse_steps_remaining > 0 and pulse_action is not None:
+                action = pulse_action
+                pulse_steps_remaining -= 1
+            else:
+                action = agent.act(obs, noise=cfg.exploration_noise, deterministic=False)
 
         next_obs, reward, terminated, truncated, info = env.step(action)
         done = bool(terminated or truncated)
@@ -98,6 +117,8 @@ def train(config: str = "TD3/configs/pendulum.yaml", wandb_key: str = ""):
 
         if done:
             obs, _ = env.reset()
+            pulse_action = None
+            pulse_steps_remaining = 0
 
         if step >= cfg.start_steps and buffer.can_sample(cfg.batch_size):
             for _ in range(cfg.updates_per_step):
@@ -153,7 +174,7 @@ def train(config: str = "TD3/configs/pendulum.yaml", wandb_key: str = ""):
 
 
 def demo(
-    config: str = "TD3/configs/pendulum.yaml",
+    config: str = "TD3/configs/mountaincar_continuous.yaml",
     model_path: Optional[str] = None,
     episodes: Optional[int] = None,
     exploration_noise: float = 0.0,

@@ -1,0 +1,58 @@
+# TD3 Config for MountainCarContinuous-v0
+# Experiment tracking
+project: rl-practice  # wandb project name (any string)
+entity: null  # null or your wandb entity/team
+run_name: td3-mountaincar-continuous  # wandb run name (any string)
+wandb_key: ""  # optional API key for wandb login (or set WANDB_API_KEY)
+seed: 42  # any integer seed
+
+# Environment
+# env_id options: MountainCarContinuous-v0 (default), Pendulum-v1, or any Gymnasium continuous Box-action env
+env_id: MountainCarContinuous-v0
+# render_mode options: null (no render), human (window), rgb_array (frame arrays)
+render_mode: null
+# env_kwargs options depend on env_id; MountainCarContinuous supports goal_velocity
+env_kwargs: {}
+
+# Training
+total_steps: 200000  # total environment steps (int >= 1)
+start_steps: 10000  # random action steps before learning starts (int >= 0)
+batch_size: 256  # minibatch size for gradient updates (int >= 1)
+buffer_size: 1000000  # replay buffer capacity (int >= 1)
+updates_per_step: 1  # number of gradient updates per environment step (int >= 1)
+gamma: 0.99  # discount factor (0 < gamma <= 1)
+tau: 0.005  # target network Polyak averaging coefficient (0 < tau <= 1)
+policy_delay: 2  # update actor/targets every N critic updates (int >= 1)
+target_noise: 0.2  # target policy smoothing noise std (float >= 0)
+noise_clip: 0.5  # absolute clip for target smoothing noise (float >= 0)
+exploration_noise: 0.2  # Gaussian exploration noise std for actor actions (float >= 0)
+# random_action_prob options: 0.0 disables pulses; higher values trigger exploratory random-action bursts
+random_action_prob: 0.05
+# random_action_hold_min/max options: min/max burst length in env steps (ints >= 1; max must be >= min)
+random_action_hold_min: 8
+random_action_hold_max: 24
+actor_lr: 0.0003  # actor learning rate (positive float)
+critic_lr: 0.0003  # critic learning rate (positive float)
+
+# Model
+# hidden_sizes options: list of hidden layer widths; [] gives linear networks
+hidden_sizes: [256, 256]
+# activation options: relu, tanh, leaky_relu, elu
+activation: relu
+
+# Logging & Checkpoints
+log_interval: 1000  # logging cadence in steps (int >= 1)
+checkpoint_interval: 50000  # checkpoint cadence in steps (int >= 1)
+checkpoint_dir: TD3/checkpoints  # directory where checkpoints are saved
+save_best: true  # true or false
+log_level: INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+log_to_file: true  # true or false
+log_file: TD3/logs/td3.log  # log file path (used when log_to_file=true)
+log_to_console: true  # true or false
+
+# Inference
+inference_model_path: TD3/checkpoints/best.pt  # checkpoint path used by demo/eval
+episodes: 5  # number of demo/eval episodes (int >= 1)
+
+# Misc
+device: cpu  # auto, cpu, or cuda
