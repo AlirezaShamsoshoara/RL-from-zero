@@ -76,7 +76,7 @@ Use <code>--wandb_key YOUR_KEY</code> to authenticate for logging, or set <code>
 ## Configuration
 YAML files under <code>TD3/configs/</code> expose the hyper-parameters:
 - <strong>Environment</strong>: Gym id, render mode, and optional keyword arguments.
-- <strong>Training</strong>: interaction steps, warm-up horizon, batch size, replay capacity, learning rates, Polyak coefficient, target noise, noise clip, policy delay, and exploration noise.
+- <strong>Training</strong>: interaction steps, warm-up horizon, batch size, replay capacity, number of parallel environments, learning rates, Polyak coefficient, target noise, noise clip, policy delay, and exploration noise.
 - <strong>Model</strong>: shared hidden layer sizes and activation for actor and critics.
 - <strong>Logging</strong>: intervals, checkpoint cadence, output paths, and logger behaviour.
 - <strong>Inference</strong>: default checkpoint and number of evaluation episodes.
