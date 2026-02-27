@@ -1,6 +1,6 @@
 # TD3 Config for MountainCarContinuous-v0
 # Experiment tracking
-project: rl-practice  # wandb project name (any string)
+project: rl-hero  # wandb project name (any string)
 entity: null  # null or your wandb entity/team
 run_name: td3-mountaincar-continuous  # wandb run name (any string)
 wandb_key: ""  # optional API key for wandb login (or set WANDB_API_KEY)
@@ -20,6 +20,7 @@ start_steps: 10000  # random action steps before learning starts (int >= 0)
 batch_size: 256  # minibatch size for gradient updates (int >= 1)
 buffer_size: 1000000  # replay buffer capacity (int >= 1)
 updates_per_step: 1  # number of gradient updates per environment step (int >= 1)
+num_envs: 64  # number of parallel environments (int >= 1; higher = faster data collection)
 gamma: 0.99  # discount factor (0 < gamma <= 1)
 tau: 0.005  # target network Polyak averaging coefficient (0 < tau <= 1)
 policy_delay: 2  # update actor/targets every N critic updates (int >= 1)
@@ -55,4 +56,4 @@ inference_model_path: TD3/checkpoints/best.pt  # checkpoint path used by demo/ev
 episodes: 5  # number of demo/eval episodes (int >= 1)
 
 # Misc
-device: cpu  # auto, cpu, or cuda
+device: auto  # auto, cpu, or cuda
