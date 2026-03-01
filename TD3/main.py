@@ -1,18 +1,25 @@
 from __future__ import annotations
+
 import os
 from dataclasses import asdict
-from typing import Optional, List, Dict
+from typing import Dict, List, Optional
+
 import numpy as np
 import torch
-from tqdm import tqdm
 import wandb
 from gymnasium import spaces
-
-from TD3.td3.config import Config
-from TD3.td3.utils import set_seed, make_env, save_checkpoint, load_checkpoint
 from TD3.td3.agent import TD3Agent, TD3Stats
-from TD3.td3.replay_buffer import ReplayBuffer
+from TD3.td3.config import Config
 from TD3.td3.logging_utils import setup_logger
+from TD3.td3.replay_buffer import ReplayBuffer
+from TD3.td3.utils import (
+    load_checkpoint,
+    make_env,
+    make_vec_env,
+    save_checkpoint,
+    set_seed,
+)
+from tqdm import tqdm
 
 
 def _stats_to_dict(stats: TD3Stats) -> Dict[str, float]:
@@ -51,9 +58,12 @@ def train(config: str = "TD3/configs/mountaincar_continuous.yaml", wandb_key: st
         config=cfg.to_dict(),
     )
 
-    env = make_env(cfg.env_id, cfg.seed, render_mode=None, env_kwargs=cfg.env_kwargs)
-    obs_space = env.observation_space
-    act_space = env.action_space
+    env = make_vec_env(
+        cfg.env_id, cfg.num_envs, cfg.seed, render_mode=None, env_kwargs=cfg.env_kwargs
+    )
+    obs_space = env.single_observation_space
+    act_space = env.single_action_space
+    num_envs = cfg.num_envs
     assert isinstance(obs_space, spaces.Box) and len(obs_space.shape) == 1
     assert isinstance(act_space, spaces.Box) and len(act_space.shape) == 1
 
@@ -89,56 +99,91 @@ def train(config: str = "TD3/configs/mountaincar_continuous.yaml", wandb_key: st
     )
     hold_min = max(1, int(getattr(cfg, "random_action_hold_min", 1)))
     hold_max = max(hold_min, int(getattr(cfg, "random_action_hold_max", hold_min)))
-    pulse_action: Optional[np.ndarray] = None
-    pulse_steps_remaining = 0
 
-    pbar = tqdm(range(1, cfg.total_steps + 1), desc="TD3 Steps")
-    for step in pbar:
-        if step <= cfg.start_steps:
-            action = env.action_space.sample()
+    act_dim = int(np.prod(act_space.shape))
+    pulse_actions = np.zeros((num_envs, act_dim), dtype=np.float32)
+    pulse_steps_remaining = np.zeros(num_envs, dtype=np.int32)
+
+    total_transitions = 0
+    pbar = tqdm(total=cfg.total_steps, desc="TD3 Steps")
+
+    while total_transitions < cfg.total_steps:
+        # --- Action selection ---
+        if total_transitions < cfg.start_steps:
+            actions = env.action_space.sample()
         else:
-            if pulse_steps_remaining <= 0 and random_action_prob > 0.0:
-                if np.random.rand() < random_action_prob:
-                    pulse_action = env.action_space.sample()
-                    pulse_steps_remaining = int(
-                        np.random.randint(hold_min, hold_max + 1)
-                    )
-            if pulse_steps_remaining > 0 and pulse_action is not None:
-                action = pulse_action
-                pulse_steps_remaining -= 1
-            else:
-                action = agent.act(obs, noise=cfg.exploration_noise, deterministic=False)
+            actions = agent.act(obs, noise=cfg.exploration_noise, deterministic=False)
 
-        next_obs, reward, terminated, truncated, info = env.step(action)
-        done = bool(terminated or truncated)
-        buffer_done = float(terminated)
-        buffer.add(obs, action, reward, next_obs, buffer_done)
+            if random_action_prob > 0.0:
+                expired = pulse_steps_remaining <= 0
+                if expired.any():
+                    roll = np.random.rand(num_envs) < random_action_prob
+                    start_pulse = expired & roll
+                    if start_pulse.any():
+                        for i in np.where(start_pulse)[0]:
+                            pulse_actions[i] = env.single_action_space.sample()
+                        pulse_steps_remaining[start_pulse] = np.random.randint(
+                            hold_min, hold_max + 1, size=int(start_pulse.sum())
+                        )
+
+                pulsing = pulse_steps_remaining > 0
+                if pulsing.any():
+                    actions[pulsing] = pulse_actions[pulsing]
+                    pulse_steps_remaining[pulsing] -= 1
+
+        # --- Step the vectorized environment ---
+        next_obs, rewards, terminated, truncated, infos = env.step(actions)
+        dones = np.logical_or(terminated, truncated)
+
+        # Under SAME_STEP autoreset: when done[i] is True, next_obs[i] is the
+        # reset obs of the new episode. The terminal obs is infos["final_obs"][i].
+        buffer_next_obs = next_obs.copy()
+        buffer_dones = terminated.astype(np.float32)
+
+        if dones.any():
+            final_obs_mask = infos.get("_final_obs", np.zeros(num_envs, dtype=bool))
+            if np.any(final_obs_mask):
+                final_obs = infos["final_obs"]
+                for i in np.where(final_obs_mask)[0]:
+                    buffer_next_obs[i] = final_obs[i]
+
+            pulse_actions[dones] = 0.0
+            pulse_steps_remaining[dones] = 0
+
+        buffer.add_batch(obs, actions, rewards, buffer_next_obs, buffer_dones)
         obs = next_obs
+        total_transitions += num_envs
+        pbar.update(num_envs)
 
-        if done:
-            obs, _ = env.reset()
-            pulse_action = None
-            pulse_steps_remaining = 0
-
-        if step >= cfg.start_steps and buffer.can_sample(cfg.batch_size):
+        # --- Gradient updates ---
+        if total_transitions >= cfg.start_steps and buffer.can_sample(cfg.batch_size):
             for _ in range(cfg.updates_per_step):
                 stats = agent.update(buffer.sample(cfg.batch_size))
                 stat_dict = _stats_to_dict(stats)
                 update_metrics.append(stat_dict)
 
-        if isinstance(info, dict) and "episode" in info:
-            ep_r = float(info["episode"]["r"])
-            ep_l = int(info["episode"]["l"])
-            episode_returns.append(ep_r)
-            episode_lengths.append(ep_l)
+        # --- Episode logging from final_info ---
+        final_info_mask = infos.get("_final_info", np.zeros(num_envs, dtype=bool))
+        if np.any(final_info_mask):
+            fi = infos["final_info"]
+            if isinstance(fi, dict) and "episode" in fi:
+                ep_mask = fi.get("_episode", np.zeros(num_envs, dtype=bool))
+                for i in np.where(final_info_mask & ep_mask)[0]:
+                    episode_returns.append(float(fi["episode"]["r"][i]))
+                    episode_lengths.append(int(fi["episode"]["l"][i]))
 
-        if step % cfg.log_interval == 0:
-            avg_return = float(np.mean(episode_returns[-10:])) if episode_returns else 0.0
-            avg_length = float(np.mean(episode_lengths[-10:])) if episode_lengths else 0.0
+        # --- Periodic logging ---
+        if total_transitions % cfg.log_interval < num_envs:
+            avg_return = (
+                float(np.mean(episode_returns[-10:])) if episode_returns else 0.0
+            )
+            avg_length = (
+                float(np.mean(episode_lengths[-10:])) if episode_lengths else 0.0
+            )
             log_payload: Dict[str, float] = {
                 "charts/avg_return": avg_return,
                 "charts/avg_length": avg_length,
-                "progress/step": step,
+                "progress/step": total_transitions,
             }
             if update_metrics:
                 keys = update_metrics[0].keys()
@@ -148,29 +193,33 @@ def train(config: str = "TD3/configs/mountaincar_continuous.yaml", wandb_key: st
                         prefix = "loss" if "loss" in key else "stats"
                         log_payload[f"{prefix}/{key}"] = float(np.mean(values))
                 update_metrics.clear()
-            wandb.log(log_payload, step=step)
+            wandb.log(log_payload, step=total_transitions)
             pbar.set_postfix({"avgR": f"{avg_return:.1f}"})
 
-        if step % cfg.checkpoint_interval == 0:
-            path = os.path.join(cfg.checkpoint_dir, f"checkpoint_{step}.pt")
-            save_checkpoint(path, agent, step, best_avg_return)
+        # --- Periodic checkpointing + best model ---
+        if total_transitions % cfg.checkpoint_interval < num_envs:
+            path = os.path.join(
+                cfg.checkpoint_dir, f"checkpoint_{total_transitions}.pt"
+            )
+            save_checkpoint(path, agent, total_transitions, best_avg_return)
             logger.info(f"Saved checkpoint: {path}")
 
-        if cfg.save_best and len(episode_returns) >= 5:
-            avg_recent = float(np.mean(episode_returns[-5:]))
-            if avg_recent > best_avg_return:
-                best_avg_return = avg_recent
-                best_path = os.path.join(cfg.checkpoint_dir, "best.pt")
-                save_checkpoint(best_path, agent, step, best_avg_return)
-                logger.info(
-                    f"New best avg return {best_avg_return:.2f}; saved {best_path}"
-                )
+            if cfg.save_best and len(episode_returns) >= 5:
+                avg_recent = float(np.mean(episode_returns[-5:]))
+                if avg_recent > best_avg_return:
+                    best_avg_return = avg_recent
+                    best_path = os.path.join(cfg.checkpoint_dir, "best.pt")
+                    save_checkpoint(
+                        best_path, agent, total_transitions, best_avg_return
+                    )
+                    logger.info(
+                        f"New best avg return {best_avg_return:.2f}; saved {best_path}"
+                    )
 
+    pbar.close()
     env.close()
     run.finish()
-    logger.info(
-        f"Training finished. Best 5-ep avg return: {best_avg_return:.2f}"
-    )
+    logger.info(f"Training finished. Best 5-ep avg return: {best_avg_return:.2f}")
 
 
 def demo(
