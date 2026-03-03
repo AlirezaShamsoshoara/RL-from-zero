@@ -36,6 +36,7 @@ class Config:
     batch_size: int = 256
     buffer_size: int = 1_000_000
     updates_per_step: int = 1
+    num_envs: int = 1
     gamma: float = 0.99
     tau: float = 0.005
     policy_delay: int = 2
@@ -98,6 +99,7 @@ class Config:
             "batch_size": self.batch_size,
             "buffer_size": self.buffer_size,
             "updates_per_step": self.updates_per_step,
+            "num_envs": self.num_envs,
             "gamma": self.gamma,
             "tau": self.tau,
             "policy_delay": self.policy_delay,
