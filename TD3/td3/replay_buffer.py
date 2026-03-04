@@ -27,6 +27,35 @@ class ReplayBuffer:
     def can_sample(self, batch_size: int) -> bool:
         return self.size >= batch_size
 
+    def add_batch(self, obs, act, reward, next_obs, done):
+        batch_size = obs.shape[0]
+        reward = np.asarray(reward, dtype=np.float32).reshape(batch_size, 1)
+        done = np.asarray(done, dtype=np.float32).reshape(batch_size, 1)
+
+        if self.ptr + batch_size <= self.capacity:
+            idx = slice(self.ptr, self.ptr + batch_size)
+            self.obs_buf[idx] = obs
+            self.acts_buf[idx] = act
+            self.rews_buf[idx] = reward
+            self.next_obs_buf[idx] = next_obs
+            self.done_buf[idx] = done
+        else:
+            first = self.capacity - self.ptr
+            second = batch_size - first
+            self.obs_buf[self.ptr:] = obs[:first]
+            self.acts_buf[self.ptr:] = act[:first]
+            self.rews_buf[self.ptr:] = reward[:first]
+            self.next_obs_buf[self.ptr:] = next_obs[:first]
+            self.done_buf[self.ptr:] = done[:first]
+            self.obs_buf[:second] = obs[first:]
+            self.acts_buf[:second] = act[first:]
+            self.rews_buf[:second] = reward[first:]
+            self.next_obs_buf[:second] = next_obs[first:]
+            self.done_buf[:second] = done[first:]
+
+        self.ptr = (self.ptr + batch_size) % self.capacity
+        self.size = min(self.size + batch_size, self.capacity)
+
     def sample(self, batch_size: int):
         idxs = np.random.randint(0, self.size, size=batch_size)
         obs = torch.as_tensor(self.obs_buf[idxs], device=self.device, dtype=torch.float32)
