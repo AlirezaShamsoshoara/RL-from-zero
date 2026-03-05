@@ -30,6 +30,32 @@ def make_env(
     return env
 
 
+def make_vec_env(
+    env_id: str,
+    num_envs: int,
+    seed: int,
+    render_mode: Optional[str] = None,
+    env_kwargs: Optional[Dict[str, Any]] = None,
+) -> gym.vector.VectorEnv:
+    from gymnasium.vector import AutoresetMode
+
+    env_kwargs = env_kwargs or {}
+
+    def _make_single(rank: int):
+        def _thunk():
+            render = render_mode if num_envs == 1 else None
+            env = gym.make(env_id, render_mode=render, **env_kwargs)
+            env = gym.wrappers.RecordEpisodeStatistics(env)
+            env.reset(seed=seed + rank)
+            return env
+        return _thunk
+
+    return gym.vector.SyncVectorEnv(
+        [_make_single(i) for i in range(num_envs)],
+        autoreset_mode=AutoresetMode.SAME_STEP,
+    )
+
+
 def save_checkpoint(path: str, agent: "TD3Agent", step: int, best_return: float):
     from TD3.td3.agent import TD3Agent  # local import to avoid circular
 
