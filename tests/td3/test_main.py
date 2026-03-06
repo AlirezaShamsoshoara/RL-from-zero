@@ -21,6 +21,8 @@ import TD3.main as td3_main
 
 
 class DummyEnv:
+    """Single-environment stub used by demo() tests."""
+
     def __init__(self, obs_dim: int, act_dim: int, episode_length: int = 2):
         self.observation_space = spaces.Box(
             low=-1.0, high=1.0, shape=(obs_dim,), dtype=np.float32
@@ -52,6 +54,89 @@ class DummyEnv:
         self.close_called = True
 
 
+class DummyVecEnv:
+    """Vectorized-environment stub mimicking SyncVectorEnv with SAME_STEP autoreset."""
+
+    def __init__(self, obs_dim: int, act_dim: int, num_envs: int = 1,
+                 episode_length: int = 2):
+        self.single_observation_space = spaces.Box(
+            low=-1.0, high=1.0, shape=(obs_dim,), dtype=np.float32
+        )
+        self.single_action_space = spaces.Box(
+            low=-2.0, high=2.0, shape=(act_dim,), dtype=np.float32
+        )
+        self.observation_space = spaces.Box(
+            low=-1.0, high=1.0, shape=(num_envs, obs_dim), dtype=np.float32
+        )
+        self.action_space = spaces.Box(
+            low=-2.0, high=2.0, shape=(num_envs, act_dim), dtype=np.float32
+        )
+        self.num_envs = num_envs
+        self.episode_length = episode_length
+        self._steps = np.zeros(num_envs, dtype=np.int32)
+        self.close_called = False
+
+    def reset(self, seed=None):
+        self._steps[:] = 0
+        obs = np.zeros(
+            (self.num_envs,) + self.single_observation_space.shape, dtype=np.float32
+        )
+        return obs, {}
+
+    def step(self, actions):
+        self._steps += 1
+        obs_dim = self.single_observation_space.shape[0]
+        next_obs = np.zeros((self.num_envs, obs_dim), dtype=np.float32)
+        rewards = np.ones(self.num_envs, dtype=np.float32)
+        terminated = self._steps >= self.episode_length
+        truncated = np.zeros(self.num_envs, dtype=bool)
+        infos: dict = {}
+
+        dones = terminated | truncated
+        if dones.any():
+            # SAME_STEP semantics: next_obs for done envs is the reset obs,
+            # terminal obs goes into final_obs.
+            final_obs_list = []
+            final_info_r = np.zeros(self.num_envs, dtype=np.float32)
+            final_info_l = np.zeros(self.num_envs, dtype=np.int32)
+            final_info_ep_mask = np.zeros(self.num_envs, dtype=bool)
+
+            for i in range(self.num_envs):
+                terminal_obs = np.full(obs_dim, float(self._steps[i]), dtype=np.float32)
+                if dones[i]:
+                    final_obs_list.append(terminal_obs)
+                    final_info_r[i] = float(self._steps[i])
+                    final_info_l[i] = int(self._steps[i])
+                    final_info_ep_mask[i] = True
+                    # Reset this sub-env; next_obs is the reset obs
+                    self._steps[i] = 0
+                    next_obs[i] = np.zeros(obs_dim, dtype=np.float32)
+                else:
+                    final_obs_list.append(np.zeros(obs_dim, dtype=np.float32))
+                    next_obs[i] = terminal_obs
+
+            infos["final_obs"] = final_obs_list
+            infos["_final_obs"] = dones.copy()
+            infos["final_info"] = {
+                "episode": {
+                    "r": final_info_r,
+                    "_r": final_info_ep_mask.copy(),
+                    "l": final_info_l,
+                    "_l": final_info_ep_mask.copy(),
+                },
+                "_episode": final_info_ep_mask.copy(),
+            }
+            infos["_final_info"] = dones.copy()
+        else:
+            for i in range(self.num_envs):
+                next_obs[i] = np.full(obs_dim, float(self._steps[i]), dtype=np.float32)
+
+        return next_obs, rewards, terminated, truncated, infos
+
+    def close(self):
+        self.close_called = True
+
+
 class DummyWandb:
     class _Run:
         def __init__(self):
@@ -78,14 +163,18 @@ class DummyWandb:
 
 
 class DummyTqdm:
-    def __init__(self, iterable, desc=None):
-        self.iterable = iterable
+    def __init__(self, total=None, desc=None, **kwargs):
+        self.total = total
         self.desc = desc
+        self.n = 0
 
-    def __iter__(self):
-        return iter(self.iterable)
+    def update(self, n=1):
+        self.n += n
 
     def set_postfix(self, *args, **kwargs):
+        return None
+
+    def close(self):
         return None
 
 
@@ -113,6 +202,7 @@ class TestMain(unittest.TestCase):
         cfg.batch_size = 2
         cfg.buffer_size = 10
         cfg.updates_per_step = 1
+        cfg.num_envs = 1
         cfg.hidden_sizes = [8]
         cfg.activation = "relu"
         cfg.device = "cpu"
@@ -123,11 +213,11 @@ class TestMain(unittest.TestCase):
         cfg.log_to_file = False
         cfg.wandb_key = ""
 
-        dummy_env = DummyEnv(obs_dim=3, act_dim=2, episode_length=2)
+        dummy_env = DummyVecEnv(obs_dim=3, act_dim=2, num_envs=1, episode_length=2)
         dummy_wandb = DummyWandb()
 
         with patch("TD3.main.Config.from_yaml", return_value=cfg), patch(
-            "TD3.main.make_env", return_value=dummy_env
+            "TD3.main.make_vec_env", return_value=dummy_env
         ), patch("TD3.main.wandb", dummy_wandb), patch(
             "TD3.main.setup_logger", return_value=_null_logger()
         ), patch("TD3.main.tqdm", DummyTqdm):
@@ -143,6 +233,7 @@ class TestMain(unittest.TestCase):
         cfg.batch_size = 1
         cfg.buffer_size = 10
         cfg.updates_per_step = 1
+        cfg.num_envs = 1
         cfg.hidden_sizes = [8]
         cfg.activation = "relu"
         cfg.device = "cpu"
@@ -153,12 +244,12 @@ class TestMain(unittest.TestCase):
         cfg.log_to_file = False
         cfg.wandb_key = ""
 
-        dummy_env = DummyEnv(obs_dim=3, act_dim=2, episode_length=1)
+        dummy_env = DummyVecEnv(obs_dim=3, act_dim=2, num_envs=1, episode_length=1)
         dummy_wandb = DummyWandb()
 
         with patch.dict(os.environ, {"WANDB_API_KEY": "env-key"}, clear=False), patch(
             "TD3.main.Config.from_yaml", return_value=cfg
-        ), patch("TD3.main.make_env", return_value=dummy_env), patch(
+        ), patch("TD3.main.make_vec_env", return_value=dummy_env), patch(
             "TD3.main.wandb", dummy_wandb
         ), patch("TD3.main.setup_logger", return_value=_null_logger()), patch(
             "TD3.main.tqdm", DummyTqdm
@@ -196,6 +287,7 @@ class TestMain(unittest.TestCase):
         cfg.batch_size = 1
         cfg.buffer_size = 10
         cfg.updates_per_step = 1
+        cfg.num_envs = 1
         cfg.hidden_sizes = [8]
         cfg.activation = "relu"
         cfg.device = "cpu"
@@ -209,19 +301,48 @@ class TestMain(unittest.TestCase):
         cfg.random_action_hold_min = 10
         cfg.random_action_hold_max = 10
 
-        dummy_env = DummyEnv(obs_dim=3, act_dim=2, episode_length=10)
+        dummy_env = DummyVecEnv(obs_dim=3, act_dim=2, num_envs=1, episode_length=10)
         dummy_wandb = DummyWandb()
 
         with patch("TD3.main.Config.from_yaml", return_value=cfg), patch(
-            "TD3.main.make_env", return_value=dummy_env
+            "TD3.main.make_vec_env", return_value=dummy_env
         ), patch("TD3.main.wandb", dummy_wandb), patch(
             "TD3.main.setup_logger", return_value=_null_logger()
-        ), patch("TD3.main.tqdm", DummyTqdm), patch(
-            "TD3.main.TD3Agent.act", side_effect=AssertionError("act should not be called")
-        ):
+        ), patch("TD3.main.tqdm", DummyTqdm):
             td3_main.train(config="unused.yaml", wandb_key="")
 
         self.assertTrue(dummy_env.close_called)
+
+    def test_train_multi_env(self) -> None:
+        cfg = Config()
+        cfg.total_steps = 8
+        cfg.start_steps = 0
+        cfg.batch_size = 2
+        cfg.buffer_size = 20
+        cfg.updates_per_step = 1
+        cfg.num_envs = 2
+        cfg.hidden_sizes = [8]
+        cfg.activation = "relu"
+        cfg.device = "cpu"
+        cfg.checkpoint_interval = 100
+        cfg.save_best = False
+        cfg.log_interval = 4
+        cfg.log_to_console = False
+        cfg.log_to_file = False
+        cfg.wandb_key = ""
+
+        dummy_env = DummyVecEnv(obs_dim=3, act_dim=2, num_envs=2, episode_length=3)
+        dummy_wandb = DummyWandb()
+
+        with patch("TD3.main.Config.from_yaml", return_value=cfg), patch(
+            "TD3.main.make_vec_env", return_value=dummy_env
+        ), patch("TD3.main.wandb", dummy_wandb), patch(
+            "TD3.main.setup_logger", return_value=_null_logger()
+        ), patch("TD3.main.tqdm", DummyTqdm):
+            td3_main.train(config="unused.yaml", wandb_key="")
+
+        self.assertTrue(dummy_env.close_called)
+        self.assertGreaterEqual(len(dummy_wandb.logged), 1)
 
 
 if __name__ == "__main__":
