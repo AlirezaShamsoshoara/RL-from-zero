@@ -80,6 +80,52 @@ class TestReplayBuffer(unittest.TestCase):
         self.assertEqual(rews.dtype, torch.float32)
         self.assertEqual(obs.device.type, self.device.type)
 
+    def test_add_batch_inserts_multiple_transitions(self) -> None:
+        batch = 3
+        obs = np.arange(batch * self.obs_dim, dtype=np.float32).reshape(batch, self.obs_dim)
+        acts = np.ones((batch, self.act_dim), dtype=np.float32)
+        rews = np.array([1.0, 2.0, 3.0], dtype=np.float32)
+        next_obs = obs + 10.0
+        dones = np.array([0.0, 1.0, 0.0], dtype=np.float32)
+
+        self.buffer.add_batch(obs, acts, rews, next_obs, dones)
+
+        self.assertEqual(self.buffer.size, batch)
+        self.assertEqual(self.buffer.ptr, batch)
+        np.testing.assert_array_equal(self.buffer.obs_buf[:batch], obs)
+        np.testing.assert_array_equal(self.buffer.next_obs_buf[:batch], next_obs)
+        np.testing.assert_array_almost_equal(
+            self.buffer.rews_buf[:batch].flatten(), rews
+        )
+        np.testing.assert_array_almost_equal(
+            self.buffer.done_buf[:batch].flatten(), dones
+        )
+
+    def test_add_batch_wraps_around(self) -> None:
+        # Fill buffer to near capacity, then add a batch that wraps
+        for idx in range(self.capacity - 1):
+            obs = np.full(self.obs_dim, float(idx), dtype=np.float32)
+            self.buffer.add(obs, np.zeros(self.act_dim), 0.0, obs, 0.0)
+
+        self.assertEqual(self.buffer.ptr, self.capacity - 1)
+
+        batch = 3
+        obs = np.full((batch, self.obs_dim), 99.0, dtype=np.float32)
+        acts = np.zeros((batch, self.act_dim), dtype=np.float32)
+        rews = np.ones(batch, dtype=np.float32)
+        next_obs = obs.copy()
+        dones = np.zeros(batch, dtype=np.float32)
+
+        self.buffer.add_batch(obs, acts, rews, next_obs, dones)
+
+        self.assertEqual(self.buffer.size, self.capacity)
+        # ptr should wrap: (capacity-1 + 3) % capacity = 2
+        self.assertEqual(self.buffer.ptr, 2)
+        # Last slot and first two slots should contain the batch data
+        np.testing.assert_array_equal(self.buffer.obs_buf[self.capacity - 1], obs[0])
+        np.testing.assert_array_equal(self.buffer.obs_buf[0], obs[1])
+        np.testing.assert_array_equal(self.buffer.obs_buf[1], obs[2])
+
 
 if __name__ == "__main__":
     unittest.main()
