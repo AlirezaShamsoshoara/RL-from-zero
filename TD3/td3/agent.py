@@ -107,16 +107,19 @@ class TD3Agent:
         self.global_step = 0
 
     def act(self, obs: np.ndarray, noise: float = 0.0, deterministic: bool = False) -> np.ndarray:
-        if obs.ndim == 1:
+        single = obs.ndim == 1
+        if single:
             obs = obs[None, :]
         obs_t = torch.as_tensor(obs, dtype=torch.float32, device=self.device)
         with torch.no_grad():
-            action = self.actor(obs_t).cpu().numpy()[0]
-        if deterministic or noise <= 0.0:
-            return action
-        noise_sample = np.random.normal(0.0, noise, size=action.shape)
-        action = action + noise_sample
-        return np.clip(action, self.action_low_np, self.action_high_np)
+            action = self.actor(obs_t).cpu().numpy()
+        if not deterministic and noise > 0.0:
+            noise_sample = np.random.normal(0.0, noise, size=action.shape)
+            action = action + noise_sample
+            action = np.clip(action, self.action_low_np, self.action_high_np)
+        if single:
+            return action[0]
+        return action
 
     def update(self, batch) -> TD3Stats:
         obs, actions, rewards, next_obs, dones = batch
