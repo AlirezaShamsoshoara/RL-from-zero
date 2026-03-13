@@ -90,8 +90,8 @@ This implementation mirrors the structure used for the existing PPO and Q-learni
 
 ### Training charts
  <p align="center">
-    <img src="assets/chart_01.png" alt="SAC stats chart" width="487">
-    <img src="assets/chart_03.png" alt="SAC Reward chart" width="251">
+    <img src="assets/chart_01.png" alt="SAC stats chart" width="840">
+    <img src="assets/chart_03.png" alt="SAC Reward chart" width="435">
  </p>
  <p align="center">
     <img src="assets/chart_02.png" alt="SAC Loss charts">
