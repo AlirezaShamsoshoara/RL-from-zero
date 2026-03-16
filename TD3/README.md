@@ -65,6 +65,17 @@ $$
 - Replay buffer and warm-up phase shared with the other off-policy agents.
 - Built-in WandB logging, tqdm-aware logging utilities, and checkpoint management.
 
+### Training charts
+ <p align="center">
+    <img src="assets/chart_01.png" alt="TD3 Q-values chart" width="720">
+ </p>
+ <p align="center">
+    <img src="assets/chart_02.png" alt="TD3 actor and critic loss chart" width="720">
+ </p>
+ <p align="center">
+    <img src="assets/chart_03.png" alt="TD3 Reward charts" width="720">
+ </p>
+
 ## Quickstart
 ```bash
 python -m TD3.main train --config TD3/configs/mountaincar_continuous.yaml
