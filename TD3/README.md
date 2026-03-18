@@ -94,6 +94,12 @@ YAML files under <code>TD3/configs/</code> expose the hyper-parameters:
 
 Clone the provided TD3 config in <code>TD3/configs/</code> to target other continuous-control tasks.
 
+## Multi-Environment Support
+TD3 supports parallel environment execution via Gymnasium's `SyncVectorEnv`. The `num_envs` parameter controls how many environment instances run simultaneously. This value can only be changed in your YAML config file (e.g. `TD3/configs/mountaincar_continuous.yaml`) — there is no CLI flag to override it, collecting transitions in parallel to speed up data collection. The default config ships with `num_envs: 64`.
+
+> **Important:** Each parallel environment runs as a separate instance within the process. You should keep `num_envs` **at or below the number of CPU cores** available on your machine. Setting it higher than your core count will lead to excessive context switching and can actually **slow down** training rather than speed it up. Check your core count with `nproc` (Linux) or `sysctl -n hw.ncpu` (macOS) and set `num_envs` accordingly.
+
+
 ## References
 - Fujimoto et al., Addressing Function Approximation Error in Actor-Critic Methods, ICML 2018.
 - OpenAI Spinning Up TD3: https://spinningup.openai.com/en/latest/algorithms/td3.html
