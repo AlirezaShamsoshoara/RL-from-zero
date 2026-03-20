@@ -20,16 +20,17 @@ class Config:
     # WandB
     project: str = "rl-practice"
     entity: Optional[str] = None
-    run_name: str = "a3c-run"
+    run_name: str = "a3c-acrobot"
     wandb_key: str = ""
 
     # Environment
-    env_id: str = "CartPole-v1"
+    env_id: str = "Acrobot-v1"
     render_mode: Optional[str] = None
     seed: int = 42
 
     # Workers
     num_workers: int = 4
+    num_envs: int = 1
     t_max: int = 20
 
     # Training
@@ -77,6 +78,7 @@ class Config:
         return cfg
 
     def to_dict(self) -> Dict[str, Any]:
+        # Intentionally exclude wandb_key from the public config dict
         return {
             "project": self.project,
             "entity": self.entity,
@@ -85,6 +87,7 @@ class Config:
             "render_mode": self.render_mode,
             "seed": self.seed,
             "num_workers": self.num_workers,
+            "num_envs": self.num_envs,
             "t_max": self.t_max,
             "total_steps": self.total_steps,
             "gamma": self.gamma,
