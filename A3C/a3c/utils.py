@@ -20,6 +20,26 @@ def make_env(env_id: str, seed: int, render_mode: Optional[str] = None) -> gym.E
     return env
 
 
+def make_vec_env(
+    env_id: str,
+    num_envs: int,
+    seed: int,
+) -> gym.vector.VectorEnv:
+    from gymnasium.vector import AutoresetMode
+
+    def _make_single(rank: int):
+        def _thunk():
+            env = gym.make(env_id)
+            env.reset(seed=seed + rank)
+            return env
+        return _thunk
+
+    return gym.vector.SyncVectorEnv(
+        [_make_single(i) for i in range(num_envs)],
+        autoreset_mode=AutoresetMode.SAME_STEP,
+    )
+
+
 def save_checkpoint(path: str, model: torch.nn.Module, optimizer: torch.optim.Optimizer, step: int, best_return: float) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     torch.save(
