@@ -24,10 +24,13 @@ def _log_mean(stats: list[Dict[str, float]]) -> Dict[str, float]:
     return {key: float(np.mean([item[key] for item in stats])) for key in keys}
 
 
-def train(config: str = "A3C/configs/cartpole.yaml", wandb_key: str = ""):
+def train(config: str = "A3C/configs/acrobot.yaml", wandb_key: str = ""):
     cfg = Config.from_yaml(config)
+    env_wandb_key = os.getenv("WANDB_API_KEY", "")
     if wandb_key:
         cfg.wandb_key = wandb_key
+    elif env_wandb_key:
+        cfg.wandb_key = env_wandb_key
 
     logger = setup_logger(
         name="a3c",
@@ -39,8 +42,7 @@ def train(config: str = "A3C/configs/cartpole.yaml", wandb_key: str = ""):
     set_seed(cfg.seed)
 
     if getattr(cfg, "wandb_key", ""):
-        import wandb as _wandb
-        _wandb.login(key=cfg.wandb_key)
+        wandb.login(key=cfg.wandb_key)
 
     logger.info(f"Initializing wandb run={cfg.run_name}")
     run = wandb.init(
@@ -75,7 +77,9 @@ def train(config: str = "A3C/configs/cartpole.yaml", wandb_key: str = ""):
     )
 
     logger.info(
-        f"Env={cfg.env_id} | obs_dim={agent.obs_dim} | act_dim={agent.act_dim} | workers={cfg.num_workers}"
+        f"Env={cfg.env_id} | obs_dim={agent.obs_dim} | act_dim={agent.act_dim} "
+        f"| workers={cfg.num_workers} | envs_per_worker={cfg.num_envs} "
+        f"| total_envs={cfg.num_workers * cfg.num_envs}"
     )
 
     ctx = mp.get_context("spawn")
@@ -170,7 +174,7 @@ def train(config: str = "A3C/configs/cartpole.yaml", wandb_key: str = ""):
 
 
 def demo(
-    config: str = "A3C/configs/cartpole.yaml",
+    config: str = "A3C/configs/acrobot.yaml",
     model_path: Optional[str] = None,
     episodes: Optional[int] = None,
 ):
