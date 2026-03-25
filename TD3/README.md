@@ -65,6 +65,17 @@ $$
 - Replay buffer and warm-up phase shared with the other off-policy agents.
 - Built-in WandB logging, tqdm-aware logging utilities, and checkpoint management.
 
+### Training charts
+ <p align="center">
+    <img src="assets/chart_01.png" alt="TD3 Q-values chart" width="720">
+ </p>
+ <p align="center">
+    <img src="assets/chart_02.png" alt="TD3 actor and critic loss chart" width="720">
+ </p>
+ <p align="center">
+    <img src="assets/chart_03.png" alt="TD3 Reward charts" width="720">
+ </p>
+
 ## Quickstart
 ```bash
 python -m TD3.main train --config TD3/configs/mountaincar_continuous.yaml
@@ -82,6 +93,12 @@ YAML files under <code>TD3/configs/</code> expose the hyper-parameters:
 - <strong>Inference</strong>: default checkpoint and number of evaluation episodes.
 
 Clone the provided TD3 config in <code>TD3/configs/</code> to target other continuous-control tasks.
+
+## Multi-Environment Support
+TD3 supports parallel environment execution via Gymnasium's `SyncVectorEnv`. The `num_envs` parameter controls how many environment instances run simultaneously. This value can only be changed in your YAML config file (e.g. `TD3/configs/mountaincar_continuous.yaml`) — there is no CLI flag to override it, collecting transitions in parallel to speed up data collection. The default config ships with `num_envs: 64`.
+
+> **Important:** Each parallel environment runs as a separate instance within the process. You should keep `num_envs` **at or below the number of CPU cores** available on your machine. Setting it higher than your core count will lead to excessive context switching and can actually **slow down** training rather than speed it up. Check your core count with `nproc` (Linux) or `sysctl -n hw.ncpu` (macOS) and set `num_envs` accordingly.
+
 
 ## References
 - Fujimoto et al., Addressing Function Approximation Error in Actor-Critic Methods, ICML 2018.
