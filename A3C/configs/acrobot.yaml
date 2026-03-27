@@ -1,0 +1,49 @@
+# A3C Config for Acrobot-v1
+# Experiment tracking
+project: rl-hero  # wandb project name (any string)
+entity: null  # null or your wandb entity/team
+run_name: a3c-acrobot  # wandb run name (any string)
+wandb_key: ""  # optional API key for wandb login (or set WANDB_API_KEY)
+seed: 42  # any integer seed
+
+# Environment
+# env_id options: Acrobot-v1 (default), CartPole-v1, LunarLander-v2, or any Gymnasium discrete-action env
+env_id: Acrobot-v1
+# render_mode options: null (no render), human (window), rgb_array (frame arrays)
+render_mode: null
+
+# Workers
+num_workers: 4  # number of parallel A3C worker processes (int >= 1)
+num_envs: 1  # number of parallel environments per worker via SyncVectorEnv (int >= 1; total envs = num_workers * num_envs)
+t_max: 20  # max rollout steps per worker before gradient update (int >= 1)
+
+# Training
+total_steps: 200000  # total environment steps across all workers (int >= 1)
+gamma: 0.99  # discount factor (0 < gamma <= 1)
+entropy_coef: 0.01  # entropy bonus coefficient for exploration (float >= 0)
+value_loss_coef: 0.5  # value loss scaling factor (float >= 0)
+learning_rate: 0.0001  # SharedAdam learning rate (positive float)
+max_grad_norm: 40.0  # gradient clipping max norm (float >= 0; 0 disables clipping)
+
+# Model
+# hidden_sizes options: list of hidden layer widths; [] gives linear networks
+hidden_sizes: [128, 128]
+# activation options: relu, tanh, leaky_relu, elu
+activation: relu
+
+# Logging & Checkpoints
+log_interval: 1000  # logging cadence in global steps (int >= 1)
+checkpoint_interval: 10000  # checkpoint cadence in global steps (int >= 1)
+checkpoint_dir: A3C/checkpoints  # directory where checkpoints are saved
+save_best: true  # true or false
+log_level: INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+log_to_file: false  # true or false
+log_file: A3C/logs/a3c.log  # log file path (used when log_to_file=true)
+log_to_console: true  # true or false
+
+# Inference
+inference_model_path: A3C/checkpoints/best.pt  # checkpoint path used by demo/eval
+episodes: 5  # number of demo/eval episodes (int >= 1)
+
+# Misc
+device: cpu  # cpu only; A3C uses torch.multiprocessing share_memory_() which requires CPU tensors (CUDA tensors cannot be shared across OS processes)
