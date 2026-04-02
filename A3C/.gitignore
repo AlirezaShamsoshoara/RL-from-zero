@@ -1,2 +1,3 @@
 assets/*.mov
-assets/td3_moutaincar_cont.png
+# assets/td3_moutaincar_cont.png
+checkpoints/*
