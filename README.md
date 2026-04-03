@@ -35,7 +35,7 @@ RL-from-zero is a collection of reinforcement learning agents implemented from s
 | [`deepQN/`](deepQN/) | Deep Q-Network (with Double DQN option) | Discrete | `MountainCar-v0` | <img src="deepQN/assets/dqn_mountaincar.gif" alt="DQN MountainCar demo" width="160"> |
 | [`PPO/`](PPO/) | Proximal Policy Optimization | Discrete | `CartPole-v1` | <img src="PPO/assets/ppo_cartpole.gif" alt="PPO CartPole demo" width="160"> |
 | [`MAPPO/`](MAPPO/) | Multi-Agent PPO (centralized critic) | Discrete | `MultiWalker-v9` (PettingZoo) | <img src="MAPPO/assets/mappo_multiwalker.gif" alt="MAPPO MultiWalker demo" width="160"> |
-| [`A3C/`](A3C/) | Asynchronous Advantage Actor-Critic | Discrete | `Acrobot-v1` | - |
+| [`A3C/`](A3C/) | Asynchronous Advantage Actor-Critic | Discrete | `LunarLander-v3` | - |
 | [`SAC/`](SAC/) | Soft Actor-Critic | Continuous | `Pendulum-v1` | <img src="SAC/assets/sac_pendulum.gif" width="180"> |
 | [`DDPG/`](DDPG/) | Deep Deterministic Policy Gradient | Continuous | `Pendulum-v1` | - |
 | [`MADDPG/`](MADDPG/) | Multi-Agent DDPG (centralized training) | Continuous | `simple_spread_v3` (PettingZoo MPE) | - |
@@ -116,8 +116,8 @@ python -m deepQN.main train --config deepQN/configs/mountaincar.yaml
 python -m deepQN.main demo --config deepQN/configs/mountaincar.yaml --model_path deepQN/checkpoints/best.pt
 
 # A3C with multiple workers
-python -m A3C.main train --config A3C/configs/acrobot.yaml
-python -m A3C.main demo --config A3C/configs/acrobot.yaml --model_path A3C/checkpoints/best.pt --episodes 5
+python -m A3C.main train --config A3C/configs/lunarlander.yaml
+python -m A3C.main demo --config A3C/configs/lunarlander.yaml --model_path A3C/checkpoints/best.pt --episodes 5
 ```
 
 ### Continuous control examples
