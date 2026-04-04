@@ -9,6 +9,7 @@ import torch.multiprocessing as mp
 import wandb
 import gymnasium as gym
 from gymnasium import spaces
+from tqdm import tqdm
 
 from A3C.a3c.config import Config
 from A3C.a3c.agent import A3CAgent
@@ -24,7 +25,7 @@ def _log_mean(stats: list[Dict[str, float]]) -> Dict[str, float]:
     return {key: float(np.mean([item[key] for item in stats])) for key in keys}
 
 
-def train(config: str = "A3C/configs/acrobot.yaml", wandb_key: str = ""):
+def train(config: str = "A3C/configs/lunarlander.yaml", wandb_key: str = ""):
     cfg = Config.from_yaml(config)
     env_wandb_key = os.getenv("WANDB_API_KEY", "")
     if wandb_key:
@@ -104,6 +105,9 @@ def train(config: str = "A3C/configs/acrobot.yaml", wandb_key: str = ""):
     next_log_step = cfg.log_interval if cfg.log_interval > 0 else None
     next_checkpoint = cfg.checkpoint_interval if cfg.checkpoint_interval > 0 else None
     latest_step = 0
+    prev_step = 0
+
+    pbar = tqdm(total=cfg.total_steps, desc="A3C Steps")
 
     try:
         while True:
@@ -116,6 +120,8 @@ def train(config: str = "A3C/configs/acrobot.yaml", wandb_key: str = ""):
                 continue
 
             latest_step = max(latest_step, int(message.get("global_step", latest_step)))
+            pbar.update(latest_step - prev_step)
+            prev_step = latest_step
 
             if message.get("kind") == "episode":
                 episode_returns.append(float(message["episode_return"]))
@@ -148,6 +154,22 @@ def train(config: str = "A3C/configs/acrobot.yaml", wandb_key: str = ""):
                         log_payload[f"{prefix}/{key}"] = value
                     update_stats.clear()
                 wandb.log(log_payload, step=latest_step)
+                pbar.set_postfix({
+                    "avgR": f"{avg_return:.1f}",
+                    "avgL": f"{avg_length:.0f}",
+                    "loss": f"{mean_stats.get('total_loss', 0):.3f}" if mean_stats else "n/a",
+                })
+                logger.info(
+                    f"step={latest_step} | avg_return={avg_return:.2f} | avg_length={avg_length:.0f}"
+                    + (
+                        f" | policy_loss={mean_stats['policy_loss']:.4f}"
+                        f" | value_loss={mean_stats['value_loss']:.4f}"
+                        f" | entropy={mean_stats['entropy']:.4f}"
+                        f" | total_loss={mean_stats['total_loss']:.4f}"
+                        if mean_stats
+                        else ""
+                    )
+                )
                 next_log_step += cfg.log_interval
 
             if next_checkpoint is not None and latest_step >= next_checkpoint:
@@ -167,6 +189,7 @@ def train(config: str = "A3C/configs/acrobot.yaml", wandb_key: str = ""):
         for proc in processes:
             proc.join()
 
+    pbar.close()
     run.finish()
     logger.info(
         f"Training finished. Best 10-ep avg return: {best_avg_return:.2f}"
@@ -174,7 +197,7 @@ def train(config: str = "A3C/configs/acrobot.yaml", wandb_key: str = ""):
 
 
 def demo(
-    config: str = "A3C/configs/acrobot.yaml",
+    config: str = "A3C/configs/lunarlander.yaml",
     model_path: Optional[str] = None,
     episodes: Optional[int] = None,
 ):
