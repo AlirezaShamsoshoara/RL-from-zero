@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Iterable, Tuple
+from typing import Iterable, Optional, Tuple
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -80,11 +80,17 @@ class A3CAgent:
         values: torch.Tensor,
         returns: torch.Tensor,
         entropies: torch.Tensor,
+        entropy_coef: Optional[float] = None,
+        normalize_advantages: bool = False,
     ) -> Tuple[torch.Tensor, A3CStats]:
-        policy_loss = -(advantages.detach() * log_probs).mean()
-        value_loss = F.mse_loss(values, returns)
+        ent_coef = entropy_coef if entropy_coef is not None else self.entropy_coef
+        adv = advantages.detach()
+        if normalize_advantages and adv.numel() > 1:
+            adv = (adv - adv.mean()) / (adv.std() + 1e-8)
+        policy_loss = -(adv * log_probs).mean()
+        value_loss = F.mse_loss(values, returns.detach())
         entropy = entropies.mean()
-        total_loss = policy_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy
+        total_loss = policy_loss + self.value_loss_coef * value_loss - ent_coef * entropy
         stats = A3CStats(
             policy_loss=float(policy_loss.item()),
             value_loss=float(value_loss.item()),
