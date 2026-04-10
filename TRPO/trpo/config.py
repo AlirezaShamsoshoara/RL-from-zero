@@ -21,11 +21,11 @@ class Config:
     # WandB
     project: str = "rl-practice"
     entity: Optional[str] = None
-    run_name: str = "trpo-run"
+    run_name: str = "trpo-acrobot"
     wandb_key: str = ""
 
     # Environment
-    env_id: str = "Pendulum-v1"
+    env_id: str = "Acrobot-v1"
     render_mode: Optional[str] = None
     num_envs: int = 1
     seed: int = 42
@@ -63,6 +63,9 @@ class Config:
     # Inference
     inference_model_path: str = "TRPO/checkpoints/best.pt"
     episodes: int = 5
+    # Greedy eval is correct for continuous (Gaussian mean) but can be pathological
+    # for discrete (categorical argmax can get stuck); set false to sample instead.
+    eval_deterministic: bool = True
 
     # Misc
     device: str = "auto"
@@ -117,6 +120,7 @@ class Config:
             "log_to_console": self.log_to_console,
             "inference_model_path": self.inference_model_path,
             "episodes": self.episodes,
+            "eval_deterministic": self.eval_deterministic,
             "device": self.device,
         }
 
