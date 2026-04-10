@@ -14,8 +14,72 @@ def set_seed(seed: int) -> None:
     torch.cuda.manual_seed_all(seed)
 
 
-def make_env(env_id: str, seed: int, render_mode: Optional[str] = None) -> gym.Env:
+class AcrobotShapedReward(gym.Wrapper):
+    """Potential-based reward shaping for Acrobot-v1.
+
+    Acrobot's default reward (-1 per step) is too sparse for A3C to learn
+    from random exploration alone.  This wrapper adds a potential-based
+    bonus F = γ·Φ(s') − Φ(s) where Φ is the tip height.
+
+    Potential-based shaping preserves the optimal policy (Ng et al., 1999)
+    while providing an immediate, per-action learning signal: actions that
+    swing the tip upward get higher reward, downward get lower.
+    """
+
+    def __init__(self, env: gym.Env, gamma: float = 0.99):
+        super().__init__(env)
+        self._gamma = gamma
+        self._prev_height: float = -2.0  # bottom (default)
+
+    @staticmethod
+    def _tip_height(obs) -> float:
+        """Tip height = −cos(θ₁) − cos(θ₁+θ₂), range [−2, 2]."""
+        cos_sum = obs[0] * obs[2] - obs[1] * obs[3]  # cos(θ₁ + θ₂)
+        return float(-obs[0] - cos_sum)
+
+    def reset(self, **kwargs):
+        obs, info = self.env.reset(**kwargs)
+        self._prev_height = self._tip_height(obs)
+        return obs, info
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        new_height = self._tip_height(obs)
+        # F = γ·Φ(s') − Φ(s)
+        shaping = self._gamma * new_height - self._prev_height
+        self._prev_height = new_height
+        return obs, reward + shaping, terminated, truncated, info
+
+
+class RewardScaler(gym.RewardWrapper):
+    """Multiply rewards by a constant scale factor."""
+
+    def __init__(self, env: gym.Env, scale: float = 1.0):
+        super().__init__(env)
+        self._scale = scale
+
+    def reward(self, reward):
+        return reward * self._scale
+
+
+def _wrap_env(env: gym.Env, env_id: str, reward_shaping: bool, gamma: float = 0.99, reward_scale: float = 1.0) -> gym.Env:
+    if reward_shaping and "Acrobot" in env_id:
+        env = AcrobotShapedReward(env, gamma=gamma)
+    if reward_scale != 1.0:
+        env = RewardScaler(env, scale=reward_scale)
+    return env
+
+
+def make_env(
+    env_id: str,
+    seed: int,
+    render_mode: Optional[str] = None,
+    reward_shaping: bool = False,
+    gamma: float = 0.99,
+    reward_scale: float = 1.0,
+) -> gym.Env:
     env = gym.make(env_id, render_mode=render_mode)
+    env = _wrap_env(env, env_id, reward_shaping, gamma=gamma, reward_scale=reward_scale)
     env.reset(seed=seed)
     return env
 
@@ -24,12 +88,16 @@ def make_vec_env(
     env_id: str,
     num_envs: int,
     seed: int,
+    reward_shaping: bool = False,
+    gamma: float = 0.99,
+    reward_scale: float = 1.0,
 ) -> gym.vector.VectorEnv:
     from gymnasium.vector import AutoresetMode
 
     def _make_single(rank: int):
         def _thunk():
             env = gym.make(env_id)
+            env = _wrap_env(env, env_id, reward_shaping, gamma=gamma, reward_scale=reward_scale)
             env.reset(seed=seed + rank)
             return env
         return _thunk
