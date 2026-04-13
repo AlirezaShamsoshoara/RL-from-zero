@@ -35,7 +35,7 @@ RL-from-zero is a collection of reinforcement learning agents implemented from s
 | [`deepQN/`](deepQN/) | Deep Q-Network (with Double DQN option) | Discrete | `MountainCar-v0` | <img src="deepQN/assets/dqn_mountaincar.gif" alt="DQN MountainCar demo" width="160"> |
 | [`PPO/`](PPO/) | Proximal Policy Optimization | Discrete | `CartPole-v1` | <img src="PPO/assets/ppo_cartpole.gif" alt="PPO CartPole demo" width="160"> |
 | [`MAPPO/`](MAPPO/) | Multi-Agent PPO (centralized critic) | Discrete | `MultiWalker-v9` (PettingZoo) | <img src="MAPPO/assets/mappo_multiwalker.gif" alt="MAPPO MultiWalker demo" width="160"> |
-| [`A3C/`](A3C/) | Asynchronous Advantage Actor-Critic | Discrete | `CartPole-v1` | - |
+| [`A3C/`](A3C/) | Asynchronous Advantage Actor-Critic | Discrete | `Acrobot-v1` | - |
 | [`SAC/`](SAC/) | Soft Actor-Critic | Continuous | `Pendulum-v1` | <img src="SAC/assets/sac_pendulum.gif" width="180"> |
 | [`DDPG/`](DDPG/) | Deep Deterministic Policy Gradient | Continuous | `Pendulum-v1` | - |
 | [`MADDPG/`](MADDPG/) | Multi-Agent DDPG (centralized training) | Continuous | `simple_spread_v3` (PettingZoo MPE) | - |
@@ -116,8 +116,8 @@ python -m deepQN.main train --config deepQN/configs/mountaincar.yaml
 python -m deepQN.main demo --config deepQN/configs/mountaincar.yaml --model_path deepQN/checkpoints/best.pt
 
 # A3C with multiple workers
-python -m A3C.main train --config A3C/configs/cartpole.yaml
-python -m A3C.main demo --config A3C/configs/cartpole.yaml --model_path A3C/checkpoints/best.pt --episodes 5
+python -m A3C.main train --config A3C/configs/acrobot.yaml
+python -m A3C.main demo --config A3C/configs/acrobot.yaml --model_path A3C/checkpoints/best.pt --episodes 5
 ```
 
 ### Continuous control examples
@@ -144,7 +144,7 @@ python -m IQL.main demo --config IQL/configs/pendulum_random.yaml --model_path I
 ```
 
 ### Optional Weights & Biases logging
-Add `--wandb_key YOUR_KEY` to any `train` command or set `wandb_key` in the YAML config to authenticate and push metrics, losses, and episode returns to W&B. If `WANDB_API_KEY` is set in your environment, trainers that check the env var (for example, PPO and SAC) will read it automatically.
+Add `--wandb_key YOUR_KEY` to any `train` command or set `wandb_key` in the YAML config to authenticate and push metrics, losses, and episode returns to W&B. If `WANDB_API_KEY` is set in your environment, trainers that check the env var (for example, PPO, SAC, A3C, and TD3) will read it automatically.
 
 ## Configuring experiments
 - Duplicate a baseline YAML file (for example `PPO/configs/cartpole.yaml`) and edit environment ids, learning rates, rollout lengths, or logging cadence.
