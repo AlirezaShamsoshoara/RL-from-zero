@@ -1,4 +1,7 @@
 # A3C Config for Acrobot-v1
+# NOTE: Acrobot-v1 is extremely hard for vanilla A3C due to sparse rewards
+# and the need for coordinated multi-step strategies (energy pumping).
+# Use cartpole.yaml for reliable convergence. This config is for experimentation.
 # Experiment tracking
 project: rl-hero  # wandb project name (any string)
 entity: null  # null or your wandb entity/team
@@ -14,16 +17,18 @@ render_mode: null
 
 # Workers
 num_workers: 4  # number of parallel A3C worker processes (int >= 1)
-num_envs: 1  # number of parallel environments per worker via SyncVectorEnv (int >= 1; total envs = num_workers * num_envs)
+num_envs: 1  # environments per worker (int >= 1; >1 uses SyncVectorEnv but reduces gradient updates)
 t_max: 20  # max rollout steps per worker before gradient update (int >= 1)
 
 # Training
-total_steps: 200000  # total environment steps across all workers (int >= 1)
+total_steps: 1000000  # total environment steps across all workers (int >= 1)
 gamma: 0.99  # discount factor (0 < gamma <= 1)
-entropy_coef: 0.01  # entropy bonus coefficient for exploration (float >= 0)
-value_loss_coef: 0.5  # value loss scaling factor (float >= 0)
-learning_rate: 0.0001  # SharedAdam learning rate (positive float)
-max_grad_norm: 40.0  # gradient clipping max norm (float >= 0; 0 disables clipping)
+entropy_coef: 0.05  # entropy bonus coefficient for exploration (float >= 0)
+value_loss_coef: 0.01  # value loss scaling factor (float >= 0; low value prevents value gradients from dominating shared backbone)
+learning_rate: 0.001  # SharedAdam learning rate (positive float)
+max_grad_norm: 1.0  # gradient clipping max norm (float >= 0; 0 disables clipping)
+anneal_lr: true  # linearly decay learning rate to 0 over total_steps (true/false)
+reward_shaping: true  # add height-based reward bonus for Acrobot (true/false; provides intermediate learning signal)
 
 # Model
 # hidden_sizes options: list of hidden layer widths; [] gives linear networks
