@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import asdict
 import numpy as np
 import torch
-from .utils import make_env, make_vec_env, compute_returns
+from .utils import make_env, make_vec_env, compute_returns, set_seed
 
 
 def worker_process(
@@ -13,20 +13,32 @@ def worker_process(
     result_queue,
     stop_event,
 ):
+    set_seed(cfg.seed + worker_id)
     num_envs = getattr(cfg, "num_envs", 1)
     use_vec = num_envs > 1
+    reward_shaping = getattr(cfg, "reward_shaping", False)
+    reward_scale = getattr(cfg, "reward_scale", 1.0)
 
     if use_vec:
         env = make_vec_env(
             cfg.env_id,
             num_envs=num_envs,
             seed=cfg.seed + worker_id * num_envs,
+            reward_shaping=reward_shaping,
+            gamma=cfg.gamma,
+            reward_scale=reward_scale,
         )
     else:
-        env = make_env(cfg.env_id, seed=cfg.seed + worker_id)
+        env = make_env(cfg.env_id, seed=cfg.seed + worker_id, reward_shaping=reward_shaping, gamma=cfg.gamma, reward_scale=reward_scale)
 
     local_model = shared_agent.new_local_model()
     device = shared_agent.device
+    anneal_lr = getattr(cfg, "anneal_lr", False)
+    initial_lr = cfg.learning_rate
+    anneal_entropy = getattr(cfg, "anneal_entropy", False)
+    entropy_coef_start = cfg.entropy_coef
+    entropy_coef_end = getattr(cfg, "entropy_coef_end", cfg.entropy_coef)
+    normalize_advantages = getattr(cfg, "normalize_advantages", False)
 
     obs, _ = env.reset(seed=cfg.seed + worker_id)
 
@@ -178,16 +190,33 @@ def worker_process(
             returns_t = returns_t.reshape(-1)
             advantages = advantages.reshape(-1)
 
+        # Entropy coefficient (optionally annealed)
+        if anneal_entropy:
+            frac = max(1.0 - current_step / cfg.total_steps, 0.0)
+            ent_coef = entropy_coef_end + (entropy_coef_start - entropy_coef_end) * frac
+        else:
+            ent_coef = None  # use agent default
+
         total_loss, stats = shared_agent.compute_loss(
             advantages=advantages,
             log_probs=log_probs_t,
             values=values_t,
             returns=returns_t,
             entropies=entropies_t,
+            entropy_coef=ent_coef,
+            normalize_advantages=normalize_advantages,
         )
 
         local_model.zero_grad()
         total_loss.backward()
+
+        # Linear LR annealing (original A3C paper)
+        if anneal_lr:
+            frac = max(1.0 - current_step / cfg.total_steps, 0.0)
+            new_lr = initial_lr * frac
+            for param_group in shared_agent.optimizer.param_groups:
+                param_group["lr"] = new_lr
+
         shared_agent.apply_gradients(local_model)
         shared_agent.sync_local(local_model)
 

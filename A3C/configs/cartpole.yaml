@@ -1,0 +1,67 @@
+# A3C Config for CartPole-v1 (converges reliably on all seeds)
+
+# Experiment tracking
+project: rl-hero  # wandb project name (any string)
+entity: null  # null or your wandb entity/team
+run_name: a3c-cartpole  # wandb run name (any string)
+wandb_key: ""  # wandb API key (string, or set WANDB_API_KEY env var)
+seed: 42  # random seed (int)
+
+# Environment
+# env_id options: CartPole-v1 (default), LunarLander-v3, Acrobot-v1,
+#   or any Gymnasium discrete-action env id
+env_id: CartPole-v1
+# render_mode options: null (no render), human (window), rgb_array (frames)
+render_mode: null
+
+# Workers
+# num_workers: number of parallel OS processes (int >= 1)
+#   recommended: 2-8, keep num_workers * num_envs <= CPU core count
+num_workers: 4
+# num_envs: environments per worker via SyncVectorEnv (int >= 1)
+#   total active envs = num_workers * num_envs
+num_envs: 1
+# t_max: max rollout length before gradient push (int >= 1)
+#   typical range: 5-50
+t_max: 20
+
+# Training
+total_steps: 200000  # total env interactions across all workers (int >= 1)
+gamma: 0.99  # discount factor (0 < gamma <= 1)
+# entropy_coef: entropy bonus weight (float >= 0); typical range: 0.01-0.2
+entropy_coef: 0.05
+# value_loss_coef: value loss weight (float >= 0); keep low (0.01) with shared backbone
+value_loss_coef: 0.01
+# learning_rate: Adam LR (positive float); typical range: 1e-4 to 1e-2
+learning_rate: 0.001
+# max_grad_norm: gradient clipping max norm (positive float); typical range: 0.5-50
+max_grad_norm: 40.0
+# anneal_lr: linearly decay LR to 0 over total_steps (true/false)
+anneal_lr: true
+# reward_shaping: potential-based shaping for Acrobot only (true/false)
+reward_shaping: false
+
+# Model
+# hidden_sizes: MLP hidden layer sizes (list of ints)
+#   examples: [64, 64], [128, 128], [256, 128]
+hidden_sizes: [128, 128]
+# activation options: relu, tanh, elu, leaky_relu
+activation: relu
+
+# Logging & Checkpoints
+log_interval: 1000  # log cadence in steps (int >= 1)
+checkpoint_interval: 10000  # checkpoint cadence in steps (int >= 1)
+checkpoint_dir: A3C/checkpoints  # checkpoint directory path
+save_best: true  # true or false
+log_level: INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+log_to_file: false  # true or false
+log_file: A3C/logs/a3c.log  # log file path (used when log_to_file=true)
+log_to_console: true  # true or false
+
+# Inference
+inference_model_path: A3C/checkpoints/best.pt  # checkpoint for demo/eval
+episodes: 5  # number of demo episodes (int >= 1)
+
+# Misc
+# device options: cpu (required for A3C shared-memory implementation)
+device: cpu

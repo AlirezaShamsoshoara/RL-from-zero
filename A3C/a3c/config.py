@@ -34,11 +34,11 @@ class Config:
     t_max: int = 20
 
     # Training
-    total_steps: int = 500_000
+    total_steps: int = 1_000_000
     gamma: float = 0.99
-    entropy_coef: float = 0.01
-    value_loss_coef: float = 0.5
-    learning_rate: float = 1e-4
+    entropy_coef: float = 0.05
+    value_loss_coef: float = 0.01
+    learning_rate: float = 1e-3
     max_grad_norm: float = 40.0
 
     # Model
@@ -58,6 +58,22 @@ class Config:
     # Inference
     inference_model_path: str = "A3C/checkpoints/best.pt"
     episodes: int = 5
+
+    # Learning rate schedule
+    anneal_lr: bool = True
+
+    # Entropy annealing (linear decay from entropy_coef → entropy_coef_end)
+    anneal_entropy: bool = False
+    entropy_coef_end: float = 0.01
+
+    # Advantage normalization
+    normalize_advantages: bool = False
+
+    # Reward scaling (multiply rewards by this factor)
+    reward_scale: float = 1.0
+
+    # Reward shaping (height bonus for Acrobot)
+    reward_shaping: bool = True
 
     # Misc
     device: str = "auto"
@@ -107,5 +123,11 @@ class Config:
             "log_to_console": self.log_to_console,
             "inference_model_path": self.inference_model_path,
             "episodes": self.episodes,
+            "anneal_lr": self.anneal_lr,
+            "anneal_entropy": self.anneal_entropy,
+            "entropy_coef_end": self.entropy_coef_end,
+            "normalize_advantages": self.normalize_advantages,
+            "reward_scale": self.reward_scale,
+            "reward_shaping": self.reward_shaping,
             "device": self.device,
         }

@@ -114,21 +114,29 @@ with gradient clipping $\|\nabla\| \leq g_{\max}$ (`max_grad_norm`) before the u
 - Configurable number of parallel workers, rollout length, and entropy regularization.
 - WandB integration, tqdm-aware logging, and checkpoint management consistent with other algorithms.
 
-## Default Environment: Acrobot-v1
+## Default Environment: LunarLander-v3
 
-Acrobot is a classic control environment where a two-link pendulum must swing its free end above a target height:
-- **Observation**: 6-dimensional continuous state (joint angles and angular velocities).
-- **Actions**: 3 discrete torques applied to the actuated joint ($\{-1, 0, +1\}$).
-- **Reward**: $-1$ per step until the free end crosses the target height; the goal is to solve it in as few steps as possible.
-- **Max episode length**: 500 steps (truncated if not solved).
+LunarLander is a classic control environment where a lander must navigate from the top of the screen to a landing pad at the origin:
+- **Observation**: 8-dimensional continuous state (position, velocity, angle, angular velocity, leg contact).
+- **Actions**: 4 discrete actions (do nothing, fire left engine, fire main engine, fire right engine).
+- **Reward**: Ranges from about −400 (crash) to +300 (perfect landing). Positive reward for moving toward the pad and landing softly; negative for crashing or using fuel.
+- **Max episode length**: 1000 steps (truncated if not landed).
+- **Solved threshold**: +200 average return over 100 episodes.
 
-This environment tests A3C's ability to learn from sparse negative reward signals using parallel exploration across workers.
+LunarLander's wide reward range (−400 to +300) makes it challenging for A3C's shared backbone. Three stabilization techniques are used:
+1. **Reward scaling** (`reward_scale=0.01`): compresses returns to ~[−4, +3], preventing value gradients from dominating the shared backbone.
+2. **Advantage normalization** (`normalize_advantages=True`): makes the policy gradient scale-invariant.
+3. **Entropy annealing** (`entropy_coef` 0.15 → 0.01): starts with high exploration to avoid early entropy collapse, then reduces for exploitation.
+
+> **Note:** LunarLander-v3 requires Box2D. Install with: `pip install swig && pip install "gymnasium[box2d]"`
+
+Alternative configs for CartPole-v1 and Acrobot-v1 are also provided under `A3C/configs/`.
 
 ## Quickstart
 ```bash
-python -m A3C.main train --config A3C/configs/acrobot.yaml
+python -m A3C.main train --config A3C/configs/lunarlander.yaml
 
-python -m A3C.main demo --config A3C/configs/acrobot.yaml --model_path A3C/checkpoints/best.pt
+python -m A3C.main demo --config A3C/configs/lunarlander.yaml --model_path A3C/checkpoints/best.pt
 ```
 Use `--wandb_key YOUR_KEY` to authenticate for logging, or set `WANDB_API_KEY` in your environment. Checkpoints live in `A3C/checkpoints`, and the moving-average best checkpoint is written to `best.pt`.
 
@@ -139,8 +147,8 @@ Windows cmd:
 uv venv .venv
 uv sync
 .\.venv\Scripts\activate.bat
-python -m A3C.main train --config A3C/configs/acrobot.yaml
-python -m A3C.main demo --config A3C/configs/acrobot.yaml --model_path A3C/checkpoints/best.pt --episodes 5
+python -m A3C.main train --config A3C/configs/lunarlander.yaml
+python -m A3C.main demo --config A3C/configs/lunarlander.yaml --model_path A3C/checkpoints/best.pt --episodes 5
 ```
 
 macOS/Linux (bash or zsh):
@@ -148,26 +156,38 @@ macOS/Linux (bash or zsh):
 uv venv .venv
 uv sync
 source .venv/bin/activate
-python -m A3C.main train --config A3C/configs/acrobot.yaml
-python -m A3C.main demo --config A3C/configs/acrobot.yaml --model_path A3C/checkpoints/best.pt --episodes 5
+python -m A3C.main train --config A3C/configs/lunarlander.yaml
+python -m A3C.main demo --config A3C/configs/lunarlander.yaml --model_path A3C/checkpoints/best.pt --episodes 5
 ```
 
 If you prefer `uv run` instead of activation:
 ```bash
-uv run -m A3C.main train --config A3C/configs/acrobot.yaml
-uv run -m A3C.main demo --config A3C/configs/acrobot.yaml --model_path A3C/checkpoints/best.pt --episodes 5
+uv run -m A3C.main train --config A3C/configs/lunarlander.yaml
+uv run -m A3C.main demo --config A3C/configs/lunarlander.yaml --model_path A3C/checkpoints/best.pt --episodes 5
 ```
 
+## Training Results
+
+**LunarLander-v3** (default, `seed=42`, 500K steps, ~4 min on 4 cores):
+- Training best 10-ep avg return: **+262** (above +200 solved threshold)
+- Demo avg return over 10 episodes: **+127** (7/10 episodes positive, best +302)
+
+**CartPole-v1** (`seed=42`, 200K steps):
+- Converges to **500** (max score) reliably across all seeds
+
+> **Note on reproducibility:** A3C is inherently non-deterministic due to asynchronous worker scheduling. Even with the same seed, results may vary between runs. LunarLander is particularly sensitive — seed 42 converges reliably, while other seeds may be less stable.
+
 ## Configuration
-YAML files under `A3C/configs/` expose the hyper-parameters:
+YAML files under `A3C/configs/` expose the hyper-parameters (see inline comments in each YAML for options and valid ranges):
 - **Environment**: Gym id, render mode.
-- **Workers**: number of parallel processes and max rollout length per update.
-- **Training**: total interaction steps, discount factor, entropy coefficient, value loss coefficient, learning rate, and gradient clipping.
+- **Workers**: number of parallel processes (`num_workers`), environments per worker (`num_envs`), and max rollout length (`t_max`).
+- **Training**: total interaction steps, discount factor, entropy coefficient, value loss coefficient, learning rate, gradient clipping, and schedule options (`anneal_lr`, `anneal_entropy`).
+- **Stabilization**: reward scaling (`reward_scale`), advantage normalization (`normalize_advantages`), entropy annealing (`anneal_entropy`, `entropy_coef_end`), and reward shaping (`reward_shaping`, Acrobot only).
 - **Model**: shared hidden layer sizes and activation for the actor-critic backbone.
 - **Logging**: intervals, checkpoint cadence, output paths, and logger behaviour.
 - **Inference**: default checkpoint path and number of evaluation episodes.
 
-Clone the provided config in `A3C/configs/` to target other discrete-action Gymnasium tasks (e.g., `CartPole-v1`, `LunarLander-v2`).
+Clone the provided config in `A3C/configs/` to target other discrete-action Gymnasium tasks. Configs for `CartPole-v1` and `Acrobot-v1` are included.
 
 ## Multi-Environment Support
 A3C supports parallel environment execution within each worker via Gymnasium's `SyncVectorEnv`. The `num_envs` parameter controls how many environment instances each worker runs simultaneously. The total number of active environments is `num_workers * num_envs`.
@@ -223,10 +243,22 @@ When `num_envs > 1`, each worker step collects transitions from all its environm
 | **Exploration** | Entropy bonus | Entropy bonus | Maximum entropy framework |
 | **Gradient sync** | Async (lock-free) | Synchronous | N/A |
 
+## Tuning Guide
+
+**Worker scaling:** Keep `num_workers` at 4 (default). More workers increase asynchronous gradient staleness — each worker pushes gradients computed against an increasingly outdated copy of the global model. In experiments, 8 workers performed significantly worse than 4 despite higher data throughput. Prefer increasing `num_envs` (vectorized environments within each worker) over `num_workers` if you need more throughput, though `num_envs=1` gave the best convergence in our tests.
+
+**Value loss coefficient (`value_loss_coef`):** Keep at 0.01 with the shared backbone architecture. With the default 0.5, value gradients are ~200x larger than policy gradients, drowning out policy learning entirely. This was the single most critical fix for convergence.
+
+**Wide-reward environments (e.g., LunarLander):** Environments with reward ranges much larger than [−1, +1] need additional stabilization:
+- `reward_scale`: compress rewards (e.g., 0.01 for LunarLander's [−400, +300] range)
+- `normalize_advantages: true`: makes policy gradient scale-invariant
+- `anneal_entropy: true`: start with high entropy (0.1–0.2) to prevent early collapse, decay to 0.01
+
+**LR and entropy annealing interact with `total_steps`:** Both schedules linearly decay to their end value at `total_steps`. Setting `total_steps` too high keeps LR/entropy elevated for too long, preventing exploitation. For LunarLander, 500K steps works well; 2M steps causes divergence because the LR stays too high.
+
 ## Notes
 - This reference implementation currently supports CPU devices, flat observation spaces, and discrete action spaces.
-- Increase `num_workers` and `t_max` carefully; CPU contention can hurt performance with too many workers.
-- Tweak exploration via `entropy_coef` in the config to balance return and stability.
+- A3C's asynchronous gradient updates are inherently less stable than synchronous methods (A2C, PPO). This is a fundamental algorithmic trade-off, not a bug — for maximum stability, consider PPO.
 - Unlike PPO which uses synchronized vectorized environments, A3C uses true multiprocessing with independent environment instances per worker.
 
 ## References

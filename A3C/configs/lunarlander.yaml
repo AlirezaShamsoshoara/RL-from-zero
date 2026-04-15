@@ -1,0 +1,108 @@
+# A3C Config for LunarLander-v3
+#
+# LunarLander is harder for A3C than CartPole due to its wide reward range
+# (-400 to +300). Key stabilization techniques:
+#   - reward_scale=0.01: compresses returns to ~[-4, +3], taming value gradients
+#   - normalize_advantages: makes policy gradient scale-invariant
+#   - entropy annealing: prevents early entropy collapse on some seeds
+#
+# NOTE: A3C is inherently seed-sensitive on LunarLander. Seed 42 reliably
+# reaches +200 (solved). Other seeds learn but may be unstable.
+#
+# Requires Box2D: pip install swig && pip install "gymnasium[box2d]"
+
+# Experiment tracking
+project: rl-hero  # wandb project name (any string)
+entity: null  # null or your wandb entity/team
+run_name: a3c-lunarlander  # wandb run name (any string)
+wandb_key: ""  # wandb API key (string, or set WANDB_API_KEY env var)
+seed: 42  # random seed (int); seed 42 converges reliably on LunarLander
+
+# Environment
+# env_id options: LunarLander-v3 (default), CartPole-v1, Acrobot-v1,
+#   or any Gymnasium discrete-action env id
+env_id: LunarLander-v3
+# render_mode options: null (no render), human (window), rgb_array (frames)
+render_mode: null
+
+# Workers
+# num_workers: number of parallel OS processes (int >= 1)
+#   each worker runs its own env copy and pushes async gradients
+#   recommended: 2-8, keep num_workers * num_envs <= CPU core count
+num_workers: 4
+# num_envs: environments per worker via SyncVectorEnv (int >= 1)
+#   total active envs = num_workers * num_envs
+#   higher values increase data throughput but may hurt convergence stability
+#   for LunarLander: 1 (stable) or 2 (faster, may need tuning)
+num_envs: 1
+# t_max: max rollout length before gradient push (int >= 1)
+#   smaller = lower variance but more overhead; larger = higher variance
+#   typical range: 5-50
+t_max: 20
+
+# Training
+total_steps: 500000  # total env interactions across all workers (int >= 1)
+gamma: 0.99  # discount factor (0 < gamma <= 1)
+# entropy_coef: entropy bonus weight (float >= 0)
+#   higher = more exploration; if anneal_entropy=true, this is the starting value
+#   typical range: 0.01-0.2
+entropy_coef: 0.15
+# value_loss_coef: value loss weight in total loss (float >= 0)
+#   IMPORTANT: keep low (0.01) with shared backbone to prevent value gradients
+#   from drowning out policy learning. Use 0.5 only with separate networks.
+#   typical range: 0.001-0.5
+value_loss_coef: 0.01
+# learning_rate: Adam optimizer LR (positive float)
+#   if anneal_lr=true, linearly decays to 0 over total_steps
+#   typical range: 1e-4 to 1e-2
+learning_rate: 0.001
+# max_grad_norm: gradient clipping max norm (positive float)
+#   lower = more stable but slower learning; higher = faster but riskier
+#   typical range: 0.5-50
+max_grad_norm: 40.0
+# anneal_lr: linearly decay LR from learning_rate to 0 over total_steps
+#   options: true, false
+anneal_lr: true
+# anneal_entropy: linearly decay entropy_coef to entropy_coef_end over total_steps
+#   prevents early entropy collapse while allowing later exploitation
+#   options: true, false
+anneal_entropy: true
+# entropy_coef_end: final entropy coefficient when anneal_entropy=true (float >= 0)
+entropy_coef_end: 0.01
+# normalize_advantages: normalize advantages to zero mean / unit std per rollout
+#   makes policy gradient scale-invariant; critical for wide-reward envs
+#   options: true, false
+normalize_advantages: true
+# reward_scale: multiply all env rewards by this factor (positive float)
+#   1.0 = no scaling; 0.01 = compress [-400,+300] to [-4,+3]
+#   use < 1.0 for envs with large reward magnitudes to stabilize value learning
+reward_scale: 0.01
+# reward_shaping: apply potential-based reward shaping (currently Acrobot only)
+#   options: true, false
+reward_shaping: false
+
+# Model
+# hidden_sizes: MLP hidden layer sizes (list of ints)
+#   examples: [64, 64], [128, 128], [256, 128]
+hidden_sizes: [128, 128]
+# activation: hidden layer activation function
+#   options: relu, tanh, elu, leaky_relu
+activation: relu
+
+# Logging & Checkpoints
+log_interval: 5000  # log cadence in steps (int >= 1)
+checkpoint_interval: 50000  # checkpoint cadence in steps (int >= 1)
+checkpoint_dir: A3C/checkpoints  # checkpoint directory path
+save_best: true  # save best checkpoint by rolling avg return (true/false)
+log_level: INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+log_to_file: false  # true or false
+log_file: A3C/logs/a3c.log  # log file path (used when log_to_file=true)
+log_to_console: true  # true or false
+
+# Inference
+inference_model_path: A3C/checkpoints/best.pt  # checkpoint for demo/eval
+episodes: 10  # number of demo episodes (int >= 1)
+
+# Misc
+# device options: cpu (required for A3C shared-memory implementation)
+device: cpu
