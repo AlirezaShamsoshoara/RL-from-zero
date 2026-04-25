@@ -1,10 +1,10 @@
-# DDPG utils — README asset generators
+# DDPG utils - README asset generators
 
 Helpers that produce the demo assets in `DDPG/assets/`:
 
-- **`make_gif.py` / `make_gif.sh`** — render a trained policy to an animated GIF
+- **`make_gif.py` / `make_gif.sh`** - render a trained policy to an animated GIF
   (rolls out several deterministic episodes, keeps the best, stitches them).
-- **`make_charts.py` / `make_charts.sh`** — read a local wandb run and write the
+- **`make_charts.py` / `make_charts.sh`** - read a local wandb run and write the
   three training charts (`chart_01/02/03.png`).
 
 The `.sh` wrappers cd to the repo root, apply sensible defaults, and forward any
@@ -46,7 +46,7 @@ SDL_VIDEODRIVER=dummy python -m DDPG.utils.make_gif \
 | Flag | Default | Meaning |
 | --- | --- | --- |
 | `--config` | *(required)* | YAML config; provides `env_id`, network sizes, action bounds, etc. |
-| `--checkpoint` | *(required)* | `.pt` file to load. **Use `best.pt`, not the last checkpoint** — DDPG is high-variance and the final model is usually worse. |
+| `--checkpoint` | *(required)* | `.pt` file to load. **Use `best.pt`, not the last checkpoint** - DDPG is high-variance and the final model is usually worse. |
 | `--out` | *(required)* | Output GIF path (parent dirs are created). |
 | `--episodes` | `8` | How many episodes to roll out before selecting the best. |
 | `--keep-top` | `3` | How many of the highest-returning episodes to include. |
@@ -73,7 +73,7 @@ Any extra flags are forwarded to `make_gif.py`, e.g.:
 
 # Charts generator
 
-Reads a run's `.wandb` datastore file directly (works for **offline** runs too —
+Reads a run's `.wandb` datastore file directly (works for **offline** runs too -
 no network needed) and writes `chart_01.png` (critic Q vs. realized return),
 `chart_02.png` (actor & critic loss), and `chart_03.png` (return & length).
 

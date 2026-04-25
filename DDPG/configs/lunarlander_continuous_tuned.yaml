@@ -1,4 +1,4 @@
-# DDPG config for LunarLanderContinuous-v3 — stability-tuned variant.
+# DDPG config for LunarLanderContinuous-v3 - stability-tuned variant.
 # The pure-DDPG default (lunarlander_continuous.yaml) suffered from critic
 # over-estimation: Q-values exploded (~330) while real returns went negative,
 # the policy peaked early (~step 20k) and then collapsed. This variant enables

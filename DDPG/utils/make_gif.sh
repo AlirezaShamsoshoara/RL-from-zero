@@ -20,7 +20,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 cd "$REPO_ROOT"
 
-# Headless rendering for Box2D/pygame — renders to an off-screen surface.
+# Headless rendering for Box2D/pygame - renders to an off-screen surface.
 export SDL_VIDEODRIVER="${SDL_VIDEODRIVER:-dummy}"
 
 PYTHON="${PYTHON:-python}"

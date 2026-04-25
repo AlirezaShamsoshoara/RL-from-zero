@@ -1,7 +1,7 @@
 """Generate DDPG training charts (chart_01/02/03.png) from a local wandb run.
 
 Reads the metric history straight from a run's ``.wandb`` datastore file (works
-for offline runs too — no network needed) and writes three PNGs:
+for offline runs too - no network needed) and writes three PNGs:
 
   - chart_01: critic Q-value vs. realized return (the over-estimation story)
   - chart_02: actor & critic loss
@@ -58,7 +58,7 @@ def load_history(run_path: str) -> list[dict]:
             row = {}
             for it in rec.history.item:
                 # wandb stores keys either flat (`key`) or nested (`nested_key`,
-                # a repeated field) — join the latter with "/".
+                # a repeated field) - join the latter with "/".
                 nk = list(it.nested_key)
                 key = "/".join(nk) if nk else it.key
                 try:
@@ -101,9 +101,9 @@ def main() -> None:
 
     plt.rcParams.update({"figure.dpi": 130, "font.size": 11, "axes.grid": True,
                          "grid.alpha": 0.3, "axes.spines.top": False,
-                         "axes.spines.right": False})
+                         "axes.spines.right": False, "axes.unicode_minus": False})
 
-    # chart_01 — Q-value (critic estimate) vs realized return: the over-estimation story
+    # chart_01 - Q-value (critic estimate) vs realized return: the over-estimation story
     fig, ax = plt.subplots(figsize=(9, 4.5))
     ax.plot(ks, q, color=BLUE, lw=1.6, label="Critic Q-value estimate")
     ax.plot(ks, smooth(ret, args.smooth), color=GREEN, lw=1.8,
@@ -111,27 +111,27 @@ def main() -> None:
     ax.axhline(0, color="gray", lw=0.8, ls="--")
     ax.set_xlabel("Environment steps (thousands)")
     ax.set_ylabel("Value")
-    ax.set_title(f"Critic Q-value vs. realized return — {suffix}")
+    ax.set_title(f"Critic Q-value vs. realized return - {suffix}")
     ax.legend(loc="best", framealpha=0.9)
     fig.tight_layout(); fig.savefig(f"{args.out_dir}/chart_01.png"); plt.close(fig)
 
-    # chart_02 — actor & critic loss
+    # chart_02 - actor & critic loss
     fig, ax = plt.subplots(figsize=(9, 4.5))
     ax.plot(ks, closs, color=RED, lw=1.5, label="Critic loss (MSBE)")
     ax.set_xlabel("Environment steps (thousands)")
     ax.set_ylabel("Critic loss", color=RED)
     ax.tick_params(axis="y", labelcolor=RED)
     ax2 = ax.twinx(); ax2.grid(False)
-    ax2.plot(ks, aloss, color=ORANGE, lw=1.5, label="Actor loss  (−Q)")
-    ax2.set_ylabel("Actor loss  (−E[Q])", color=ORANGE)
+    ax2.plot(ks, aloss, color=ORANGE, lw=1.5, label="Actor loss  (-Q)")
+    ax2.set_ylabel("Actor loss  (-E[Q])", color=ORANGE)
     ax2.tick_params(axis="y", labelcolor=ORANGE)
-    ax.set_title(f"Actor & critic loss — {suffix}")
+    ax.set_title(f"Actor & critic loss - {suffix}")
     l1, la1 = ax.get_legend_handles_labels()
     l2, la2 = ax2.get_legend_handles_labels()
     ax.legend(l1 + l2, la1 + la2, loc="upper right", framealpha=0.9)
     fig.tight_layout(); fig.savefig(f"{args.out_dir}/chart_02.png"); plt.close(fig)
 
-    # chart_03 — episode return & length
+    # chart_03 - episode return & length
     fig, ax = plt.subplots(figsize=(9, 4.5))
     ax.plot(ks, ret, color=GREEN, lw=0.8, alpha=0.35, label="Avg return (raw)")
     ax.plot(ks, smooth(ret, args.smooth), color=GREEN, lw=2.0, label="Avg return (smoothed)")
@@ -144,7 +144,7 @@ def main() -> None:
     ax2.plot(ks, length, color=ORANGE, lw=1.2, alpha=0.7, label="Episode length")
     ax2.set_ylabel("Episode length", color=ORANGE)
     ax2.tick_params(axis="y", labelcolor=ORANGE)
-    ax.set_title(f"Episode return & length — {suffix}")
+    ax.set_title(f"Episode return & length - {suffix}")
     l1, la1 = ax.get_legend_handles_labels()
     l2, la2 = ax2.get_legend_handles_labels()
     ax.legend(l1 + l2, la1 + la2, loc="lower right", framealpha=0.9)

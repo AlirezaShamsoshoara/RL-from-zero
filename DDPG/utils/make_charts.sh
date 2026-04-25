@@ -3,7 +3,7 @@
 # Generate the DDPG training charts (chart_01/02/03.png) from a local wandb run.
 #
 # Runs from the repository root so the wandb datastore reader and output paths
-# resolve. By default it uses the newest run under wandb/ — pass RUN to pick one.
+# resolve. By default it uses the newest run under wandb/ - pass RUN to pick one.
 #
 # Usage:
 #   ./DDPG/utils/make_charts.sh                                  # newest wandb run

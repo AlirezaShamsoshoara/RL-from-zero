@@ -1,7 +1,7 @@
 """Render a trained DDPG policy to an animated GIF.
 
 Runs several evaluation episodes with the deterministic policy, keeps the
-highest-returning ones, and stitches them into a compact GIF — handy for the
+highest-returning ones, and stitches them into a compact GIF - handy for the
 README demo. Must be run from the repository root so that the ``DDPG.*``
 imports resolve (the ``make_gif.sh`` wrapper handles this for you).
 
