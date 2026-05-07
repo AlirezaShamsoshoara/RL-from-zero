@@ -37,7 +37,7 @@ RL-from-zero is a collection of reinforcement learning agents implemented from s
 | [`MAPPO/`](MAPPO/) | Multi-Agent PPO (centralized critic) | Discrete | `MultiWalker-v9` (PettingZoo) | <img src="MAPPO/assets/mappo_multiwalker.gif" alt="MAPPO MultiWalker demo" width="160"> |
 | [`A3C/`](A3C/) | Asynchronous Advantage Actor-Critic | Discrete | `LunarLander-v3` | <img src="A3C/assets/a3c_lunarlander.gif" alt="A3C LunarLander demo" width="160"> |
 | [`SAC/`](SAC/) | Soft Actor-Critic | Continuous | `Pendulum-v1` | <img src="SAC/assets/sac_pendulum.gif" width="180"> |
-| [`DDPG/`](DDPG/) | Deep Deterministic Policy Gradient | Continuous | `Pendulum-v1` | - |
+| [`DDPG/`](DDPG/) | Deep Deterministic Policy Gradient | Continuous | `LunarLanderContinuous-v3` | <img src="DDPG/assets/ddpg_lunarlander.gif" alt="DDPG LunarLanderContinuous demo" width="180"> |
 | [`MADDPG/`](MADDPG/) | Multi-Agent DDPG (centralized training) | Continuous | `simple_spread_v3` (PettingZoo MPE) | - |
 | [`TD3/`](TD3/) | Twin Delayed DDPG | Continuous | `MountainCarContinuous-v0` | <img src="TD3/assets/td3_moutaincar_cont.gif" width="180">  |
 | [`TRPO/`](TRPO/) | Trust Region Policy Optimization | Continuous | `Pendulum-v1` | - |
@@ -127,8 +127,8 @@ python -m SAC.main train --config SAC/configs/pendulum.yaml
 python -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/checkpoints/best.pt
 
 # Deep Deterministic Policy Gradient
-python -m DDPG.main train --config DDPG/configs/pendulum.yaml
-python -m DDPG.main demo --config DDPG/configs/pendulum.yaml --model_path DDPG/checkpoints/best.pt
+python -m DDPG.main train --config DDPG/configs/lunarlander_continuous_tuned.yaml
+python -m DDPG.main demo --config DDPG/configs/lunarlander_continuous_tuned.yaml --model_path DDPG/checkpoints_tuned/best.pt
 
 # Twin Delayed DDPG
 python -m TD3.main train --config TD3/configs/mountaincar_continuous.yaml
@@ -144,7 +144,7 @@ python -m IQL.main demo --config IQL/configs/pendulum_random.yaml --model_path I
 ```
 
 ### Optional Weights & Biases logging
-Add `--wandb_key YOUR_KEY` to any `train` command or set `wandb_key` in the YAML config to authenticate and push metrics, losses, and episode returns to W&B. If `WANDB_API_KEY` is set in your environment, trainers that check the env var (for example, PPO, SAC, A3C, and TD3) will read it automatically.
+Add `--wandb_key YOUR_KEY` to any `train` command or set `wandb_key` in the YAML config to authenticate and push metrics, losses, and episode returns to W&B. If `WANDB_API_KEY` is set in your environment, trainers that check the env var (for example, PPO, SAC, A3C, TD3, and DDPG) will read it automatically.
 
 ## Configuring experiments
 - Duplicate a baseline YAML file (for example `PPO/configs/cartpole.yaml`) and edit environment ids, learning rates, rollout lengths, or logging cadence.
