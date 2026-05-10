@@ -1,0 +1,54 @@
+# DDPG config for LunarLanderContinuous-v3 — stability-tuned variant.
+# The pure-DDPG default (lunarlander_continuous.yaml) suffered from critic
+# over-estimation: Q-values exploded (~330) while real returns went negative,
+# the policy peaked early (~step 20k) and then collapsed. This variant enables
+# TD3-style target-policy smoothing and a gentler critic learning rate to curb
+# that over-estimation and keep training stable.
+# Experiment tracking
+project: rl-hero
+entity: null
+run_name: ddpg-lunarlander-continuous-tuned
+wandb_key: ""
+seed: 42
+
+# Environment
+env_id: LunarLanderContinuous-v3
+render_mode: null
+env_kwargs: {}
+
+# Training
+total_steps: 400000
+start_steps: 10000
+batch_size: 256
+buffer_size: 1000000
+updates_per_step: 1
+gamma: 0.99
+tau: 0.005
+actor_lr: 0.0001  # actor learning rate (kept low for a stable deterministic policy)
+critic_lr: 0.0003  # lowered from 1e-3 to tame the critic_loss spikes / over-estimation
+exploration_noise: 0.1
+# Target-policy smoothing ON: adds clipped noise to the target action before the
+# critic evaluates it, regularizing sharp peaks in Q (the main DDPG fix here).
+target_policy_noise: 0.2
+target_noise_clip: 0.5
+
+# Model
+hidden_sizes: [256, 256]
+activation: relu
+
+# Logging & Checkpoints
+log_interval: 1000
+checkpoint_interval: 50000
+checkpoint_dir: DDPG/checkpoints_tuned  # separate dir; preserves the original run's checkpoints
+save_best: true
+log_level: INFO
+log_to_file: true
+log_file: DDPG/logs/ddpg_tuned.log
+log_to_console: true
+
+# Inference
+inference_model_path: DDPG/checkpoints_tuned/best.pt
+episodes: 5
+
+# Misc
+device: auto
