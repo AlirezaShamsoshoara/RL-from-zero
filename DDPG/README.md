@@ -120,11 +120,40 @@ python -m DDPG.main demo --config DDPG/configs/lunarlander_continuous.yaml --mod
 ```
 Authenticate with WandB via `--wandb_key YOUR_KEY`, or export `WANDB_API_KEY` in your environment (the CLI flag takes precedence) — matching the PPO / SAC / TD3 / A3C convention. Checkpoints and the moving-average `best.pt` snapshot are written under `DDPG/checkpoints`.
 
+### Running with uv
+If you manage the project with [uv](https://github.com/astral-sh/uv), set up the environment once from the repository root:
+
+```bash
+uv venv .venv          # create the virtual environment
+uv sync                # install the core dependencies from pyproject.toml
+```
+
+**Box2D is required for the default environment.** `LunarLanderContinuous-v3` runs on Box2D, which is *not* part of the default `pyproject.toml` extras (`classic-control`, `toy-text`). Add it once:
+
+```bash
+uv pip install "gymnasium[box2d]"
+# if the box2d build fails, install SWIG first, then retry:
+#   uv pip install swig && uv pip install "gymnasium[box2d]"
+```
+
+Then run training and the demo through `uv run` (no manual activation needed):
+
+```bash
+uv run python -m DDPG.main train --config DDPG/configs/lunarlander_continuous.yaml
+uv run python -m DDPG.main demo  --config DDPG/configs/lunarlander_continuous.yaml --model_path DDPG/checkpoints/best.pt
+```
+
+The `Pendulum-v1` config needs no extra dependencies (`classic-control` is already included), so it works right after `uv sync`.
+
 ## Tests
 ```bash
-# from the repo root, using the rlhero conda env
+# from the repo root (conda env rlhero, or any env with the deps installed)
 python -m pytest tests/ddpg/
+
+# or with uv
+uv run python -m pytest tests/ddpg/
 ```
+The DDPG tests use stubbed environments, so they run without Box2D installed.
 
 ## Configuration
 YAML files in `DDPG/configs/` expose hyper-parameters:
