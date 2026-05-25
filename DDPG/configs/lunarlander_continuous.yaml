@@ -1,0 +1,58 @@
+# DDPG config for LunarLanderContinuous-v3
+# A continuous-control rocket-landing task that DDPG reliably solves, giving a
+# clean visual inference demo (the lander touching down between the flags).
+# Experiment tracking
+project: rl-hero  # wandb project name (any string)
+entity: null  # null or your wandb entity/team
+run_name: ddpg-lunarlander-continuous  # wandb run name (any string)
+wandb_key: ""  # optional API key for wandb login (or set WANDB_API_KEY)
+seed: 42  # any integer seed
+
+# Environment
+# env_id options: LunarLanderContinuous-v3 (default), Pendulum-v1,
+# MountainCarContinuous-v0, or any Gymnasium continuous Box-action env
+env_id: LunarLanderContinuous-v3
+# render_mode options: null (no render), human (window), rgb_array (frame arrays)
+render_mode: null
+# env_kwargs options depend on env_id; LunarLanderContinuous supports
+# gravity, enable_wind, wind_power, turbulence_power
+env_kwargs: {}
+
+# Training
+total_steps: 400000  # total environment steps (int >= 1)
+start_steps: 10000  # random action steps before learning starts (int >= 0)
+batch_size: 256  # minibatch size for gradient updates (int >= 1)
+buffer_size: 1000000  # replay buffer capacity (int >= 1)
+updates_per_step: 1  # number of gradient updates per environment step (int >= 1)
+gamma: 0.99  # discount factor (0 < gamma <= 1)
+tau: 0.005  # target network Polyak averaging coefficient (0 < tau <= 1)
+actor_lr: 0.0001  # actor learning rate (positive float)
+critic_lr: 0.001  # critic learning rate (positive float)
+exploration_noise: 0.1  # Gaussian exploration noise std for actor actions (float >= 0)
+# Optional target-policy smoothing (pure DDPG leaves both at 0.0; small values
+# such as 0.2 / 0.5 add TD3-style stability if training is noisy)
+target_policy_noise: 0.0  # target policy smoothing noise std (float >= 0)
+target_noise_clip: 0.0  # absolute clip for target smoothing noise (float >= 0)
+
+# Model
+# hidden_sizes options: list of hidden layer widths; [] gives linear networks
+hidden_sizes: [256, 256]
+# activation options: relu, tanh, leaky_relu, elu
+activation: relu
+
+# Logging & Checkpoints
+log_interval: 1000  # logging cadence in steps (int >= 1)
+checkpoint_interval: 50000  # checkpoint cadence in steps (int >= 1)
+checkpoint_dir: DDPG/checkpoints  # directory where checkpoints are saved
+save_best: true  # true or false
+log_level: INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+log_to_file: true  # true or false
+log_file: DDPG/logs/ddpg.log  # log file path (used when log_to_file=true)
+log_to_console: true  # true or false
+
+# Inference
+inference_model_path: DDPG/checkpoints/best.pt  # checkpoint path used by demo/eval
+episodes: 5  # number of demo/eval episodes (int >= 1)
+
+# Misc
+device: auto  # auto, cpu, or cuda
