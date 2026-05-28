@@ -19,10 +19,13 @@ def _stats_to_dict(stats: DDPGStats) -> Dict[str, float]:
     return asdict(stats)
 
 
-def train(config: str = "DDPG/configs/pendulum.yaml", wandb_key: str = ""):
+def train(config: str = "DDPG/configs/lunarlander_continuous.yaml", wandb_key: str = ""):
     cfg = Config.from_yaml(config)
+    env_wandb_key = os.getenv("WANDB_API_KEY", "")
     if wandb_key:
         cfg.wandb_key = wandb_key
+    elif env_wandb_key:
+        cfg.wandb_key = env_wandb_key
 
     logger = setup_logger(
         name="ddpg",
@@ -35,8 +38,7 @@ def train(config: str = "DDPG/configs/pendulum.yaml", wandb_key: str = ""):
     set_seed(cfg.seed)
 
     if getattr(cfg, "wandb_key", ""):
-        import wandb as _wandb
-        _wandb.login(key=cfg.wandb_key)
+        wandb.login(key=cfg.wandb_key)
 
     logger.info(f"Initializing wandb run={cfg.run_name}")
     run = wandb.init(
@@ -152,7 +154,7 @@ def train(config: str = "DDPG/configs/pendulum.yaml", wandb_key: str = ""):
 
 
 def demo(
-    config: str = "DDPG/configs/pendulum.yaml",
+    config: str = "DDPG/configs/lunarlander_continuous.yaml",
     model_path: Optional[str] = None,
     episodes: Optional[int] = None,
     exploration_noise: float = 0.0,
