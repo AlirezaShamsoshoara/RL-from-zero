@@ -12,13 +12,22 @@ DDPG is an off-policy actor-critic method for continuous action spaces that main
 - Replay buffer warm-up, optional target policy smoothing, and Gaussian exploration noise.
 - Integrated tqdm-aware logging, checkpoint helpers, and Weights & Biases tracking.
 
+## Environment
+The default benchmark is **`LunarLanderContinuous-v3`** — a continuous-control rocket-landing task whose two-dimensional action space (main and side thrusters) and dense shaping reward are a natural fit for DDPG's deterministic actor. It reliably converges to a successful-landing policy, making for a clean visual inference demo. `Pendulum-v1` is kept as an alternative config.
+
 ## Quickstart
 ```bash
-python -m DDPG.main train --config DDPG/configs/pendulum.yaml
+python -m DDPG.main train --config DDPG/configs/lunarlander_continuous.yaml
 
-python -m DDPG.main demo --config DDPG/configs/pendulum.yaml --model_path DDPG/checkpoints/best.pt
+python -m DDPG.main demo --config DDPG/configs/lunarlander_continuous.yaml --model_path DDPG/checkpoints/best.pt
 ```
-Authenticate with WandB via `--wandb_key YOUR_KEY` if you want remote logging. Checkpoints and the moving-average `best.pt` snapshot are written under `DDPG/checkpoints`.
+Authenticate with WandB via `--wandb_key YOUR_KEY`, or export `WANDB_API_KEY` in your environment (the CLI flag takes precedence) — matching the PPO / SAC / TD3 / A3C convention. Checkpoints and the moving-average `best.pt` snapshot are written under `DDPG/checkpoints`.
+
+## Tests
+```bash
+# from the repo root, using the rlhero conda env
+python -m pytest tests/ddpg/
+```
 
 ## Configuration
 YAML files in `DDPG/configs/` expose hyper-parameters:
@@ -28,7 +37,7 @@ YAML files in `DDPG/configs/` expose hyper-parameters:
 - **Logging**: logging cadence, checkpoint cadence, output paths, and logger behaviour.
 - **Inference**: default checkpoint path and number of evaluation episodes.
 
-Copy `pendulum.yaml` to tailor runs for other continuous control benchmarks.
+Copy `lunarlander_continuous.yaml` (or `pendulum.yaml`) to tailor runs for other continuous control benchmarks.
 
 ## References
 - Lillicrap et al., Continuous Control with Deep Reinforcement Learning, ICLR 2016 https://arxiv.org/abs/1509.02971
