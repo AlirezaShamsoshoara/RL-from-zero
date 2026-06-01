@@ -136,6 +136,18 @@ LunarLander's wide reward range (−400 to +300) makes it challenging for A3C's 
 
 Alternative configs for CartPole-v1 and Acrobot-v1 are also provided under `A3C/configs/`.
 
+### Training charts
+
+<p align="center">
+  <img src="assets/chart_01.png" alt="A3C training chart 1" width="520" />
+</p>
+<p align="center">
+  <img src="assets/chart_02.png" alt="A3C training chart 2" width="520" />
+</p>
+<p align="center">
+  <img src="assets/chart_03.png" alt="A3C training chart 3" width="520" />
+</p>
+
 ## Quickstart
 ```bash
 python -m A3C.main train --config A3C/configs/lunarlander.yaml
