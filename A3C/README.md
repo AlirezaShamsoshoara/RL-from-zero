@@ -4,6 +4,10 @@
 
 # A3C (Asynchronous Advantage Actor-Critic)
 
+<p align="center">
+  <img src="assets/a3c_lunarlander.gif" alt="A3C LunarLander demo" width="520" />
+</p>
+
 ## Overview
 A3C is an on-policy actor-critic algorithm that achieves stable, efficient training by running multiple workers in parallel, each interacting with its own copy of the environment and asynchronously pushing gradients to a shared global network. This removes the need for experience replay and decorrelates data through parallelism rather than a replay buffer.
 
