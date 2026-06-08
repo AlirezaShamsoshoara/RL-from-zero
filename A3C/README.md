@@ -4,6 +4,10 @@
 
 # A3C (Asynchronous Advantage Actor-Critic)
 
+<p align="center">
+  <img src="assets/a3c_lunarlander.gif" alt="A3C LunarLander demo" width="520" />
+</p>
+
 ## Overview
 A3C is an on-policy actor-critic algorithm that achieves stable, efficient training by running multiple workers in parallel, each interacting with its own copy of the environment and asynchronously pushing gradients to a shared global network. This removes the need for experience replay and decorrelates data through parallelism rather than a replay buffer.
 
@@ -131,6 +135,18 @@ LunarLander's wide reward range (−400 to +300) makes it challenging for A3C's 
 > **Note:** LunarLander-v3 requires Box2D. Install with: `pip install swig && pip install "gymnasium[box2d]"`
 
 Alternative configs for CartPole-v1 and Acrobot-v1 are also provided under `A3C/configs/`.
+
+### Training charts
+
+<p align="center">
+  <img src="assets/chart_01.png" alt="A3C training chart 1" width="520" />
+</p>
+<p align="center">
+  <img src="assets/chart_02.png" alt="A3C training chart 2" width="520" />
+</p>
+<p align="center">
+  <img src="assets/chart_03.png" alt="A3C training chart 3" width="520" />
+</p>
 
 ## Quickstart
 ```bash
