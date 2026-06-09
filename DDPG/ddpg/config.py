@@ -21,11 +21,11 @@ class Config:
     # WandB
     project: str = "rl-practice"
     entity: Optional[str] = None
-    run_name: str = "ddpg-run"
+    run_name: str = "ddpg-lunarlander-continuous"
     wandb_key: str = ""
 
     # Environment
-    env_id: str = "Pendulum-v1"
+    env_id: str = "LunarLanderContinuous-v3"
     render_mode: Optional[str] = None
     seed: int = 42
     env_kwargs: Dict[str, Any] = field(default_factory=dict)

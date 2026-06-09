@@ -16,6 +16,9 @@ dependencies = [
     "scipy>=1.10.0",
     "pettingzoo[mpe]>=1.24.4",
     "pytest>=8.2.0",
+    "matplotlib>=3.8.0",
+    "imageio>=2.34.0",
+    "pillow>=10.0.0",
 ]
 
 [build-system]
