@@ -40,7 +40,7 @@ RL-from-zero is a collection of reinforcement learning agents implemented from s
 | [`DDPG/`](DDPG/) | Deep Deterministic Policy Gradient | Continuous | `LunarLanderContinuous-v3` | <img src="DDPG/assets/ddpg_lunarlander.gif" alt="DDPG LunarLanderContinuous demo" width="180"> |
 | [`MADDPG/`](MADDPG/) | Multi-Agent DDPG (centralized training) | Continuous | `simple_spread_v3` (PettingZoo MPE) | - |
 | [`TD3/`](TD3/) | Twin Delayed DDPG | Continuous | `MountainCarContinuous-v0` | <img src="TD3/assets/td3_moutaincar_cont.gif" width="180">  |
-| [`TRPO/`](TRPO/) | Trust Region Policy Optimization | Continuous | `Pendulum-v1` | - |
+| [`TRPO/`](TRPO/) | Trust Region Policy Optimization | Discrete + Continuous | `Acrobot-v1` (discrete) | <img src="TRPO/assets/trpo_acrobot.gif" alt="TRPO Acrobot demo" width="180"> |
 | [`IQL/`](IQL/) | Implicit Q-Learning (offline) | Continuous | `Pendulum-v1` (random offline dataset) | - |
 
 All agents expose a two-command Fire CLI (`train` and `demo`), use PyTorch under the hood, and save both periodic and best checkpoints in their respective `checkpoints/` directories.
@@ -135,8 +135,8 @@ python -m TD3.main train --config TD3/configs/mountaincar_continuous.yaml
 python -m TD3.main demo --config TD3/configs/mountaincar_continuous.yaml --model_path TD3/checkpoints/best.pt
 
 # Trust Region Policy Optimization
-python -m TRPO.main train --config TRPO/configs/pendulum.yaml
-python -m TRPO.main demo --config TRPO/configs/pendulum.yaml --model_path TRPO/checkpoints/best.pt
+python -m TRPO.main train --config TRPO/configs/acrobot.yaml
+python -m TRPO.main demo --config TRPO/configs/acrobot.yaml --model_path TRPO/checkpoints_acrobot/best.pt
 
 # Implicit Q-Learning (offline)
 python -m IQL.main train --config IQL/configs/pendulum_random.yaml
@@ -144,7 +144,7 @@ python -m IQL.main demo --config IQL/configs/pendulum_random.yaml --model_path I
 ```
 
 ### Optional Weights & Biases logging
-Add `--wandb_key YOUR_KEY` to any `train` command or set `wandb_key` in the YAML config to authenticate and push metrics, losses, and episode returns to W&B. If `WANDB_API_KEY` is set in your environment, trainers that check the env var (for example, PPO, SAC, A3C, TD3, and DDPG) will read it automatically.
+Add `--wandb_key YOUR_KEY` to any `train` command or set `wandb_key` in the YAML config to authenticate and push metrics, losses, and episode returns to W&B. If `WANDB_API_KEY` is set in your environment, trainers that check the env var (for example, PPO, SAC, A3C, TD3, DDPG, and TRPO) will read it automatically.
 
 ## Configuring experiments
 - Duplicate a baseline YAML file (for example `PPO/configs/cartpole.yaml`) and edit environment ids, learning rates, rollout lengths, or logging cadence.
