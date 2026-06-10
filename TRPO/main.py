@@ -18,10 +18,13 @@ from TRPO.trpo.agent import TRPOAgent, Batch
 from TRPO.trpo.logging_utils import setup_logger
 
 
-def train(config: str = "TRPO/configs/pendulum.yaml", wandb_key: str = ""):
+def train(config: str = "TRPO/configs/acrobot.yaml", wandb_key: str = ""):
     cfg = Config.from_yaml(config)
+    env_wandb_key = os.getenv("WANDB_API_KEY", "")
     if wandb_key:
         cfg.wandb_key = wandb_key
+    elif env_wandb_key:
+        cfg.wandb_key = env_wandb_key
 
     logger = setup_logger(
         name="trpo",
@@ -34,9 +37,7 @@ def train(config: str = "TRPO/configs/pendulum.yaml", wandb_key: str = ""):
     set_seed(cfg.seed)
 
     if getattr(cfg, "wandb_key", ""):
-        import wandb as _wandb
-
-        _wandb.login(key=cfg.wandb_key)
+        wandb.login(key=cfg.wandb_key)
 
     logger.info(f"Initializing wandb run={cfg.run_name}")
     run = wandb.init(
@@ -56,7 +57,8 @@ def train(config: str = "TRPO/configs/pendulum.yaml", wandb_key: str = ""):
     obs_space = vec_env.single_observation_space
     act_space = vec_env.single_action_space
     assert isinstance(obs_space, spaces.Box) and len(obs_space.shape) == 1
-    assert isinstance(act_space, spaces.Box) and len(act_space.shape) == 1
+    discrete = isinstance(act_space, spaces.Discrete)
+    assert discrete or (isinstance(act_space, spaces.Box) and len(act_space.shape) == 1)
 
     agent = TRPOAgent(
         obs_space=obs_space,
@@ -76,9 +78,11 @@ def train(config: str = "TRPO/configs/pendulum.yaml", wandb_key: str = ""):
     )
 
     obs_dim = int(np.prod(obs_space.shape))
-    act_dim = int(np.prod(act_space.shape))
+    act_dim = 1 if discrete else int(np.prod(act_space.shape))
     logger.info(
-        f"Env={cfg.env_id} | obs_dim={obs_dim} | act_dim={act_dim} | num_envs={cfg.num_envs}"
+        f"Env={cfg.env_id} | obs_dim={obs_dim} | "
+        f"{'num_actions' if discrete else 'act_dim'}="
+        f"{act_space.n if discrete else act_dim} | num_envs={cfg.num_envs}"
     )
 
     num_updates = cfg.total_timesteps // (cfg.rollout_steps * cfg.num_envs)
@@ -91,7 +95,10 @@ def train(config: str = "TRPO/configs/pendulum.yaml", wandb_key: str = ""):
     per_env_lengths = np.zeros(cfg.num_envs, dtype=np.int32)
 
     obs_buf = np.zeros((cfg.rollout_steps, cfg.num_envs, obs_dim), dtype=np.float32)
-    actions_buf = np.zeros((cfg.rollout_steps, cfg.num_envs, act_dim), dtype=np.float32)
+    if discrete:
+        actions_buf = np.zeros((cfg.rollout_steps, cfg.num_envs), dtype=np.int64)
+    else:
+        actions_buf = np.zeros((cfg.rollout_steps, cfg.num_envs, act_dim), dtype=np.float32)
     logprobs_buf = np.zeros((cfg.rollout_steps, cfg.num_envs), dtype=np.float32)
     rewards_buf = np.zeros((cfg.rollout_steps, cfg.num_envs), dtype=np.float32)
     dones_buf = np.zeros((cfg.rollout_steps, cfg.num_envs), dtype=np.float32)
@@ -142,9 +149,14 @@ def train(config: str = "TRPO/configs/pendulum.yaml", wandb_key: str = ""):
         b_obs = torch.as_tensor(
             obs_buf.reshape(-1, obs_dim), dtype=torch.float32, device=agent.device
         )
-        b_actions = torch.as_tensor(
-            actions_buf.reshape(-1, act_dim), dtype=torch.float32, device=agent.device
-        )
+        if discrete:
+            b_actions = torch.as_tensor(
+                actions_buf.reshape(-1), dtype=torch.long, device=agent.device
+            )
+        else:
+            b_actions = torch.as_tensor(
+                actions_buf.reshape(-1, act_dim), dtype=torch.float32, device=agent.device
+            )
         b_logprobs = torch.as_tensor(
             logprobs_buf.reshape(-1), dtype=torch.float32, device=agent.device
         )
@@ -210,9 +222,10 @@ def train(config: str = "TRPO/configs/pendulum.yaml", wandb_key: str = ""):
 
 
 def demo(
-    config: str = "TRPO/configs/pendulum.yaml",
+    config: str = "TRPO/configs/acrobot.yaml",
     model_path: Optional[str] = None,
     episodes: Optional[int] = None,
+    deterministic: Optional[bool] = None,
 ):
     cfg = Config.from_yaml(config)
     logger = setup_logger(
@@ -224,6 +237,8 @@ def demo(
     )
     model_path = model_path or cfg.inference_model_path
     episodes = episodes or cfg.episodes
+    if deterministic is None:
+        deterministic = cfg.eval_deterministic
 
     set_seed(cfg.seed)
 
@@ -237,7 +252,9 @@ def demo(
     obs_space = env.single_observation_space
     act_space = env.single_action_space
     assert isinstance(obs_space, spaces.Box) and len(obs_space.shape) == 1
-    assert isinstance(act_space, spaces.Box) and len(act_space.shape) == 1
+    assert isinstance(act_space, spaces.Discrete) or (
+        isinstance(act_space, spaces.Box) and len(act_space.shape) == 1
+    )
 
     agent = TRPOAgent(
         obs_space=obs_space,
@@ -264,7 +281,7 @@ def demo(
         done = np.array([False])
         ep_ret = 0.0
         while not done[0]:
-            actions, _, _ = agent.act(obs, deterministic=True)
+            actions, _, _ = agent.act(obs, deterministic=deterministic)
             obs, reward, terminated, truncated, _ = env.step(actions)
             done = np.logical_or(terminated, truncated)
             ep_ret += float(reward[0])
