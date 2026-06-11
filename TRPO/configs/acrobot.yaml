@@ -1,0 +1,54 @@
+# TRPO configuration for Acrobot-v1 (discrete control)
+# A discrete 3-action swing-up task, used to exercise the categorical-policy path
+# and to compare against the continuous BipedalWalker run. TRPO solves it quickly
+# and cleanly, which makes for a reliable demo.
+project: rl-hero
+entity: null
+run_name: trpo-acrobot
+wandb_key: ""  # optional API key for wandb login (or set WANDB_API_KEY)
+seed: 0
+
+# Environment
+env_id: Acrobot-v1
+render_mode: null
+num_envs: 8
+env_kwargs: {}
+
+# Training
+total_timesteps: 400000
+rollout_steps: 1024
+gamma: 0.99
+gae_lambda: 0.95
+max_kl: 0.01
+cg_iters: 10
+cg_damping: 0.1
+line_search_coef: 0.8
+line_search_steps: 10
+vf_lr: 0.001
+vf_iters: 5
+entropy_coef: 0.0
+normalize_advantages: true
+
+# Model
+hidden_sizes: [64, 64]
+activation: tanh
+
+# Logging & Checkpoints (intervals are in TRPO updates, not env steps)
+log_interval: 1
+checkpoint_interval: 10
+checkpoint_dir: TRPO/checkpoints_acrobot
+save_best: true
+log_level: INFO
+log_to_file: true
+log_file: TRPO/logs/trpo_acrobot.log
+log_to_console: true
+
+# Inference
+inference_model_path: TRPO/checkpoints_acrobot/best.pt
+episodes: 5
+# Sample at eval: a categorical argmax policy can get stuck on Acrobot, while
+# sampling reliably swings up. (Continuous configs leave this true.)
+eval_deterministic: false
+
+# Misc
+device: auto

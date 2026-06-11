@@ -1,0 +1,4 @@
+checkpoints/*.pt
+checkpoints_acrobot/*.pt
+checkpoints_bipedalwalker/*.pt
+logs/

@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from gymnasium import spaces
-from .networks import GaussianPolicy, ValueNetwork
+from .networks import CategoricalPolicy, GaussianPolicy, ValueNetwork
 
 
 @dataclass
@@ -67,10 +67,17 @@ def _conjugate_gradient(
 
 
 class TRPOAgent:
+    """TRPO agent supporting both continuous (Box) and discrete (Discrete) actions.
+
+    The action-space type selects the policy head (tanh-Gaussian vs. categorical);
+    the trust-region machinery (conjugate gradient, Fisher-vector products, line
+    search) is identical for both because the policy exposes a uniform interface.
+    """
+
     def __init__(
         self,
         obs_space: spaces.Box,
-        act_space: spaces.Box,
+        act_space,
         hidden_sizes: Iterable[int],
         activation: str,
         max_kl: float,
@@ -86,28 +93,40 @@ class TRPOAgent:
     ):
         if not isinstance(obs_space, spaces.Box):
             raise TypeError("Observation space must be gym.spaces.Box")
-        if not isinstance(act_space, spaces.Box):
-            raise TypeError("Action space must be gym.spaces.Box")
         if len(obs_space.shape) != 1:
             raise ValueError("Only flat observation spaces are supported")
-        if len(act_space.shape) != 1:
-            raise ValueError("Only flat action spaces are supported")
 
         self.device = torch.device(device)
         self.obs_dim = int(np.prod(obs_space.shape))
-        self.act_dim = int(np.prod(act_space.shape))
+        self.discrete = isinstance(act_space, spaces.Discrete)
 
-        action_low = torch.as_tensor(act_space.low, dtype=torch.float32)
-        action_high = torch.as_tensor(act_space.high, dtype=torch.float32)
+        if self.discrete:
+            self.act_dim = 1
+            self.num_actions = int(act_space.n)
+            self.policy = CategoricalPolicy(
+                obs_dim=self.obs_dim,
+                num_actions=self.num_actions,
+                hidden_sizes=hidden_sizes,
+                activation=activation,
+            ).to(self.device)
+        elif isinstance(act_space, spaces.Box):
+            if len(act_space.shape) != 1:
+                raise ValueError("Only flat action spaces are supported")
+            self.act_dim = int(np.prod(act_space.shape))
+            self.num_actions = self.act_dim
+            action_low = torch.as_tensor(act_space.low, dtype=torch.float32)
+            action_high = torch.as_tensor(act_space.high, dtype=torch.float32)
+            self.policy = GaussianPolicy(
+                obs_dim=self.obs_dim,
+                act_dim=self.act_dim,
+                hidden_sizes=hidden_sizes,
+                activation=activation,
+                action_low=action_low,
+                action_high=action_high,
+            ).to(self.device)
+        else:
+            raise TypeError("Action space must be gym.spaces.Box or gym.spaces.Discrete")
 
-        self.policy = GaussianPolicy(
-            obs_dim=self.obs_dim,
-            act_dim=self.act_dim,
-            hidden_sizes=hidden_sizes,
-            activation=activation,
-            action_low=action_low,
-            action_high=action_high,
-        ).to(self.device)
         self.value_fn = ValueNetwork(
             obs_dim=self.obs_dim,
             hidden_sizes=hidden_sizes,
@@ -132,23 +151,21 @@ class TRPOAgent:
             obs = obs[None, :]
         obs_t = torch.as_tensor(obs, dtype=torch.float32, device=self.device)
         if deterministic:
-            mean, _ = self.policy(obs_t)
-            action = torch.tanh(mean) * self.policy.action_scale + self.policy.action_bias
+            action = self.policy.greedy(obs_t)
             log_prob = self.policy.log_prob(obs_t, action)
         else:
             action, log_prob, _, _ = self.policy.sample(obs_t)
         value = self.value_fn(obs_t)
-        return (
-            action.cpu().numpy(),
-            log_prob.cpu().numpy(),
-            value.cpu().numpy(),
-        )
+        action_np = action.cpu().numpy()
+        if self.discrete:
+            action_np = action_np.astype(np.int64)
+        return action_np, log_prob.cpu().numpy(), value.cpu().numpy()
 
-    def evaluate(self, obs: torch.Tensor, actions: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def evaluate(
+        self, obs: torch.Tensor, actions: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         log_prob = self.policy.log_prob(obs, actions)
-        mean, log_std = self.policy(obs)
-        dist = torch.distributions.Normal(mean, torch.exp(log_std))
-        entropy = dist.entropy().sum(dim=-1)
+        entropy = self.policy.entropy(obs)
         return log_prob, entropy
 
     def update(self, batch: Batch) -> Dict[str, float]:
@@ -162,23 +179,20 @@ class TRPOAgent:
             advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
         with torch.no_grad():
-            old_mean, old_log_std = self.policy(obs)
+            old_params = self.policy.detached_params(obs)
 
-        def loss_and_kl():
+        def surrogate() -> Tuple[torch.Tensor, torch.Tensor]:
             log_prob = self.policy.log_prob(obs, actions)
             ratio = torch.exp(log_prob - old_log_probs)
-            mean, log_std = self.policy(obs)
-            dist = torch.distributions.Normal(mean, torch.exp(log_std))
-            entropy = dist.entropy().sum(dim=-1).mean()
+            entropy = self.policy.entropy(obs).mean()
             loss_pi = -(ratio * advantages).mean() - self.entropy_coef * entropy
-            kl = self.policy.kl_divergence(obs, old_mean, old_log_std).mean()
-            return loss_pi, kl, entropy
+            return loss_pi, entropy
 
-        loss_pi, kl, entropy = loss_and_kl()
+        loss_pi, entropy = surrogate()
         loss_grad = _flat_grad(loss_pi, self.policy.parameters(), retain_graph=True)
 
         def fisher_vector_product(vec: torch.Tensor) -> torch.Tensor:
-            kl_value = self.policy.kl_divergence(obs, old_mean, old_log_std).mean()
+            kl_value = self.policy.kl(obs, *old_params).mean()
             grads = torch.autograd.grad(kl_value, self.policy.parameters(), create_graph=True)
             flat_grad_kl = torch.cat([g.contiguous().view(-1) for g in grads])
             grad_vec = torch.dot(flat_grad_kl, vec)
@@ -193,8 +207,7 @@ class TRPOAgent:
         prev_params = _flat_params(self.policy)
 
         def apply_step(step: torch.Tensor):
-            new_params = prev_params + step
-            _set_params(self.policy, new_params)
+            _set_params(self.policy, prev_params + step)
 
         loss_before = loss_pi.item()
         success, kl_val, loss_after, steps_taken = self._line_search(
@@ -206,8 +219,7 @@ class TRPOAgent:
             actions,
             advantages,
             old_log_probs,
-            old_mean,
-            old_log_std,
+            old_params,
         )
 
         if not success:
@@ -240,8 +252,7 @@ class TRPOAgent:
         actions: torch.Tensor,
         advantages: torch.Tensor,
         old_log_probs: torch.Tensor,
-        old_mean: torch.Tensor,
-        old_log_std: torch.Tensor,
+        old_params: Tuple[torch.Tensor, ...],
     ) -> Tuple[bool, float, float, int]:
         step_frac = 1.0
         for attempt in range(1, self.line_search_steps + 1):
@@ -250,11 +261,9 @@ class TRPOAgent:
             with torch.no_grad():
                 log_prob = self.policy.log_prob(obs, actions)
                 ratio = torch.exp(log_prob - old_log_probs)
-                mean, log_std = self.policy(obs)
-                dist = torch.distributions.Normal(mean, torch.exp(log_std))
-                entropy = dist.entropy().sum(dim=-1).mean()
+                entropy = self.policy.entropy(obs).mean()
                 loss_pi = -(ratio * advantages).mean() - self.entropy_coef * entropy
-                kl = self.policy.kl_divergence(obs, old_mean, old_log_std).mean()
+                kl = self.policy.kl(obs, *old_params).mean()
             loss_val = float(loss_pi.item())
             kl_val = float(kl.item())
             if loss_val <= loss_before and kl_val <= self.max_kl:
