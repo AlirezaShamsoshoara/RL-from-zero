@@ -2,6 +2,14 @@
   <img src="assets/ddpg_logo.svg" width="420" alt="Deep Deterministic Policy Gradient Logo" />
 </p>
 
+<p align="center">
+  <img src="assets/ddpg_lunarlander.gif" width="420" alt="DDPG LunarLanderContinuous demo" />
+</p>
+
+<p align="center">
+  <em>The tuned DDPG policy landing on <code>LunarLanderContinuous-v3</code> (deterministic eval: 213 ± 86 mean return, 83% of episodes solved).</em>
+</p>
+
 # Deep Deterministic Policy Gradient (DDPG)
 
 ## Overview
@@ -114,11 +122,19 @@ The default benchmark is **`LunarLanderContinuous-v3`** — a continuous-control
 
 ## Quickstart
 ```bash
+# ==================================================
+# Recommended: the tuned config (target smoothing) reproduces the demo above
+python -m DDPG.main train --config DDPG/configs/lunarlander_continuous_tuned.yaml
+
+python -m DDPG.main demo --config DDPG/configs/lunarlander_continuous_tuned.yaml --model_path DDPG/checkpoints_tuned/best.pt
+
+# ==================================================
+# Or, for the pure DDPG config (no target smoothing)
 python -m DDPG.main train --config DDPG/configs/lunarlander_continuous.yaml
 
 python -m DDPG.main demo --config DDPG/configs/lunarlander_continuous.yaml --model_path DDPG/checkpoints/best.pt
 ```
-Authenticate with WandB via `--wandb_key YOUR_KEY`, or export `WANDB_API_KEY` in your environment (the CLI flag takes precedence) — matching the PPO / SAC / TD3 / A3C convention. Checkpoints and the moving-average `best.pt` snapshot are written under `DDPG/checkpoints`.
+Authenticate with WandB via `--wandb_key YOUR_KEY`, or export `WANDB_API_KEY` in your environment (the CLI flag takes precedence) — matching the PPO / SAC / TD3 / A3C convention. Checkpoints and the moving-average `best.pt` snapshot are written under the config's `checkpoint_dir`. **Always demo from `best.pt`, not the last checkpoint** — see [Training results & analysis](#training-results--analysis) for why.
 
 ### Running with uv
 If you manage the project with [uv](https://github.com/astral-sh/uv), set up the environment once from the repository root:
@@ -163,10 +179,48 @@ YAML files in `DDPG/configs/` expose hyper-parameters:
 - **Logging**: logging cadence, checkpoint cadence, output paths, and logger behaviour.
 - **Inference**: default checkpoint path and number of evaluation episodes.
 
-Copy `lunarlander_continuous.yaml` (or `pendulum.yaml`) to tailor runs for other continuous control benchmarks.
+Two LunarLanderContinuous configs are provided:
+- **`lunarlander_continuous.yaml`** — pure DDPG (no target smoothing). Useful for *seeing* the classic over-estimation failure (see below).
+- **`lunarlander_continuous_tuned.yaml`** — adds TD3-style target-policy smoothing (`target_policy_noise=0.2`, `target_noise_clip=0.5`) and a gentler critic LR (`3e-4`). This is the config used for the demo above.
+
+Copy either (or `pendulum.yaml`) to tailor runs for other continuous control benchmarks.
+
+## Training results & analysis
+Both configs were trained for **400k environment steps** on `LunarLanderContinuous-v3` (seed 42). The headline is a textbook illustration of why DDPG is famously unstable — and how target smoothing helps.
+
+| Run | Best 5-ep avg (train) | Deterministic eval (30 ep) | % solved (≥200) | Peak critic Q | Peak critic loss |
+|---|---|---|---|---|---|
+| Pure DDPG | 187.9 | **55 ± 115** | 20% | **330** | **258** |
+| DDPG + target smoothing | 259.7 | **213 ± 86** | **83%** | 147 | ~30 |
+
+**What happened with pure DDPG.** The policy learned to land within the first ~20k steps (its peak), then **collapsed**: the single critic's Q-value exploded to ~330 while realized returns stayed *negative* (a ~240-point over-estimation gap). The actor maximizes the critic, so once the critic became delusional the policy chased a fiction and degraded — ending up hovering until the 1000-step timeout rather than committing to a landing. This is exactly the over-estimation pathology that motivated TD3.
+
+**What the tuned run fixed.** Adding clipped noise to the target action ($\tilde a' = \mathrm{clip}(\mu_{\theta'}(s') + \mathrm{clip}(\epsilon,-c,c),\,a_{\text{low}},a_{\text{high}})$) and lowering the critic learning rate kept the Q-estimate calibrated (peak ~147, critic loss ~30 instead of 258). The result is a genuinely **solved** policy: 213 mean return with 83% of evaluation episodes ≥200.
+
+> **Even when tuned, DDPG remains high-variance**; the return curve still oscillates and the *final* checkpoint (step 400k) evaluates at only −40. The strong policy lives in `best.pt`, which is why `save_best` (rolling-average checkpointing) is essential for this algorithm. Always demo from `best.pt`, not the last checkpoint.
+
+### Training charts
+Charts below are from the tuned run (`DDPG/configs/lunarlander_continuous_tuned.yaml`).
+
+<p align="center">
+  <img src="assets/chart_01.png" alt="Critic Q-value vs. realized return" width="720">
+</p>
+
+*Critic Q-value (blue) vs. realized return (green). The estimate stays bounded (~147) and tracks real returns — contrast with pure DDPG, where Q ran away to ~330 while returns stayed negative.*
+
+<p align="center">
+  <img src="assets/chart_02.png" alt="Actor and critic loss" width="720">
+</p>
+
+*Actor loss ($-\mathbb{E}[Q]$) and critic loss (MSBE). The critic loss stays low and spike-free, a sign the bootstrapped target is well-behaved.*
+
+<p align="center">
+  <img src="assets/chart_03.png" alt="Episode return and length" width="720">
+</p>
+
+*Episode return (green) and length (orange). Returns repeatedly reach the solved bar (200), though with the high variance characteristic of DDPG.*
 
 ## References
 - Lillicrap et al., Continuous Control with Deep Reinforcement Learning, ICLR 2016 https://arxiv.org/abs/1509.02971
 - OpenAI Spinning Up DDPG: https://spinningup.openai.com/en/latest/algorithms/ddpg.html
 - Stable-Baselines3 DDPG: https://stable-baselines3.readthedocs.io/en/master/modules/ddpg.html
-
