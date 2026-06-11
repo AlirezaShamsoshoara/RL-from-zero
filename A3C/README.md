@@ -92,8 +92,8 @@ where $c_v$ is the value loss coefficient (`value_loss_coef`) and $c_e$ is the e
 Each worker $k$ maintains a local copy $\theta'_k$ of the global parameters $\theta$. After each rollout:
 
 1. Sync local parameters: $\theta'_k \leftarrow \theta$
-2. Collect trajectory $\{(s_t, a_t, r_t)\}_{t=0}^{n-1}$ using $\pi_{\theta'_k}$
-3. Compute $\nabla_{\theta'_k} \mathcal{L}_{\text{total}}$ on local parameters
+2. Collect trajectory $`\{(s_t, a_t, r_t)\}_{t=0}^{n-1}`$ using $`\pi_{\theta'_k}`$
+3. Compute $`\nabla_{\theta'_k} \mathcal{L}_{\text{total}}`$ on local parameters
 4. Apply gradients to the global network:
 
 $$
