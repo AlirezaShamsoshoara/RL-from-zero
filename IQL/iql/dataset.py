@@ -109,6 +109,8 @@ def build_dataset(
     src = source.lower()
     if src == "random":
         arrays = _collect_random_dataset(env_id, num_steps, seed, env_kwargs)
+    elif src == "mixed":
+        arrays = _collect_mixed_dataset(env_id, num_steps, seed, env_kwargs)
     elif src == "npz":
         if not path:
             raise ValueError("dataset_path must be provided when dataset_source='npz'")
@@ -183,6 +185,85 @@ def _collect_random_dataset(
 
     env.close()
 
+    return (
+        np.stack(observations),
+        np.stack(actions),
+        np.asarray(rewards, dtype=np.float32),
+        np.stack(next_observations),
+        np.asarray(dones, dtype=np.float32),
+    )
+
+
+def _pendulum_swingup_action(obs: np.ndarray) -> float:
+    """Energy-shaping swing-up + PD balance controller for Pendulum-v1.
+
+    obs = [cos(theta), sin(theta), theta_dot] with theta=0 at the upright goal.
+    Pumps energy toward the upright equilibrium, then switches to a PD hold near
+    the top. Returns a torque, unclipped (the caller clips/adds noise).
+    """
+    cos_th, sin_th, thdot = float(obs[0]), float(obs[1]), float(obs[2])
+    theta = np.arctan2(sin_th, cos_th)  # 0 = upright, in [-pi, pi]
+    # Pendulum-v1 physics: g=10, m=1, l=1. Energy relative to the upright rest
+    # state (0 at the top at rest, negative below).
+    energy = 0.5 * thdot * thdot + 10.0 * (cos_th - 1.0)
+    if abs(theta) < 0.4:
+        # Near the top: PD controller to hold upright. For theta>0 gravity pushes
+        # away from the top, so the corrective torque must be negative.
+        action = -(12.0 * theta + 2.5 * thdot)
+    else:
+        # Swing-up: inject torque in the direction of motion to add energy
+        # (energy < 0 below the top, so this matches sign(theta_dot)).
+        action = -1.2 * thdot * energy
+    return action
+
+
+def _collect_mixed_dataset(
+    env_id: str,
+    num_steps: int,
+    seed: int,
+    env_kwargs: Dict[str, Any],
+    scripted_fraction: float = 0.7,
+    action_noise: float = 0.4,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Collect a "medium" dataset: a noisy scripted controller mixed with random
+    episodes. Self-contained (no external datasets, no other agents). The scripted
+    controller is Pendulum-specific; other envs fall back to a smaller random set.
+    """
+    if num_steps <= 0:
+        raise ValueError("num_steps must be positive when using mixed dataset source")
+    if "Pendulum" not in env_id:
+        # The scripted controller is Pendulum-specific; degrade gracefully.
+        return _collect_random_dataset(env_id, num_steps, seed, env_kwargs)
+
+    env = gym.make(env_id, **env_kwargs)
+    low = env.action_space.low
+    high = env.action_space.high
+    rng = np.random.default_rng(seed)
+    obs, _ = env.reset(seed=seed)
+
+    observations, actions, rewards, next_observations, dones = [], [], [], [], []
+    use_scripted = rng.random() < scripted_fraction
+    for _ in range(num_steps):
+        if use_scripted:
+            base = _pendulum_swingup_action(np.asarray(obs, dtype=np.float32))
+            noisy = base + rng.normal(0.0, action_noise * float(high[0]))
+            action = np.clip([noisy], low, high).astype(np.float32)
+        else:
+            action = env.action_space.sample().astype(np.float32)
+
+        next_obs, reward, terminated, truncated, _ = env.step(action)
+        observations.append(np.asarray(obs, dtype=np.float32))
+        actions.append(np.asarray(action, dtype=np.float32))
+        rewards.append(float(reward))
+        next_observations.append(np.asarray(next_obs, dtype=np.float32))
+        dones.append(1.0 if terminated else 0.0)
+
+        obs = next_obs
+        if terminated or truncated:
+            obs, _ = env.reset()
+            use_scripted = rng.random() < scripted_fraction  # re-roll behavior per episode
+
+    env.close()
     return (
         np.stack(observations),
         np.stack(actions),

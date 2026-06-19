@@ -1,17 +1,17 @@
-# IQL on Pendulum-v1 with a random-policy offline dataset.
-# Offline RL: the dataset is collected once (here, a random policy) and IQL learns
-# from it with no further environment interaction. The env is used only for
-# periodic evaluation. This "random" regime is the weakest data quality; see
-# pendulum_mixed.yaml for a higher-quality behavior dataset.
+# IQL on Pendulum-v1 with a "mixed" (medium) offline dataset.
+# The dataset is collected once from a noisy energy-shaping swing-up controller
+# mixed with random episodes (a medium-quality behavior policy, return ~ -500).
+# IQL learns from this fixed dataset with no environment interaction and should
+# extract a policy better than the behavior that produced the data.
 project: rl-hero
 entity: null
-run_name: iql-pendulum-random
+run_name: iql-pendulum-mixed
 wandb_key: ""  # optional API key for wandb login (or set WANDB_API_KEY)
 env_id: Pendulum-v1
 seed: 42
 
 # Dataset
-dataset_source: random  # random | mixed | npz | d4rl
+dataset_source: mixed  # random | mixed | npz | d4rl
 dataset_steps: 60000
 normalize_rewards: false
 
@@ -34,14 +34,14 @@ log_interval: 1000
 eval_interval: 10000
 eval_episodes: 10
 checkpoint_interval: 40000
-checkpoint_dir: IQL/checkpoints_random
+checkpoint_dir: IQL/checkpoints_mixed
 save_best: true
 log_level: INFO
 log_to_file: true
-log_file: IQL/logs/iql_random.log
+log_file: IQL/logs/iql_mixed.log
 log_to_console: true
 
 # Evaluation / inference
-inference_model_path: IQL/checkpoints_random/best.pt
+inference_model_path: IQL/checkpoints_mixed/best.pt
 episodes: 5
 device: auto

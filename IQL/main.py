@@ -23,8 +23,11 @@ from IQL.iql.logging_utils import setup_logger
 
 def train(config: str = "IQL/configs/pendulum_random.yaml", wandb_key: str = ""):
     cfg = Config.from_yaml(config)
+    env_wandb_key = os.getenv("WANDB_API_KEY", "")
     if wandb_key:
         cfg.wandb_key = wandb_key
+    elif env_wandb_key:
+        cfg.wandb_key = env_wandb_key
 
     logger = setup_logger(
         name="iql",
@@ -37,9 +40,7 @@ def train(config: str = "IQL/configs/pendulum_random.yaml", wandb_key: str = "")
     set_seed(cfg.seed)
 
     if getattr(cfg, "wandb_key", ""):
-        import wandb as _wandb  # local import keeps optional dependency scoped
-
-        _wandb.login(key=cfg.wandb_key)
+        wandb.login(key=cfg.wandb_key)
 
     logger.info(f"Initializing wandb run={cfg.run_name}")
     run = wandb.init(

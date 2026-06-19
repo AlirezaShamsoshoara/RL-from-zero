@@ -1,0 +1,4 @@
+checkpoints/*.pt
+checkpoints_random/*.pt
+checkpoints_mixed/*.pt
+logs/
