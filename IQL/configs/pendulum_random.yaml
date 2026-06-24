@@ -1,9 +1,22 @@
-project: rl-practice
+# IQL on Pendulum-v1 with a random-policy offline dataset.
+# Offline RL: the dataset is collected once (here, a random policy) and IQL learns
+# from it with no further environment interaction. The env is used only for
+# periodic evaluation. This "random" regime is the weakest data quality; see
+# pendulum_mixed.yaml for a higher-quality behavior dataset.
+project: rl-hero
+entity: null
 run_name: iql-pendulum-random
+wandb_key: ""  # optional API key for wandb login (or set WANDB_API_KEY)
 env_id: Pendulum-v1
-dataset_source: random
+seed: 42
+
+# Dataset
+dataset_source: random  # random | mixed | npz | d4rl
 dataset_steps: 60000
-total_updates: 120000
+normalize_rewards: false
+
+# Training
+total_updates: 80000
 batch_size: 256
 gamma: 0.99
 tau: 0.005
@@ -15,8 +28,20 @@ critic_lr: 0.0003
 value_lr: 0.0003
 hidden_sizes: [256, 256]
 activation: relu
-log_interval: 500
-eval_interval: 5000
-checkpoint_interval: 20000
-eval_episodes: 5
+
+# Logging & checkpoints
+log_interval: 1000
+eval_interval: 10000
+eval_episodes: 10
+checkpoint_interval: 40000
+checkpoint_dir: IQL/checkpoints_random
+save_best: true
+log_level: INFO
+log_to_file: true
+log_file: IQL/logs/iql_random.log
+log_to_console: true
+
+# Evaluation / inference
+inference_model_path: IQL/checkpoints_random/best.pt
+episodes: 5
 device: auto
