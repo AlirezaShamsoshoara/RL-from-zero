@@ -30,7 +30,7 @@ RL-from-zero is a collection of reinforcement learning agents implemented from s
 | Folder | Algorithm | Action space | Default environment | Demo GIF |
 | --- | --- | --- | --- | --- |
 | [`Qlearning/`](Qlearning/) | Tabular Q-learning | Discrete | `FrozenLake-v1` (deterministic) | <img src="Qlearning/assets/qlearning_frozenlake_8x8.gif" alt="Q-learning FrozenLake demo" width="160"> |
-| [`Independent-QL/`](Independent-QL/) | Independent Q-learning (multi-agent) | Discrete | `LineWorld` (custom 2-agent grid) | - |
+| [`Independent-QL/`](Independent-QL/) | Independent Q-learning (multi-agent) | Discrete | `LineWorld` (custom 2-agent grid) | <img src="Independent-QL/assets/independent_ql_lineworld.gif" alt="Independent-QL LineWorld demo" width="180"> |
 | [`Nash-QL/`](Nash-QL/) | Nash Q-learning (multi-agent game theory) | Discrete | `LineWorld` (custom 2-agent grid) | - |
 | [`deepQN/`](deepQN/) | Deep Q-Network (with Double DQN option) | Discrete | `MountainCar-v0` | <img src="deepQN/assets/dqn_mountaincar.gif" alt="DQN MountainCar demo" width="160"> |
 | [`PPO/`](PPO/) | Proximal Policy Optimization | Discrete | `CartPole-v1` | <img src="PPO/assets/ppo_cartpole.gif" alt="PPO CartPole demo" width="160"> |
@@ -86,8 +86,8 @@ python -m Qlearning.main train --config Qlearning/configs/frozenlake.yaml
 python -m Qlearning.main demo --config Qlearning/configs/frozenlake.yaml --model_path Qlearning/checkpoints/best.pt --episodes 5
 
 # Multi-agent Independent Q-learning
-python -m Independent-QL.main train --config Independent-QL/configs/line_world.yaml
-python -m Independent-QL.main demo --config Independent-QL/configs/line_world.yaml --model_path Independent-QL/checkpoints/best.pt
+python Independent-QL/main.py train --config Independent-QL/configs/line_world.yaml
+python Independent-QL/main.py demo --config Independent-QL/configs/line_world.yaml --model_path Independent-QL/checkpoints/best.pt
 
 # Multi-agent Nash Q-learning (game-theoretic)
 python -m Nash-QL.main train --config Nash-QL/configs/line_world.yaml
@@ -144,7 +144,7 @@ python -m IQL.main demo --config IQL/configs/pendulum_mixed.yaml --model_path IQ
 ```
 
 ### Optional Weights & Biases logging
-Add `--wandb_key YOUR_KEY` to any `train` command or set `wandb_key` in the YAML config to authenticate and push metrics, losses, and episode returns to W&B. If `WANDB_API_KEY` is set in your environment, trainers that check the env var (for example, PPO, SAC, A3C, TD3, DDPG, TRPO, and IQL) will read it automatically.
+Add `--wandb_key YOUR_KEY` to any `train` command or set `wandb_key` in the YAML config to authenticate and push metrics, losses, and episode returns to W&B. If `WANDB_API_KEY` is set in your environment, trainers that check the env var (for example, PPO, SAC, A3C, TD3, DDPG, TRPO, IQL, and Independent-QL) will read it automatically.
 
 ## Configuring experiments
 - Duplicate a baseline YAML file (for example `PPO/configs/cartpole.yaml`) and edit environment ids, learning rates, rollout lengths, or logging cadence.
