@@ -19,8 +19,11 @@ def train(
     wandb_key: str = "",
 ) -> None:
     cfg = Config.from_yaml(config)
+    env_wandb_key = os.getenv("WANDB_API_KEY", "")
     if wandb_key:
         cfg.wandb_key = wandb_key
+    elif env_wandb_key:
+        cfg.wandb_key = env_wandb_key
 
     logger = setup_logger(
         name="independent-ql",
