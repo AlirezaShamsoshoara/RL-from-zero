@@ -87,7 +87,7 @@ and agent 1 solves the dual $\min_{u, \pi_1}\; u$ s.t. $P\,\pi_1 \le u\,\mathbf{
 **Shapley's algorithm (exact solver).** For a zero-sum stochastic game, iterate
 
 $$
-Q^{\ast}(s, a_0, a_1) \;\leftarrow\; \mathbb{E}_{s'}\big[r_0(s, a, s') + \gamma\, V^{\ast}(s')\big], \qquad V^{\ast}(s) \;\leftarrow\; \operatorname{minimax}(Q^{\ast}(s)).
+Q^{\ast}(s, a_0, a_1) \;\leftarrow\; \mathbb{E}_{s'}\big[r_0(s, a, s') + \gamma\, V^{\ast}(s')\big], \qquad V^{\ast}(s) \;\leftarrow\; \mathrm{minimax}(Q^{\ast}(s)).
 $$
 
 This is a $\gamma$-contraction, so it converges to the unique game-value $V^{\ast}$. We use it to precompute the ground truth for evaluation.
@@ -95,7 +95,7 @@ This is a $\gamma$-contraction, so it converges to the unique game-value $V^{\as
 **Exploitability.** For any policy $\mu$ played by agent 0,
 
 $$
-\operatorname{Expl}(\mu; s) \;=\; V^{\ast}(s) \;-\; \min_{\nu}\; \mathbb{E}\!\left[\sum_t \gamma^t r_0 \,\middle|\, \mu, \nu\right].
+\mathrm{Expl}(\mu; s) \;=\; V^{\ast}(s) \;-\; \min_{\nu}\; \mathbb{E}\!\left[\sum_t \gamma^t r_0 \,\middle|\, \mu, \nu\right].
 $$
 
 Zero iff $\mu$ is a Nash strategy. We compute the inner minimum by best-response VI (a plain MDP for agent 1 with the environment being `env + mu`).
