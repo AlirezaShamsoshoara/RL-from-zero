@@ -49,7 +49,7 @@ Ordinary Q-learning assumes the agent controls the whole environment. In a game
 the transitions and rewards depend on every agent, so the "max over my actions"
 target is wrong. Nash Q-learning replaces it: agent $i$ keeps $Q_i(s, a_0, a_1)$
 over joint actions, and at each state solves the stage game defined by
-$(Q_0(s), Q_1(s))$ for a Nash equilibrium $(\pi_0^*, \pi_1^*)$. It acts from that
+$(Q_0(s), Q_1(s))$ for a Nash equilibrium $(\pi_0^{\ast}, \pi_1^{\ast})$. It acts from that
 equilibrium and bootstraps with its value.
 
 On a **zero-sum** game (like soccer: one team's goal is the other's loss) the
@@ -70,10 +70,10 @@ $$
 Q_i(s, a_0, a_1) \leftarrow Q_i(s, a_0, a_1) + \alpha \Big[ r_i + \gamma\,(1 - d)\, V_i^{\text{Nash}}(s') - Q_i(s, a_0, a_1) \Big].
 $$
 
-**Nash value.** With the stage-game equilibrium $(\pi_0^*, \pi_1^*)$ at $s'$, agent $i$'s value is the expected payoff under it:
+**Nash value.** With the stage-game equilibrium $(\pi_0^{\ast}, \pi_1^{\ast})$ at $s'$, agent $i$'s value is the expected payoff under it:
 
 $$
-V_i^{\text{Nash}}(s') = \pi_0^{*\top} Q_i(s')\, \pi_1^* .
+V_i^{\text{Nash}}(s') = (\pi_0^{\ast})^{\top}\, Q_i(s')\, \pi_1^{\ast} .
 $$
 
 **Zero-sum minimax LP.** For payoff $P = Q_0(s)$ the row player (agent 0) solves
@@ -82,20 +82,20 @@ $$
 \max_{v,\, \pi_0}\; v \quad \text{s.t.} \quad P^\top \pi_0 \ge v\,\mathbf{1},\;\; \mathbf{1}^\top \pi_0 = 1,\;\; \pi_0 \ge 0,
 $$
 
-and agent 1 solves the dual $\min_{u, \pi_1}\; u$ s.t. $P\,\pi_1 \le u\,\mathbf{1}$. By the minimax theorem both give the same value $v = u = V^*(s)$.
+and agent 1 solves the dual $\min_{u, \pi_1}\; u$ s.t. $P\,\pi_1 \le u\,\mathbf{1}$. By the minimax theorem both give the same value $v = u = V^{\ast}(s)$.
 
 **Shapley's algorithm (exact solver).** For a zero-sum stochastic game, iterate
 
 $$
-Q^*(s, a_0, a_1) \;\leftarrow\; \mathbb{E}_{s'}\big[r_0(s, a, s') + \gamma\, V^*(s')\big], \qquad V^*(s) \;\leftarrow\; \text{minimax}(Q^*(s)).
+Q^{\ast}(s, a_0, a_1) \;\leftarrow\; \mathbb{E}_{s'}\big[r_0(s, a, s') + \gamma\, V^{\ast}(s')\big], \qquad V^{\ast}(s) \;\leftarrow\; \operatorname{minimax}(Q^{\ast}(s)).
 $$
 
-This is a $\gamma$-contraction, so it converges to the unique game-value $V^*$. We use it to precompute the ground truth for evaluation.
+This is a $\gamma$-contraction, so it converges to the unique game-value $V^{\ast}$. We use it to precompute the ground truth for evaluation.
 
 **Exploitability.** For any policy $\mu$ played by agent 0,
 
 $$
-\text{Expl}(\mu; s) \;=\; V^*(s) \;-\; \min_{\nu}\; \mathbb{E}\!\left[\sum_t \gamma^t r_0 \,\middle|\, \mu, \nu\right].
+\operatorname{Expl}(\mu; s) \;=\; V^{\ast}(s) \;-\; \min_{\nu}\; \mathbb{E}\!\left[\sum_t \gamma^t r_0 \,\middle|\, \mu, \nu\right].
 $$
 
 Zero iff $\mu$ is a Nash strategy. We compute the inner minimum by best-response VI (a plain MDP for agent 1 with the environment being `env + mu`).
@@ -104,12 +104,12 @@ Zero iff $\mu$ is a Nash strategy. We compute the inner minimum by best-response
 | Symbol | Meaning | Where in code |
 | --- | --- | --- |
 | $Q_i(s, a_0, a_1)$ | joint-action Q-tables | `agent.Q` (shape `[2, n_states, n_actions, n_actions]`) |
-| $(\pi_0^*, \pi_1^*)$ | stage-game equilibrium | `solve_nash_equilibrium` (general-sum) / `exact_solver._minimax_value` (zero-sum LP) |
+| $(\pi_0^{\ast}, \pi_1^{\ast})$ | stage-game equilibrium | `solve_nash_equilibrium` (general-sum) / `exact_solver._minimax_value` (zero-sum LP) |
 | $V_i^{\text{Nash}}$ | equilibrium value | `compute_nash_value` |
 | Nash update | TD update | `NashQLearningAgent.update` |
 | equilibrium policy | self-play action | `NashQLearningAgent.greedy_actions` |
 | best response | exploit a known opponent | `NashQLearningAgent.best_response_action` |
-| $Q^*, V^*, \pi^*$ | analytical solution | `exact_solver.shapley_iterate` |
+| $Q^{\ast}, V^{\ast}, \pi^{\ast}$ | analytical solution | `exact_solver.shapley_iterate` |
 | exploitability | game-theoretic metric | `exact_solver.exploitability` |
 | head-to-head | learned pi vs exact opp | `exact_solver.head_to_head_vs_exact` |
 
