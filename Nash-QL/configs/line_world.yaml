@@ -19,13 +19,13 @@ env_kwargs:
   collision_penalty: -0.1
 
 # Training hyperparameters
-total_episodes: 5000
+total_episodes: 2000  # LineWorld is tiny (49 joint states); Nash Q solves an LP per step, so keep this modest
 max_steps_per_episode: 120
 gamma: 0.95  # Discount factor
 alpha: 0.1   # Learning rate
 epsilon_start: 1.0
 epsilon_end: 0.05
-epsilon_decay: 0.0008
+epsilon_decay: 0.002  # decay faster so most of the (LP-heavy) run exploits the learned equilibria
 
 # Logging & checkpoints
 log_interval: 50
