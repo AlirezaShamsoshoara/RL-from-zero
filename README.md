@@ -31,7 +31,7 @@ RL-from-zero is a collection of reinforcement learning agents implemented from s
 | --- | --- | --- | --- | --- |
 | [`Qlearning/`](Qlearning/) | Tabular Q-learning | Discrete | `FrozenLake-v1` (deterministic) | <img src="Qlearning/assets/qlearning_frozenlake_8x8.gif" alt="Q-learning FrozenLake demo" width="160"> |
 | [`Independent-QL/`](Independent-QL/) | Independent Q-learning (multi-agent) | Discrete | `LineWorld` (custom 2-agent grid) | <img src="Independent-QL/assets/independent_ql_lineworld.gif" alt="Independent-QL LineWorld demo" width="180"> |
-| [`Nash-QL/`](Nash-QL/) | Nash Q-learning (multi-agent game theory) | Discrete | `LineWorld` (custom 2-agent grid) | - |
+| [`Nash-QL/`](Nash-QL/) | Nash Q-learning (multi-agent game theory) | Discrete | `GridSoccer` (custom zero-sum 2-agent) | <img src="Nash-QL/assets/nash_ql_grid_soccer.gif" alt="Nash-QL Grid Soccer demo" width="180"> |
 | [`deepQN/`](deepQN/) | Deep Q-Network (with Double DQN option) | Discrete | `MountainCar-v0` | <img src="deepQN/assets/dqn_mountaincar.gif" alt="DQN MountainCar demo" width="160"> |
 | [`PPO/`](PPO/) | Proximal Policy Optimization | Discrete | `CartPole-v1` | <img src="PPO/assets/ppo_cartpole.gif" alt="PPO CartPole demo" width="160"> |
 | [`MAPPO/`](MAPPO/) | Multi-Agent PPO (centralized critic) | Discrete | `MultiWalker-v9` (PettingZoo) | <img src="MAPPO/assets/mappo_multiwalker.gif" alt="MAPPO MultiWalker demo" width="160"> |
@@ -90,8 +90,8 @@ python Independent-QL/main.py train --config Independent-QL/configs/line_world.y
 python Independent-QL/main.py demo --config Independent-QL/configs/line_world.yaml --model_path Independent-QL/checkpoints/best.pt
 
 # Multi-agent Nash Q-learning (game-theoretic)
-python -m Nash-QL.main train --config Nash-QL/configs/line_world.yaml
-python -m Nash-QL.main demo --config Nash-QL/configs/line_world.yaml --model_path Nash-QL/checkpoints/best.pt
+python Nash-QL/main.py train --config Nash-QL/configs/line_world.yaml
+python Nash-QL/main.py demo --config Nash-QL/configs/line_world.yaml --model_path Nash-QL/checkpoints/best.pt
 ```
 
 ### Multi-agent deep RL examples
@@ -144,7 +144,7 @@ python -m IQL.main demo --config IQL/configs/pendulum_mixed.yaml --model_path IQ
 ```
 
 ### Optional Weights & Biases logging
-Add `--wandb_key YOUR_KEY` to any `train` command or set `wandb_key` in the YAML config to authenticate and push metrics, losses, and episode returns to W&B. If `WANDB_API_KEY` is set in your environment, trainers that check the env var (for example, PPO, SAC, A3C, TD3, DDPG, TRPO, IQL, and Independent-QL) will read it automatically.
+Add `--wandb_key YOUR_KEY` to any `train` command or set `wandb_key` in the YAML config to authenticate and push metrics, losses, and episode returns to W&B. If `WANDB_API_KEY` is set in your environment, trainers that check the env var (for example, PPO, SAC, A3C, TD3, DDPG, TRPO, IQL, Independent-QL, and Nash-QL) will read it automatically.
 
 ## Configuring experiments
 - Duplicate a baseline YAML file (for example `PPO/configs/cartpole.yaml`) and edit environment ids, learning rates, rollout lengths, or logging cadence.

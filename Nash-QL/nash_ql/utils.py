@@ -68,3 +68,39 @@ def load_checkpoint(path: str):
         Checkpoint dictionary with keys: q_tables, step, best_return
     """
     return torch.load(path, map_location="cpu")
+
+
+def evaluate_vs_random(agent, env, episodes: int, seed: int, max_steps: int = 60):
+    """Evaluate the learned agent 0 (greedy Nash policy) against a random agent 1.
+
+    On a zero-sum game a strong policy should win most games against a random
+    opponent, which is a meaningful "best" signal for self-play (where the raw
+    self-play return is ~0 at equilibrium).
+
+    Returns:
+        (win_rate, draw_rate) for the learned agent 0.
+    """
+    wins = 0
+    draws = 0
+    for ep in range(episodes):
+        states = env.reset(seed=seed + ep)
+        steps = 0
+        scorer = None
+        while steps < max_steps:
+            # Against a known (random = uniform) opponent, play the best response
+            # extracted from the learned Q, not the hedging equilibrium.
+            a0 = agent.best_response_action(states[0], agent=0)
+            a1 = random.randint(0, env.n_actions - 1)
+            step_result = env.step([a0, a1])
+            states = step_result.observations
+            steps += 1
+            if all(step_result.terminated):
+                scorer = step_result.info.get("scorer")
+                break
+            if step_result.truncated:
+                break
+        if scorer == 0:
+            wins += 1
+        elif scorer is None:
+            draws += 1
+    return wins / episodes, draws / episodes

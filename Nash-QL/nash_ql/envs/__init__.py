@@ -1,16 +1,18 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Type
+from typing import Any, Dict
 
+from .grid_soccer import GridSoccerEnv
 from .line_world import LineWorldEnv
 
-ENV_REGISTRY: Dict[str, Type[LineWorldEnv]] = {
+ENV_REGISTRY: Dict[str, type] = {
     "line_world": LineWorldEnv,
     "nash_line_world": LineWorldEnv,
+    "grid_soccer": GridSoccerEnv,
 }
 
 
-def make(env_id: str, **kwargs: Any) -> LineWorldEnv:
+def make(env_id: str, **kwargs: Any):
     """
     Create environment by ID.
 
@@ -33,4 +35,4 @@ def make(env_id: str, **kwargs: Any) -> LineWorldEnv:
     return env_cls(**kwargs)
 
 
-__all__ = ["make", "LineWorldEnv", "ENV_REGISTRY"]
+__all__ = ["make", "LineWorldEnv", "GridSoccerEnv", "ENV_REGISTRY"]

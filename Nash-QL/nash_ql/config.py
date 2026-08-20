@@ -30,34 +30,40 @@ class Config:
     run_name: str = "nash-ql-run"
     wandb_key: str = ""
 
-    # Environment
-    env_id: str = "line_world"
+    # Environment (default: zero-sum 2D grid soccer, which suits Nash-Q)
+    env_id: str = "grid_soccer"
     seed: int = 42
     env_kwargs: Dict[str, Any] = field(
         default_factory=lambda: {
-            "n_agents": 2,
-            "grid_length": 7,
-            "max_steps": 60,
-            "goal_positions": None,
-            "step_penalty": -0.02,
+            "rows": 4,
+            "cols": 5,
+            "max_steps": 40,
             "goal_reward": 1.0,
-            "shared_goal_bonus": 0.5,
-            "collision_penalty": -0.1,
+            "shaping": 0.1,
         }
     )
 
     # Training Hyperparameters
     total_episodes: int = 5000
-    max_steps_per_episode: int = 200
+    max_steps_per_episode: int = 60
     gamma: float = 0.95
     alpha: float = 0.1
     epsilon_start: float = 1.0
-    epsilon_end: float = 0.05
-    epsilon_decay: float = 0.0008
+    epsilon_end: float = 0.1
+    epsilon_decay: float = 0.0004
+
+    # Evaluation (learned agent 0 vs a random opponent)
+    eval_interval: int = 500
+    eval_episodes: int = 200
+
+    # Exact-solver evaluation (only applies when the env supports .simulate):
+    # if True, at each eval also measure exploitability + head-to-head against
+    # the analytical Nash policy; gates save_best on exploitability.
+    exact_eval: bool = True
 
     # Logging & Checkpoints
     log_interval: int = 50
-    checkpoint_interval: int = 500
+    checkpoint_interval: int = 1000
     checkpoint_dir: str = "Nash-QL/checkpoints"
     save_best: bool = True
     log_level: str = "INFO"
@@ -107,6 +113,9 @@ class Config:
             "epsilon_start": self.epsilon_start,
             "epsilon_end": self.epsilon_end,
             "epsilon_decay": self.epsilon_decay,
+            "eval_interval": self.eval_interval,
+            "eval_episodes": self.eval_episodes,
+            "exact_eval": self.exact_eval,
             "log_interval": self.log_interval,
             "checkpoint_interval": self.checkpoint_interval,
             "checkpoint_dir": self.checkpoint_dir,
