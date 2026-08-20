@@ -10,12 +10,25 @@ from tqdm import tqdm
 
 from nash_ql.agent import NashQLearningAgent, Transition
 from nash_ql.config import Config
+from nash_ql.exact_solver import (
+    enumerate_transitions,
+    exploitability,
+    head_to_head_vs_exact,
+    initial_state_indices,
+    load_or_solve,
+)
 from nash_ql.logging_utils import setup_logger
-from nash_ql.utils import load_checkpoint, make_env, save_checkpoint, set_seed
+from nash_ql.utils import (
+    evaluate_vs_random,
+    load_checkpoint,
+    make_env,
+    save_checkpoint,
+    set_seed,
+)
 
 
 def train(
-    config: str = "Nash-QL/configs/line_world.yaml",
+    config: str = "Nash-QL/configs/grid_soccer.yaml",
     wandb_key: str = "",
 ) -> None:
     """
@@ -26,8 +39,11 @@ def train(
         wandb_key: Weights & Biases API key for logging
     """
     cfg = Config.from_yaml(config)
+    env_wandb_key = os.getenv("WANDB_API_KEY", "")
     if wandb_key:
         cfg.wandb_key = wandb_key
+    elif env_wandb_key:
+        cfg.wandb_key = env_wandb_key
 
     logger = setup_logger(
         name="nash-ql",
@@ -61,6 +77,25 @@ def train(
         n_actions,
     )
 
+    # Exact minimax solution of the TRUE (unshaped) zero-sum game. Cached to
+    # disk so subsequent runs load in milliseconds. Enabled only when the env
+    # supports it (grid_soccer exposes simulate/decode/encode).
+    exact_soln = None
+    T_true = None
+    init_states = None
+    if getattr(cfg, "exact_eval", True) and hasattr(env, "simulate"):
+        logger.info("Loading/solving exact Nash equilibrium for %s...", cfg.env_id)
+        exact_soln = load_or_solve(
+            env, cfg.env_kwargs, gamma=cfg.gamma,
+            cache_dir=cfg.checkpoint_dir, shaping=0.0, tol=1e-6, verbose=True,
+        )
+        T_true = enumerate_transitions(env, shaping=0.0)
+        init_states = list(initial_state_indices(env))
+        logger.info(
+            "Exact solved: V*(start ball=0)=%.4f  V*(start ball=1)=%.4f  iters=%d",
+            exact_soln.V[init_states[0]], exact_soln.V[init_states[1]], exact_soln.iters,
+        )
+
     agent = NashQLearningAgent(
         n_agents=n_agents,
         n_states=n_states,
@@ -72,21 +107,25 @@ def train(
         epsilon_decay=cfg.epsilon_decay,
     )
 
-    ep_returns: list[np.ndarray] = []
-    best_avg_return = -np.inf
-    pbar = tqdm(range(cfg.total_episodes), desc="Nash Q-learning")
+    # Rolling episode outcomes (agent 0 win / agent 1 win / draw). On this
+    # zero-sum game the raw self-play return is ~0 at equilibrium, so outcome
+    # rates and the eval-vs-random win rate are the informative signals.
+    outcomes: list[int] = []  # +1 agent0 scored, -1 agent1 scored, 0 draw
+    best_win_rate = -np.inf
+    best_exploit = np.inf  # lower is better; used only when exact_soln is available
+    pbar = tqdm(range(cfg.total_episodes), desc="Nash Q-learning (grid soccer)")
 
     for ep in pbar:
         states = env.reset(seed=cfg.seed + ep)
         episode_returns = np.zeros(n_agents, dtype=np.float32)
         steps = 0
+        scorer = None
 
         while steps < cfg.max_steps_per_episode:
             actions = agent.act(states)
             step_result = env.step(actions)
             next_states = step_result.observations
 
-            # Create transitions with joint actions
             transitions = []
             joint_action = tuple(actions)
             for idx in range(n_agents):
@@ -108,59 +147,111 @@ def train(
             steps += 1
 
             if all(step_result.terminated) or step_result.truncated:
+                scorer = step_result.info.get("scorer") if isinstance(step_result.info, dict) else None
                 break
 
-        ep_returns.append(episode_returns)
+        outcomes.append(0 if scorer is None else (1 if scorer == 0 else -1))
 
-        # Logging
+        # Logging: self-play win / loss / draw rates over the recent window.
         if (ep + 1) % cfg.log_interval == 0:
-            recent = np.stack(ep_returns[-cfg.log_interval :])
-            mean_per_agent = recent.mean(axis=0)
-            log_data = {
-                "charts/mean_return": float(mean_per_agent.mean()),
-                "charts/epsilon": agent.epsilon(),
-                "progress/episode": ep + 1,
-                "progress/steps": agent.global_step,
-            }
-            for idx, value in enumerate(mean_per_agent):
-                log_data[f"charts/agent{idx}_mean_return"] = float(value)
-            wandb.log(log_data)
-            pbar.set_postfix(
+            recent = np.array(outcomes[-cfg.log_interval:])
+            win0 = float(np.mean(recent == 1))
+            win1 = float(np.mean(recent == -1))
+            draw = float(np.mean(recent == 0))
+            wandb.log(
                 {
-                    "avgReturn": f"{mean_per_agent.mean():.3f}",
-                    "eps": f"{agent.epsilon():.3f}",
+                    "charts/agent0_win_rate": win0,
+                    "charts/agent1_win_rate": win1,
+                    "charts/draw_rate": draw,
+                    "charts/decisive_rate": win0 + win1,
+                    "charts/epsilon": agent.epsilon(),
+                    "progress/episode": ep + 1,
+                    "progress/steps": agent.global_step,
                 }
             )
+            pbar.set_postfix(
+                {"win0": f"{win0:.2f}", "win1": f"{win1:.2f}", "draw": f"{draw:.2f}",
+                 "eps": f"{agent.epsilon():.2f}"}
+            )
 
-        # Periodic checkpoint
+        # Periodic checkpoint.
         if (ep + 1) % cfg.checkpoint_interval == 0:
             path = os.path.join(cfg.checkpoint_dir, f"checkpoint_ep{ep+1}.pt")
-            save_checkpoint(path, agent.Q, ep + 1, best_avg_return)
+            save_checkpoint(path, agent.Q, ep + 1, best_win_rate)
             logger.info("Saved checkpoint: %s", path)
 
-        # Save best model
-        if len(ep_returns) >= 10:
-            recent_stack = np.stack(ep_returns[-10:])
-            avg_last = float(recent_stack.mean())
-            if cfg.save_best and avg_last > best_avg_return:
-                best_avg_return = avg_last
-                best_path = os.path.join(cfg.checkpoint_dir, "best.pt")
-                save_checkpoint(best_path, agent.Q, ep + 1, best_avg_return)
+        # Periodic evaluation: vs-random (retained), plus exploitability +
+        # head-to-head against the analytical Nash opponent when available.
+        if cfg.eval_interval > 0 and (ep + 1) % cfg.eval_interval == 0:
+            win_rate, draw_rate = evaluate_vs_random(
+                agent, env, cfg.eval_episodes, cfg.seed + 100000,
+                max_steps=cfg.max_steps_per_episode,
+            )
+            log_data = {
+                "eval/win_rate_vs_random": win_rate,
+                "eval/draw_rate_vs_random": draw_rate,
+                "progress/episode": ep + 1,
+            }
+
+            new_best = False
+            if exact_soln is not None and T_true is not None:
+                expl = exploitability(
+                    agent.Q[0], T_true, exact_soln, cfg.gamma,
+                    initial_states=init_states,
+                )
+                h2h = head_to_head_vs_exact(
+                    agent.Q[0], env, exact_soln,
+                    n_episodes=cfg.eval_episodes,
+                    seed=cfg.seed + 200000 + ep,
+                    max_steps=cfg.max_steps_per_episode,
+                )
+                log_data.update({f"exact/{k}": v for k, v in expl.items()})
+                log_data.update({f"exact/{k}": v for k, v in h2h.items()})
+                log_data["exact/V_star_start"] = float(
+                    0.5 * (exact_soln.V[init_states[0]] + exact_soln.V[init_states[1]])
+                )
                 logger.info(
-                    "New best mean return %.3f; saved %s",
-                    best_avg_return,
-                    best_path,
+                    "Eval ep=%d | exploit(start)=%.4f mean=%.4f | h2h vs exact: "
+                    "win=%.2f draw=%.2f loss=%.2f meanR0=%.3f (V*=%.3f) | "
+                    "win_vs_random=%.3f",
+                    ep + 1, expl["exploit_start"], expl["exploit_mean"],
+                    h2h["h2h_win"], h2h["h2h_draw"], h2h["h2h_loss"],
+                    h2h["h2h_mean_r0"], log_data["exact/V_star_start"],
+                    win_rate,
+                )
+                if cfg.save_best and expl["exploit_start"] < best_exploit:
+                    best_exploit = expl["exploit_start"]
+                    new_best = True
+            else:
+                logger.info(
+                    "Eval ep=%d | win_rate_vs_random=%.3f (draw=%.3f)",
+                    ep + 1, win_rate, draw_rate,
+                )
+                if cfg.save_best and win_rate > best_win_rate:
+                    best_win_rate = win_rate
+                    new_best = True
+
+            wandb.log(log_data)
+            if new_best:
+                best_path = os.path.join(cfg.checkpoint_dir, "best.pt")
+                metric = best_exploit if exact_soln is not None else best_win_rate
+                save_checkpoint(best_path, agent.Q, ep + 1, metric)
+                logger.info(
+                    "New best: %s=%.4f; saved %s",
+                    "exploit_start" if exact_soln is not None else "win_rate_vs_random",
+                    metric, best_path,
                 )
 
     run.finish()
-    logger.info(
-        "Training finished. Best 10-episode mean return across agents: %.3f",
-        best_avg_return,
-    )
+    if exact_soln is not None:
+        logger.info("Training finished. Best exploitability at start states: %.4f",
+                    best_exploit)
+    else:
+        logger.info("Training finished. Best win rate vs random: %.3f", best_win_rate)
 
 
 def demo(
-    config: str = "Nash-QL/configs/line_world.yaml",
+    config: str = "Nash-QL/configs/grid_soccer.yaml",
     model_path: Optional[str] = None,
     episodes: Optional[int] = None,
 ) -> None:
@@ -214,29 +305,33 @@ def demo(
     agent.Q = q_tables.copy()
 
     logger.info(f"Loaded model from {model_path}")
-    logger.info(f"Running {episodes} demo episodes...")
+    logger.info("Running %d demo episodes (learned agent 0 vs a random agent 1)...", episodes)
 
+    import random as _random
+
+    wins = 0
     for ep in range(episodes):
         states = env.reset(seed=cfg.seed + ep)
-        episode_returns = np.zeros(n_agents, dtype=np.float32)
         steps = 0
+        scorer = None
 
         while steps < cfg.max_steps_per_episode:
-            actions = agent.greedy_actions(states)
-            step_result = env.step(actions)
+            a0 = agent.best_response_action(states[0], agent=0)
+            a1 = _random.randint(0, n_actions - 1)
+            step_result = env.step([a0, a1])
             states = step_result.observations
-            episode_returns += np.asarray(step_result.rewards, dtype=np.float32)
             steps += 1
 
             if all(step_result.terminated) or step_result.truncated:
+                scorer = step_result.info.get("scorer") if isinstance(step_result.info, dict) else None
                 break
 
-        logger.info(
-            "Episode %d | returns=%s | steps=%d",
-            ep + 1,
-            np.array2string(episode_returns, precision=3),
-            steps,
-        )
+        if scorer == 0:
+            wins += 1
+        outcome = "draw" if scorer is None else f"agent {scorer} scored"
+        logger.info("Episode %d | %s | steps=%d", ep + 1, outcome, steps)
+
+    logger.info("Learned agent 0 won %d/%d games vs the random opponent.", wins, episodes)
 
 
 if __name__ == "__main__":
