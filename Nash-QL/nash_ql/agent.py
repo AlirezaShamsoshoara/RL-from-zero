@@ -161,6 +161,23 @@ class NashQLearningAgent:
 
         return [action_1, action_2]
 
+    def best_response_action(self, state: int, agent: int = 0, opponent_dist=None) -> int:
+        """Best-response action for `agent` at `state` against a given opponent.
+
+        The Nash (equilibrium) policy is the right play against a competent
+        adversary, but it hedges against a weak one. When the opponent is known
+        (e.g. random, i.e. uniform), the learned Q supports a best response that
+        exploits it: pick the action maximizing expected Q over the opponent's
+        action distribution. `Q[agent, state, a0, a1]` has agent 0 on axis 0 and
+        agent 1 on axis 1; `opponent_dist` defaults to uniform.
+        """
+        payoff = self.Q[agent, state]  # shape (n_actions_0, n_actions_1)
+        if agent == 0:
+            values = payoff.mean(axis=1) if opponent_dist is None else payoff @ opponent_dist
+        else:
+            values = payoff.mean(axis=0) if opponent_dist is None else opponent_dist @ payoff
+        return int(np.argmax(values))
+
     def update(self, transitions: Iterable[Transition]) -> None:
         """
         Update Q-values using Nash Q-learning rule.
