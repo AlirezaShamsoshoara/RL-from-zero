@@ -1,0 +1,4 @@
+checkpoints/*.pt
+logs/
+checkpoints_soccer/*.pt
+checkpoints_soccer/exact_soln_*.npz
