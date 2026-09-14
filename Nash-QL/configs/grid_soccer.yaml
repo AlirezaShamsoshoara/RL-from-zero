@@ -1,0 +1,49 @@
+# Nash Q-Learning on a 2-player zero-sum Grid Soccer Markov game.
+# Zero-sum is where Nash-Q shines: the LP solver's maxmin (security) strategy is
+# the exact Nash equilibrium, and equilibrium reasoning genuinely matters (a naive
+# independent learner would be exploited by a good opponent).
+project: rl-hero
+run_name: nash-ql-grid-soccer
+entity: null
+wandb_key: ""  # optional API key for wandb login (or set WANDB_API_KEY)
+
+# Environment
+env_id: grid_soccer
+seed: 42
+env_kwargs:
+  rows: 4
+  cols: 5
+  max_steps: 40
+  goal_reward: 1.0
+  shaping: 0.1  # zero-sum dense reward for advancing the ball toward goal
+
+# Training hyperparameters (self-play). Nash-Q solves an LP per step, so this is
+# slower per episode than tabular single-agent Q-learning; keep counts modest.
+total_episodes: 4000
+max_steps_per_episode: 40
+gamma: 0.95
+alpha: 0.1
+epsilon_start: 1.0
+epsilon_end: 0.15
+epsilon_decay: 0.00008  # slow: keep exploring so goals happen and attack values propagate
+
+# Evaluation: learned agent 0 (greedy Nash) vs a random opponent
+eval_interval: 500
+eval_episodes: 200
+
+# Logging & checkpoints
+log_interval: 50
+checkpoint_interval: 2000
+checkpoint_dir: Nash-QL/checkpoints_soccer
+save_best: true
+log_level: INFO
+log_to_file: true
+log_file: Nash-QL/logs/nash_ql_soccer.log
+log_to_console: true
+
+# Inference
+inference_model_path: Nash-QL/checkpoints_soccer/best.pt
+episodes: 5
+
+# Device
+device: auto
