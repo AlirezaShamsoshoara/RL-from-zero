@@ -14,25 +14,36 @@ def set_seed(seed: int):
     torch.cuda.manual_seed_all(seed)
 
 
-def make_env(env_id: str, seed: int, n_agents: int = 3, max_cycles: int = 25, render_mode: Optional[str] = None):
+def make_env(
+    env_id: str,
+    seed: int,
+    n_agents: int = 3,
+    max_cycles: int = 25,
+    local_ratio: float = 0.0,
+    render_mode: Optional[str] = None,
+):
     """
     Create a PettingZoo environment.
 
     Args:
-        env_id: Environment ID (e.g., 'simple_spread_v3')
-        seed: Random seed
-        n_agents: Number of agents
-        max_cycles: Maximum number of cycles per episode
-        render_mode: Render mode ('human' for visualization, None for training)
+        env_id: Environment ID (e.g., 'simple_spread_v3').
+        seed: Random seed.
+        n_agents: Number of agents.
+        max_cycles: Maximum number of cycles per episode.
+        local_ratio: Blend between local (per-agent) and global (team) reward.
+            The MADDPG paper uses purely global reward (``local_ratio=0``); 0.5
+            softens the credit-assignment problem but makes random baselines
+            look artificially strong.
+        render_mode: Render mode ('human' for visualization, None for training).
 
     Returns:
-        env: PettingZoo parallel environment
+        env: PettingZoo parallel environment.
     """
     from pettingzoo.mpe import simple_spread_v3
 
     env = simple_spread_v3.parallel_env(
         N=n_agents,
-        local_ratio=0.5,
+        local_ratio=local_ratio,
         max_cycles=max_cycles,
         continuous_actions=True,
         render_mode=render_mode,

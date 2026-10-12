@@ -38,7 +38,7 @@ RL-from-zero is a collection of reinforcement learning agents implemented from s
 | [`A3C/`](A3C/) | Asynchronous Advantage Actor-Critic | Discrete | `LunarLander-v3` | <img src="A3C/assets/a3c_lunarlander.gif" alt="A3C LunarLander demo" width="160"> |
 | [`SAC/`](SAC/) | Soft Actor-Critic | Continuous | `Pendulum-v1` | <img src="SAC/assets/sac_pendulum.gif" width="180"> |
 | [`DDPG/`](DDPG/) | Deep Deterministic Policy Gradient | Continuous | `LunarLanderContinuous-v3` | <img src="DDPG/assets/ddpg_lunarlander.gif" alt="DDPG LunarLanderContinuous demo" width="180"> |
-| [`MADDPG/`](MADDPG/) | Multi-Agent DDPG (centralized training) | Continuous | `simple_spread_v3` (PettingZoo MPE) | - |
+| [`MADDPG/`](MADDPG/) | Multi-Agent DDPG (centralized critic) | Continuous | `simple_spread_v3` (PettingZoo MPE) | <img src="MADDPG/assets/maddpg_simple_spread.gif" alt="MADDPG simple_spread demo" width="180"> |
 | [`TD3/`](TD3/) | Twin Delayed DDPG | Continuous | `MountainCarContinuous-v0` | <img src="TD3/assets/td3_moutaincar_cont.gif" width="180">  |
 | [`TRPO/`](TRPO/) | Trust Region Policy Optimization | Discrete + Continuous | `Acrobot-v1` (discrete) | <img src="TRPO/assets/trpo_acrobot.gif" alt="TRPO Acrobot demo" width="180"> |
 | [`IQL/`](IQL/) | Implicit Q-Learning (offline) | Continuous | `Pendulum-v1` (offline dataset) | <img src="IQL/assets/iql_pendulum.gif" alt="IQL Pendulum demo" width="180"> |
@@ -144,7 +144,7 @@ python -m IQL.main demo --config IQL/configs/pendulum_mixed.yaml --model_path IQ
 ```
 
 ### Optional Weights & Biases logging
-Add `--wandb_key YOUR_KEY` to any `train` command or set `wandb_key` in the YAML config to authenticate and push metrics, losses, and episode returns to W&B. If `WANDB_API_KEY` is set in your environment, trainers that check the env var (for example, PPO, SAC, A3C, TD3, DDPG, TRPO, IQL, Independent-QL, and Nash-QL) will read it automatically.
+Add `--wandb_key YOUR_KEY` to any `train` command or set `wandb_key` in the YAML config to authenticate and push metrics, losses, and episode returns to W&B. If `WANDB_API_KEY` is set in your environment, trainers that check the env var (for example, PPO, SAC, A3C, TD3, DDPG, MADDPG, TRPO, IQL, Independent-QL, and Nash-QL) will read it automatically.
 
 ## Configuring experiments
 - Duplicate a baseline YAML file (for example `PPO/configs/cartpole.yaml`) and edit environment ids, learning rates, rollout lengths, or logging cadence.
