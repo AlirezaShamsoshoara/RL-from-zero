@@ -107,9 +107,9 @@ python -m MADDPG.main demo --config MADDPG/configs/simple_spread.yaml --model_pa
 
 ### Discrete deep RL examples
 ```bash
-# PPO on CartPole
-python -m PPO.main train --config PPO/configs/cartpole.yaml
-python -m PPO.main demo --config PPO/configs/cartpole.yaml --model_path PPO/checkpoints/best.pt
+# PPO on CartPole (longer-budget recipe; the 100k baseline is also retained)
+python -m PPO.main train --config PPO/configs/cartpole_tuned.yaml
+python -m PPO.main demo --config PPO/configs/cartpole_tuned.yaml --model_path PPO/checkpoints_tuned/best.pt
 
 # Deep Q-Network
 python -m deepQN.main train --config deepQN/configs/mountaincar.yaml
@@ -152,10 +152,17 @@ Add `--wandb_key YOUR_KEY` to any `train` command or set `wandb_key` in the YAML
 - Continuous control agents expose additional knobs like replay buffer sizes, target smoothing noise, and entropy targets.
 
 ## Tests
-A small but growing `tests/` folder captures unit tests. Run them with Python's unittest CLI:
+Run each algorithm's test directory separately. For example, PPO's suite covers
+GAE boundaries, deterministic actions, model/optimizer checkpoint restoration,
+W&B precedence, train/demo integration, and evaluation/asset helpers:
 ```bash
-python -m unittest tests.deepqn.test_replay_buffer
+uv venv .venv-ppo-tests
+UV_PROJECT_ENVIRONMENT=.venv-ppo-tests uv sync
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 UV_PROJECT_ENVIRONMENT=.venv-ppo-tests \
+  uv run python -m pytest tests/ppo/ -q
 ```
+PPO unit tests use stub environments and mocked W&B rather than real training.
+See each algorithm's README for its test instructions.
 
 ## Repository layout
 ```
@@ -173,7 +180,7 @@ RL-from-zero/
 |-- TD3/            # Twin Delayed DDPG agent
 |-- TRPO/           # Trust Region Policy Optimization agent
 |-- IQL/            # Implicit Q-Learning (offline) agent
-|-- tests/          # Unit tests (currently deepQN replay buffer coverage)
+|-- tests/          # Per-algorithm unit tests
 |-- pyproject.toml
 |-- uv.lock
 `-- README.md       # You are here

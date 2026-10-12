@@ -1,7 +1,6 @@
 from __future__ import annotations
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 def get_activation(name: str):
@@ -31,10 +30,10 @@ class ActorCritic(nn.Module):
         value = self.v(x).squeeze(-1)
         return logits, value
 
-    def act(self, obs):
+    def act(self, obs, deterministic: bool = False):
         logits, value = self.forward(obs)
         dist = torch.distributions.Categorical(logits=logits)
-        action = dist.sample()
+        action = logits.argmax(dim=-1) if deterministic else dist.sample()
         logprob = dist.log_prob(action)
         entropy = dist.entropy().mean()
         return action, logprob, entropy, value
