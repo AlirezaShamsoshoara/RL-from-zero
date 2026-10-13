@@ -111,9 +111,9 @@ python -m MADDPG.main demo --config MADDPG/configs/simple_spread.yaml --model_pa
 python -m PPO.main train --config PPO/configs/cartpole_tuned.yaml
 python -m PPO.main demo --config PPO/configs/cartpole_tuned.yaml --model_path PPO/checkpoints_tuned/best.pt
 
-# Deep Q-Network
-python -m deepQN.main train --config deepQN/configs/mountaincar.yaml
-python -m deepQN.main demo --config deepQN/configs/mountaincar.yaml --model_path deepQN/checkpoints/best.pt
+# Deep Q-Network (native-reward temporal-exploration recipe)
+python -m deepQN.main train --config deepQN/configs/mountaincar_exploration.yaml
+python -m deepQN.main demo --config deepQN/configs/mountaincar_exploration.yaml --model_path deepQN/checkpoints_exploration/best.pt
 
 # A3C with multiple workers
 python -m A3C.main train --config A3C/configs/lunarlander.yaml
@@ -144,7 +144,7 @@ python -m IQL.main demo --config IQL/configs/pendulum_mixed.yaml --model_path IQ
 ```
 
 ### Optional Weights & Biases logging
-Add `--wandb_key YOUR_KEY` to any `train` command or set `wandb_key` in the YAML config to authenticate and push metrics, losses, and episode returns to W&B. If `WANDB_API_KEY` is set in your environment, trainers that check the env var (for example, Qlearning, PPO, SAC, A3C, TD3, DDPG, MADDPG, TRPO, IQL, Independent-QL, and Nash-QL) will read it automatically.
+Add `--wandb_key YOUR_KEY` to any `train` command or set `wandb_key` in the YAML config to authenticate and push metrics, losses, and episode returns to W&B. If `WANDB_API_KEY` is set in your environment, trainers that check the env var (for example, deepQN, Qlearning, PPO, SAC, A3C, TD3, DDPG, MADDPG, TRPO, IQL, Independent-QL, and Nash-QL) will read it automatically.
 
 ## Configuring experiments
 - Duplicate a baseline YAML file (for example `PPO/configs/cartpole.yaml`) and edit environment ids, learning rates, rollout lengths, or logging cadence.
@@ -169,6 +169,14 @@ uv venv .venv-qlearning-tests
 UV_PROJECT_ENVIRONMENT=.venv-qlearning-tests uv sync
 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 UV_PROJECT_ENVIRONMENT=.venv-qlearning-tests \
   uv run python -m pytest tests/qlearning/ -q
+```
+DQN's suite covers Bellman targets, replay, distinct online/target restoration,
+optimizer state, train/demo integration and evaluation/asset helpers:
+```bash
+uv venv .venv-dqn-tests
+UV_PROJECT_ENVIRONMENT=.venv-dqn-tests uv sync
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 UV_PROJECT_ENVIRONMENT=.venv-dqn-tests \
+  uv run python -m pytest tests/deepqn/ -q
 ```
 See each algorithm's README for its test instructions.
 

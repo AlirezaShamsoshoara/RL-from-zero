@@ -40,6 +40,8 @@ log_interval: 1000  # log cadence (steps)
 checkpoint_interval: 5000  # checkpoint cadence (steps)
 checkpoint_dir: deepQN/checkpoints  # checkpoint directory
 save_best: true  # save best checkpoint
+best_window: 5  # completed episodes in the best-checkpoint rolling window
+max_steps_per_episode: 1000  # safety cap; MountainCar's native limit is shorter
 log_level: INFO  # DEBUG, INFO, WARNING, ERROR
 log_to_console: true  # enable console logging
 log_to_file: false  # enable file logging
