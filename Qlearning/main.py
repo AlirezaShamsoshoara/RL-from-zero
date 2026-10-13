@@ -1,67 +1,28 @@
 from __future__ import annotations
-from typing import Optional
+
 import os
+from typing import Optional
+
+import gymnasium as gym
 import numpy as np
-import torch
-from tqdm import tqdm
 import wandb
-from Qlearning.ql.config import Config
-from Qlearning.ql.utils import set_seed, make_env, save_checkpoint, load_checkpoint
+from tqdm import tqdm
+
 from Qlearning.ql.agent import QLearningAgent, Transition
+from Qlearning.ql.config import Config
 from Qlearning.ql.logging_utils import setup_logger
+from Qlearning.ql.utils import load_checkpoint, make_env, save_checkpoint, set_seed
 
 
-def train(config: str = "Qlearning/configs/frozenlake.yaml", wandb_key: str = ""):
-    """
-    Train a tabular Q-learning agent and log metrics to Weights & Biases.
-
-    Args:
-        config: Path to the YAML config file with hyperparameters and logging options.
-        wandb_key: Optional WandB API key; if omitted, `WANDB_API_KEY` env var is used.
-
-    Example:
-        python -m Qlearning.main train \
-            --config Qlearning/configs/frozenlake.yaml
-    """
-
-    cfg = Config.from_yaml(config)
-    env_wandb_key = os.getenv("WANDB_API_KEY", "")
-    if wandb_key:
-        cfg.wandb_key = wandb_key
-    elif env_wandb_key:
-        cfg.wandb_key = env_wandb_key
-
-    logger = setup_logger(
-        name="qlearning",
-        level=cfg.log_level,
-        to_console=cfg.log_to_console,
-        to_file=cfg.log_to_file,
-        log_file=cfg.log_file,
-    )
-    set_seed(cfg.seed)
-
-    if getattr(cfg, "wandb_key", ""):
-        wandb.login(key=cfg.wandb_key)
-
-    logger.info("Initializing wandb run=%s", cfg.run_name)
-    run = wandb.init(
-        project=cfg.project, entity=cfg.entity, name=cfg.run_name, config=cfg.to_dict()
-    )
-
-    # Environment
-    env = make_env(cfg.env_id, cfg.seed, render_mode=None, env_kwargs=cfg.env_kwargs)
-    obs_space = env.observation_space
-    act_space = env.action_space
-    assert hasattr(obs_space, "n"), "Q-learning requires discrete observation spaces"
-    assert hasattr(act_space, "n"), "Q-learning requires discrete action spaces"
-    n_states, n_actions = int(obs_space.n), int(act_space.n)
-    logger.info(
-        "Env=%s | n_states=%s | n_actions=%s", cfg.env_id, n_states, n_actions
-    )
-
-    agent = QLearningAgent(
-        n_states=n_states,
-        n_actions=n_actions,
+def _agent(cfg: Config, env) -> QLearningAgent:
+    for space in (env.observation_space, env.action_space):
+        if not isinstance(space, gym.spaces.Discrete) or space.start != 0:
+            raise ValueError(
+                "Q-learning requires zero-based Discrete states and actions"
+            )
+    return QLearningAgent(
+        n_states=int(env.observation_space.n),
+        n_actions=int(env.action_space.n),
         alpha=cfg.alpha,
         gamma=cfg.gamma,
         epsilon_start=cfg.epsilon_start,
@@ -69,61 +30,171 @@ def train(config: str = "Qlearning/configs/frozenlake.yaml", wandb_key: str = ""
         epsilon_decay=cfg.epsilon_decay,
     )
 
-    ep_returns = []
-    best_avg_return = -np.inf
-    pbar = tqdm(range(cfg.total_episodes), desc="Q-learning Episodes")
 
-    for ep in pbar:
-        state, _ = env.reset(seed=cfg.seed + ep)
-        state = int(state)
-        done = False
-        ep_ret = 0.0
-        steps = 0
-        while not done and steps < cfg.max_steps_per_episode:
-            action = agent.act(state)
-            next_state, reward, terminated, truncated, _ = env.step(action)
-            done = bool(terminated or truncated)
-            next_state = int(next_state)
+def _logger(cfg: Config):
+    return setup_logger(
+        name="qlearning",
+        level=cfg.log_level,
+        to_console=cfg.log_to_console,
+        to_file=cfg.log_to_file,
+        log_file=cfg.log_file,
+    )
 
-            agent.update(Transition(state, action, float(reward), next_state, done))
-            state = next_state
-            ep_ret += float(reward)
-            steps += 1
 
-        ep_returns.append(ep_ret)
-
-        if (ep + 1) % cfg.log_interval == 0:
-            avg_return = float(np.mean(ep_returns[-cfg.log_interval:]))
-            wandb.log(
+def train(config: str = "Qlearning/configs/frozenlake.yaml", wandb_key: str = ""):
+    """Train a tabular learner with diagnostics, best checkpoints and cleanup."""
+    cfg = Config.from_yaml(config)
+    env_key = os.getenv("WANDB_API_KEY", "")
+    if wandb_key:
+        cfg.wandb_key = wandb_key
+    elif env_key:
+        cfg.wandb_key = env_key
+    logger = _logger(cfg)
+    set_seed(cfg.seed)
+    if cfg.wandb_key:
+        wandb.login(key=cfg.wandb_key)
+    run = wandb.init(
+        project=cfg.project, entity=cfg.entity, name=cfg.run_name, config=cfg.to_dict()
+    )
+    env = None
+    try:
+        env = make_env(
+            cfg.env_id, cfg.seed, render_mode=None, env_kwargs=cfg.env_kwargs
+        )
+        agent = _agent(cfg, env)
+        returns = []
+        log_window = []
+        best_avg_return = -np.inf
+        pbar = tqdm(range(cfg.total_episodes), desc="Q-learning Episodes")
+        for episode in pbar:
+            state, _ = env.reset(seed=cfg.seed + episode)
+            state = int(state)
+            start_q = float(np.max(agent.Q[state]))
+            episode_return = discounted_return = td_abs = td_square = 0.0
+            cutoff = False
+            for step in range(cfg.max_steps_per_episode):
+                action = agent.act(state)
+                next_state, reward, terminated, truncated, _ = env.step(action)
+                next_state = int(next_state)
+                # Only a true terminal state suppresses the value bootstrap.
+                # A timeout/cap ends interaction, but not the underlying MDP.
+                stats = agent.update(
+                    Transition(
+                        state, action, float(reward), next_state, bool(terminated)
+                    )
+                )
+                episode_return += float(reward)
+                discounted_return += cfg.gamma**step * float(reward)
+                td_abs += abs(stats.td_error)
+                td_square += stats.td_error**2
+                state = next_state
+                cutoff = bool(
+                    truncated
+                    or (step + 1 == cfg.max_steps_per_episode and not terminated)
+                )
+                if terminated or truncated:
+                    break
+            length = step + 1
+            returns.append(episode_return)
+            log_window.append(
                 {
-                    "charts/avg_return": avg_return,
-                    "charts/epsilon": agent.epsilon(),
-                    "progress/episode": ep + 1,
-                    "progress/steps": agent.global_step,
+                    "charts/avg_return": episode_return,
+                    "charts/avg_length": length,
+                    "charts/positive_return_rate": float(episode_return > 0.0),
+                    "charts/truncation_rate": float(cutoff),
+                    "stats/start_q": start_q,
+                    "stats/discounted_return": discounted_return,
+                    "stats/td_error": td_abs / length,
+                    "loss/td_mse": td_square / length,
                 }
             )
-            pbar.set_postfix({"avgR": f"{avg_return:.2f}", "eps": f"{agent.epsilon():.2f}"})
-
-        if (ep + 1) % cfg.checkpoint_interval == 0:
-            path = os.path.join(cfg.checkpoint_dir, f"checkpoint_ep{ep+1}.pt")
-            save_checkpoint(path, agent.Q, ep + 1, best_avg_return)
-            logger.info("Saved checkpoint: %s", path)
-
-        # Save best based on moving average over last 100 episodes
-        if len(ep_returns) >= 10:
-            avg_last = float(np.mean(ep_returns[-10:]))
-            if cfg.save_best and avg_last > best_avg_return:
-                best_avg_return = avg_last
-                best_path = os.path.join(cfg.checkpoint_dir, "best.pt")
-                save_checkpoint(best_path, agent.Q, ep + 1, best_avg_return)
-                logger.info(
-                    "New best avg return %.2f; saved %s", best_avg_return, best_path
+            if (
+                episode + 1
+            ) % cfg.log_interval == 0 or episode + 1 == cfg.total_episodes:
+                payload = {
+                    key: float(np.mean([row[key] for row in log_window]))
+                    for key in log_window[0]
+                }
+                if cfg.env_id.startswith("FrozenLake"):
+                    payload["charts/success_rate"] = payload[
+                        "charts/positive_return_rate"
+                    ]
+                wandb.log(
+                    {
+                        **payload,
+                        "charts/epsilon": agent.epsilon(),
+                        "progress/episode": episode + 1,
+                        "progress/steps": agent.global_step,
+                    },
+                    step=agent.global_step,
                 )
-
-    run.finish()
-    logger.info(
-        "Training finished. Best 10-ep avg return: %.2f", best_avg_return
-    )
+                pbar.set_postfix(
+                    {
+                        "avgR": f"{payload['charts/avg_return']:.2f}",
+                        "eps": f"{agent.epsilon():.2f}",
+                    }
+                )
+                log_window.clear()
+            if cfg.save_best and len(returns) >= cfg.best_window:
+                avg_recent = float(np.mean(returns[-cfg.best_window :]))
+                if avg_recent > best_avg_return:
+                    best_avg_return = avg_recent
+                    path = os.path.join(cfg.checkpoint_dir, "best.pt")
+                    save_checkpoint(
+                        path,
+                        agent.Q,
+                        episode + 1,
+                        best_avg_return,
+                        global_step=agent.global_step,
+                        config=cfg.to_dict(),
+                    )
+                    logger.info(
+                        "New best %d-episode return %.3f; saved %s",
+                        cfg.best_window,
+                        best_avg_return,
+                        path,
+                    )
+            if (
+                episode + 1
+            ) % cfg.checkpoint_interval == 0 or episode + 1 == cfg.total_episodes:
+                path = os.path.join(
+                    cfg.checkpoint_dir, f"checkpoint_ep{episode + 1}.pt"
+                )
+                save_checkpoint(
+                    path,
+                    agent.Q,
+                    episode + 1,
+                    best_avg_return,
+                    global_step=agent.global_step,
+                    config=cfg.to_dict(),
+                )
+                logger.info("Saved checkpoint: %s", path)
+        if hasattr(run, "summary"):
+            run.summary.update(
+                {
+                    "training/episodes": cfg.total_episodes,
+                    "training/steps": agent.global_step,
+                    "training/best_return": best_avg_return
+                    if np.isfinite(best_avg_return)
+                    else None,
+                }
+            )
+        logger.info(
+            "Training finished. Best %d-episode avg return: %.3f",
+            cfg.best_window,
+            best_avg_return,
+        )
+        return {
+            "episodes": cfg.total_episodes,
+            "global_step": agent.global_step,
+            "best_avg_return": best_avg_return,
+        }
+    finally:
+        try:
+            if env is not None:
+                env.close()
+        finally:
+            run.finish()
 
 
 def demo(
@@ -131,95 +202,71 @@ def demo(
     model_path: Optional[str] = None,
     episodes: Optional[int] = None,
     render: bool = False,
+    render_mode: Optional[str] = None,
+    seed: Optional[int] = None,
 ):
-    """
-    Run a greedy-policy demo using a saved Q-table checkpoint.
-
-    Args:
-        config: Path to the YAML config file for environment and logging.
-        model_path: Optional checkpoint to load; defaults to the config value.
-        episodes: Optional override for number of demo episodes; defaults to config.
-        render: Whether to render the environment (human mode) during the demo.
-
-    Example:
-        python -m Qlearning.main demo \
-            --config Qlearning/configs/frozenlake.yaml \
-            --model_path Qlearning/checkpoints/best.pt \
-            --render True
-    """
+    """Greedy demo; use render_mode='ansi', 'human', or 'none' explicitly."""
     cfg = Config.from_yaml(config)
-    logger = setup_logger(
-        name="qlearning",
-        level=cfg.log_level,
-        to_console=cfg.log_to_console,
-        to_file=cfg.log_to_file,
-        log_file=cfg.log_file,
+    logger = _logger(cfg)
+    episodes = cfg.episodes if episodes is None else episodes
+    if episodes <= 0:
+        raise ValueError("episodes must be positive")
+    seed = cfg.seed if seed is None else seed
+    mode = (
+        ("human" if render else cfg.render_mode) if render_mode is None else render_mode
     )
-    model_path = model_path or cfg.inference_model_path
-    episodes = episodes or cfg.episodes
-    render_mode = "human" if render or cfg.render_mode == "human" else (cfg.render_mode or None)
-    render_human = render_mode == "human"
-    render_ansi = render_mode == "ansi"
-
-    set_seed(cfg.seed)
-    env = make_env(
-        cfg.env_id,
-        cfg.seed,
-        render_mode=render_mode,
-        env_kwargs=cfg.env_kwargs,
-    )
-    obs_space = env.observation_space
-    act_space = env.action_space
-    n_states, n_actions = int(obs_space.n), int(act_space.n)
-
-    # Load Q-table
-    data = load_checkpoint(model_path)
-    q_table = data["q_table"].cpu().numpy() if isinstance(data["q_table"], torch.Tensor) else data["q_table"]
-    assert q_table.shape == (n_states, n_actions)
-    logger.info("Loaded Q-table from %s", model_path)
-
-    returns = []
-    for ep in range(episodes):
-        state, _ = env.reset(seed=cfg.seed + ep)
-        state = int(state)
-        if render_human:
-            env.render()
-        elif render_ansi:
-            frame = env.render()
-            if frame is not None:
-                print(frame)
-        done = False
-        ep_ret = 0.0
-        steps = 0
-        while not done and steps < cfg.max_steps_per_episode:
-            # Greedy action from Q-table
-            q_vals = q_table[state]
-            action = int(np.argmax(q_vals))
-            next_state, reward, terminated, truncated, _ = env.step(action)
-            if render_human:
+    if isinstance(mode, str) and mode.lower() in {"none", "null"}:
+        mode = None
+    set_seed(seed)
+    env = make_env(cfg.env_id, seed, render_mode=mode, env_kwargs=cfg.env_kwargs)
+    try:
+        agent = _agent(cfg, env)
+        agent.load_state_dict(load_checkpoint(model_path or cfg.inference_model_path))
+        returns, lengths = [], []
+        for episode in range(episodes):
+            state, _ = env.reset(seed=seed + episode)
+            episode_return = 0.0
+            if mode == "ansi":
+                print(env.render())
+            elif mode == "human":
                 env.render()
-            elif render_ansi:
-                frame = env.render()
-                if frame is not None:
-                    print(frame)
-            done = bool(terminated or truncated)
-            state = int(next_state)
-            ep_ret += float(reward)
-            steps += 1
-        logger.info("Episode %d: return=%.2f", ep + 1, ep_ret)
-        returns.append(ep_ret)
-
-    logger.info(
-        "Average return over %d episodes: %.2f", episodes, np.mean(returns)
-    )
+            for step in range(cfg.max_steps_per_episode):
+                action = agent.act(int(state), deterministic=True)
+                state, reward, terminated, truncated, _ = env.step(action)
+                episode_return += float(reward)
+                if mode == "ansi":
+                    print(env.render())
+                elif mode == "human":
+                    env.render()
+                if terminated or truncated:
+                    break
+            returns.append(episode_return)
+            lengths.append(step + 1)
+            logger.info(
+                "Episode %d: return=%.3f, length=%d",
+                episode + 1,
+                episode_return,
+                step + 1,
+            )
+        result = {
+            "returns": returns,
+            "lengths": lengths,
+            "mean": float(np.mean(returns)),
+            "std": float(np.std(returns)),
+            "positive_return_rate": float(np.mean(np.asarray(returns) > 0.0)),
+            "success_rate": (
+                float(np.mean(np.asarray(returns) > 0.0))
+                if cfg.env_id.startswith("FrozenLake")
+                else None
+            ),
+        }
+        logger.info("Average return over %d episodes: %.3f", episodes, result["mean"])
+        return result
+    finally:
+        env.close()
 
 
 if __name__ == "__main__":
     import fire
 
-    fire.Fire(
-        {
-            "train": train,
-            "demo": demo,
-        }
-    )
+    fire.Fire({"train": train, "demo": demo})
