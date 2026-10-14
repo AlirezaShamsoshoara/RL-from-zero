@@ -35,7 +35,7 @@ RL-from-zero is a collection of reinforcement learning agents implemented from s
 | [`deepQN/`](deepQN/) | Deep Q-Network (with Double DQN option) | Discrete | `MountainCar-v0` | <img src="deepQN/assets/dqn_mountaincar.gif" alt="DQN MountainCar demo" width="160"> |
 | [`PPO/`](PPO/) | Proximal Policy Optimization | Discrete | `CartPole-v1` | <img src="PPO/assets/ppo_cartpole.gif" alt="PPO CartPole demo" width="160"> |
 | [`MAPPO/`](MAPPO/) | Multi-Agent PPO (centralized critic) | Continuous (default), optional discrete grid | `multiwalker_v9` (PettingZoo) | <img src="MAPPO/assets/mappo_full_delivery.gif" alt="One complete native MAPPO package-delivery episode" width="160"> |
-| [`A3C/`](A3C/) | Asynchronous Advantage Actor-Critic | Discrete | `LunarLander-v3` | <img src="A3C/assets/a3c_lunarlander.gif" alt="A3C LunarLander demo" width="160"> |
+| [`A3C/`](A3C/) | Asynchronous Advantage Actor-Critic | Discrete | `LunarLander-v3` | <img src="A3C/assets/a3c_lunarlander.gif" alt="Three selected complete native A3C LunarLander landings" width="160"> |
 | [`SAC/`](SAC/) | Soft Actor-Critic | Continuous | `Pendulum-v1` | <img src="SAC/assets/sac_pendulum.gif" width="180"> |
 | [`DDPG/`](DDPG/) | Deep Deterministic Policy Gradient | Continuous | `LunarLanderContinuous-v3` | <img src="DDPG/assets/ddpg_lunarlander.gif" alt="DDPG LunarLanderContinuous demo" width="180"> |
 | [`MADDPG/`](MADDPG/) | Multi-Agent DDPG (centralized critic) | Continuous | `simple_spread_v3` (PettingZoo MPE) | <img src="MADDPG/assets/maddpg_simple_spread.gif" alt="MADDPG simple_spread demo" width="180"> |
@@ -115,9 +115,10 @@ python -m PPO.main demo --config PPO/configs/cartpole_tuned.yaml --model_path PP
 python -m deepQN.main train --config deepQN/configs/mountaincar_exploration.yaml
 python -m deepQN.main demo --config deepQN/configs/mountaincar_exploration.yaml --model_path deepQN/checkpoints_exploration/best.pt
 
-# A3C with multiple workers
+# A3C: asynchronous training, then development-only greedy model selection
 python -m A3C.main train --config A3C/configs/lunarlander.yaml
-python -m A3C.main demo --config A3C/configs/lunarlander.yaml --model_path A3C/checkpoints/best.pt --episodes 5
+python -m A3C.utils.select_checkpoint --config A3C/configs/lunarlander.yaml --episodes 20 --seed 90000
+python -m A3C.main demo --config A3C/configs/lunarlander_greedy.yaml --episodes 5
 ```
 
 ### Continuous control examples
@@ -185,6 +186,14 @@ uv venv .venv-mappo-tests
 UV_PROJECT_ENVIRONMENT=.venv-mappo-tests uv sync
 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 UV_PROJECT_ENVIRONMENT=.venv-mappo-tests \
   uv run python -m pytest tests/mappo/ -q
+```
+A3C's suite uses fake workers and environments to cover asynchronous updates,
+timeout endpoints, native reward accounting, coherent checkpoints, and asset tools:
+```bash
+uv venv .venv-a3c-tests
+UV_PROJECT_ENVIRONMENT=.venv-a3c-tests uv sync --locked
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 WANDB_MODE=offline UV_PROJECT_ENVIRONMENT=.venv-a3c-tests \
+  uv run python -m pytest tests/a3c/ -q -W error
 ```
 See each algorithm's README for its test instructions.
 

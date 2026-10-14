@@ -6,8 +6,9 @@
 #   - normalize_advantages: makes policy gradient scale-invariant
 #   - entropy annealing: prevents early entropy collapse on some seeds
 #
-# NOTE: A3C is inherently seed-sensitive on LunarLander. Seed 42 reliably
-# reaches +200 (solved). Other seeds learn but may be unstable.
+# NOTE: Training seed and asynchronous scheduling affect the result.
+# A sampled training-window score is not a greedy native benchmark.
+# Evaluate all episodes and select development snapshots before final validation.
 #
 # Requires Box2D: pip install swig && pip install "gymnasium[box2d]"
 
@@ -16,7 +17,7 @@ project: rl-hero  # wandb project name (any string)
 entity: null  # null or your wandb entity/team
 run_name: a3c-lunarlander  # wandb run name (any string)
 wandb_key: ""  # wandb API key (string, or set WANDB_API_KEY env var)
-seed: 42  # random seed (int); seed 42 converges reliably on LunarLander
+seed: 42  # training seed; not a guarantee of convergence
 
 # Environment
 # env_id options: LunarLander-v3 (default), CartPole-v1, Acrobot-v1,
