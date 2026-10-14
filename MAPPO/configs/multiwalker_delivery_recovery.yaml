@@ -1,0 +1,52 @@
+# Numerical recovery from the first native-delivery run; native task unchanged.
+project: rl-hero
+entity: null
+run_name: mappo-native-delivery-recovery
+wandb_key: ""
+seed: 142
+init_checkpoint: MAPPO/checkpoints_delivery/best.pt
+env_id: multiwalker_v9
+n_walkers: 3
+n_agents: 3
+num_envs: 16
+env_kwargs:
+  max_cycles: 5000
+max_steps_per_episode: 5000
+render_mode: null
+discretize_actions: false
+action_bins: 3
+share_policy: true
+use_centralized_critic: true
+actor_hidden_sizes: [256, 128]
+critic_hidden_sizes: [256, 128]
+activation: relu
+normalize_inputs: false
+# Fresh optimizer; smaller actor steps plus checked/rejected invalid PPO batches.
+learning_rate: 0.00005
+critic_learning_rate: 0.001
+separate_grad_clipping: true
+clip_value_loss: false
+clip_coef: 0.2
+ent_coef: 0.005
+vf_coef: 0.5
+max_grad_norm: 0.5
+gamma: 0.99
+gae_lambda: 0.95
+target_kl: 0.02
+anneal_lr: false
+total_timesteps: 3000000
+rollout_steps: 256
+update_iterations: 5
+minibatch_size: 1024
+log_interval: 5
+checkpoint_interval: 50
+checkpoint_dir: MAPPO/checkpoints_delivery_recovery
+inference_model_path: MAPPO/checkpoints_delivery_recovery/best.pt
+best_window: 20
+save_best: true
+log_level: INFO
+log_to_file: true
+log_file: MAPPO/logs/delivery-recovery.log
+log_to_console: true
+episodes: 10
+device: cpu

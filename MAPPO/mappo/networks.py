@@ -1,8 +1,9 @@
 from __future__ import annotations
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from typing import Tuple
+
+from .normalization import RunningNorm
 
 
 def get_activation(name: str):
@@ -91,8 +92,16 @@ class GaussianActor(nn.Module):
             low = torch.as_tensor(action_low, dtype=torch.float32)
             high = torch.as_tensor(action_high, dtype=torch.float32)
 
-        self.register_buffer("action_scale", (high - low) / 2.0)
-        self.register_buffer("action_bias", (high + low) / 2.0)
+        if (
+            low.shape != (act_dim,)
+            or high.shape != (act_dim,)
+            or not torch.isfinite(low).all()
+            or not torch.isfinite(high).all()
+            or not torch.all(high > low)
+        ):
+            raise ValueError("continuous action bounds must be finite, ordered vectors")
+        self.register_buffer("action_scale", high * 0.5 - low * 0.5)
+        self.register_buffer("action_bias", high * 0.5 + low * 0.5)
 
     def forward(self, obs):
         x = self.backbone(obs)
@@ -106,33 +115,31 @@ class GaussianActor(nn.Module):
         std = torch.exp(log_std)
         return torch.distributions.Normal(mean, std)
 
+    def _logprob(self, dist, unit_action):
+        unit_action = unit_action.clamp(-1.0 + 1e-6, 1.0 - 1e-6)
+        raw = torch.atanh(unit_action)
+        jacobian = torch.log1p(-unit_action.square()) + self.action_scale.log()
+        return (dist.log_prob(raw) - jacobian).sum(dim=-1)
+
     def get_action(self, obs, deterministic: bool = False):
-        """Sample action from policy distribution."""
         dist = self._distribution(obs)
-        if deterministic:
-            raw_action = self.forward(obs)
-        else:
-            raw_action = dist.rsample()
-        action = torch.tanh(raw_action)
-
-        logprob = dist.log_prob(raw_action).sum(-1)
-        logprob -= torch.sum(torch.log(1 - action**2 + 1e-6), dim=-1)
-        entropy = dist.entropy().sum(-1)
-
-        scaled_action = action * self.action_scale + self.action_bias
-        return scaled_action, logprob, entropy
+        raw_action = dist.mean if deterministic else dist.sample()
+        unit_action = torch.tanh(raw_action).clamp(-1.0 + 1e-6, 1.0 - 1e-6)
+        action = unit_action * self.action_scale + self.action_bias
+        logprob, entropy = self.evaluate_actions(obs, action)
+        return action, logprob, entropy
 
     def evaluate_actions(self, obs, actions):
-        """Evaluate log probabilities and entropy for given actions."""
         dist = self._distribution(obs)
-        scaled = (actions - self.action_bias) / self.action_scale
-        scaled = torch.clamp(scaled, -1.0 + 1e-6, 1.0 - 1e-6)
-        raw_action = 0.5 * (torch.log1p(scaled) - torch.log1p(-scaled))
-
-        logprob = dist.log_prob(raw_action).sum(-1)
-        logprob -= torch.sum(torch.log(1 - scaled**2 + 1e-6), dim=-1)
-        entropy = dist.entropy().sum(-1)
-        return logprob, entropy
+        unit_action = (actions - self.action_bias) / self.action_scale
+        if not torch.isfinite(actions).all() or torch.any(
+            unit_action.abs() > 1.0 + 1e-5
+        ):
+            raise ValueError(
+                "continuous actions must be finite and within policy bounds"
+            )
+        # Entropy regularization uses the unsquashed Gaussian entropy proxy.
+        return self._logprob(dist, unit_action), dist.entropy().sum(dim=-1)
 
 
 class CentralizedCritic(nn.Module):
@@ -141,9 +148,7 @@ class CentralizedCritic(nn.Module):
     Takes concatenated observations from all agents (full state) and outputs value.
     """
 
-    def __init__(
-        self, state_dim: int, hidden_sizes=(256, 128), activation="relu"
-    ):
+    def __init__(self, state_dim: int, hidden_sizes=(256, 128), activation="relu"):
         super().__init__()
         layers = []
         last = state_dim
@@ -171,9 +176,7 @@ class DecentralizedCritic(nn.Module):
     Takes individual agent observation and outputs value.
     """
 
-    def __init__(
-        self, obs_dim: int, hidden_sizes=(256, 128), activation="relu"
-    ):
+    def __init__(self, obs_dim: int, hidden_sizes=(256, 128), activation="relu"):
         super().__init__()
         layers = []
         last = obs_dim
@@ -212,9 +215,12 @@ class ActorCritic(nn.Module):
         action_type: str = "discrete",
         action_low=None,
         action_high=None,
+        normalize_inputs: bool = False,
     ):
         super().__init__()
         self.use_centralized_critic = use_centralized_critic
+        if action_type not in {"continuous", "discrete"}:
+            raise ValueError("action_type must be continuous or discrete")
         self.action_type = action_type
         if action_type == "continuous":
             self.actor = GaussianActor(
@@ -227,6 +233,13 @@ class ActorCritic(nn.Module):
             )
         else:
             self.actor = Actor(obs_dim, act_dim, actor_hidden_sizes, activation)
+        self.normalize_inputs = normalize_inputs
+        self.obs_norm = RunningNorm(obs_dim) if normalize_inputs else nn.Identity()
+        self.state_norm = (
+            RunningNorm(state_dim if use_centralized_critic else obs_dim)
+            if normalize_inputs
+            else nn.Identity()
+        )
         if use_centralized_critic:
             self.critic = CentralizedCritic(state_dim, critic_hidden_sizes, activation)
         else:
@@ -240,7 +253,7 @@ class ActorCritic(nn.Module):
         Returns:
             action, logprob, entropy
         """
-        return self.actor.get_action(obs, deterministic=deterministic)
+        return self.actor.get_action(self.obs_norm(obs), deterministic=deterministic)
 
     def evaluate_actions(self, obs, actions):
         """
@@ -251,7 +264,7 @@ class ActorCritic(nn.Module):
         Returns:
             logprob, entropy
         """
-        return self.actor.evaluate_actions(obs, actions)
+        return self.actor.evaluate_actions(self.obs_norm(obs), actions)
 
     def get_value(self, state_or_obs):
         """
@@ -261,4 +274,4 @@ class ActorCritic(nn.Module):
         Returns:
             value
         """
-        return self.critic(state_or_obs)
+        return self.critic(self.state_norm(state_or_obs))
