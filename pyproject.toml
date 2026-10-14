@@ -33,6 +33,7 @@ include = [
     "MADDPG*",
     "MAPPO*",
     "PPO*",
+    "SAC*",
     "TD3*",
     "TRPO*",
     "deepQN*",

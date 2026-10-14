@@ -36,7 +36,7 @@ RL-from-zero is a collection of reinforcement learning agents implemented from s
 | [`PPO/`](PPO/) | Proximal Policy Optimization | Discrete | `CartPole-v1` | <img src="PPO/assets/ppo_cartpole.gif" alt="PPO CartPole demo" width="160"> |
 | [`MAPPO/`](MAPPO/) | Multi-Agent PPO (centralized critic) | Continuous (default), optional discrete grid | `multiwalker_v9` (PettingZoo) | <img src="MAPPO/assets/mappo_full_delivery.gif" alt="One complete native MAPPO package-delivery episode" width="160"> |
 | [`A3C/`](A3C/) | Asynchronous Advantage Actor-Critic | Discrete | `LunarLander-v3` | <img src="A3C/assets/a3c_lunarlander.gif" alt="Three selected complete native A3C LunarLander landings" width="160"> |
-| [`SAC/`](SAC/) | Soft Actor-Critic | Continuous | `Pendulum-v1` | <img src="SAC/assets/sac_pendulum.gif" width="180"> |
+| [`SAC/`](SAC/) | Soft Actor-Critic | Continuous | `Pendulum-v1` | <img src="SAC/assets/sac_pendulum.gif" alt="Complete native SAC Pendulum swing-up and holding example" width="180"> |
 | [`DDPG/`](DDPG/) | Deep Deterministic Policy Gradient | Continuous | `LunarLanderContinuous-v3` | <img src="DDPG/assets/ddpg_lunarlander.gif" alt="DDPG LunarLanderContinuous demo" width="180"> |
 | [`MADDPG/`](MADDPG/) | Multi-Agent DDPG (centralized critic) | Continuous | `simple_spread_v3` (PettingZoo MPE) | <img src="MADDPG/assets/maddpg_simple_spread.gif" alt="MADDPG simple_spread demo" width="180"> |
 | [`TD3/`](TD3/) | Twin Delayed DDPG | Continuous | `MountainCarContinuous-v0` | <img src="TD3/assets/td3_moutaincar_cont.gif" width="180">  |
@@ -123,9 +123,9 @@ python -m A3C.main demo --config A3C/configs/lunarlander_greedy.yaml --episodes 
 
 ### Continuous control examples
 ```bash
-# Soft Actor-Critic
-python -m SAC.main train --config SAC/configs/pendulum.yaml
-python -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/checkpoints/best.pt
+# Soft Actor-Critic: bounded native Pendulum training profile
+python -m SAC.main train --config SAC/configs/pendulum_fast.yaml
+python -m SAC.main demo --config SAC/configs/pendulum_fast.yaml --render_mode human
 
 # Deep Deterministic Policy Gradient
 python -m DDPG.main train --config DDPG/configs/lunarlander_continuous_tuned.yaml
@@ -194,6 +194,14 @@ uv venv .venv-a3c-tests
 UV_PROJECT_ENVIRONMENT=.venv-a3c-tests uv sync --locked
 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 WANDB_MODE=offline UV_PROJECT_ENVIRONMENT=.venv-a3c-tests \
   uv run python -m pytest tests/a3c/ -q -W error
+```
+SAC's suite uses native-space stubs to cover twin soft-Q targets, temperature
+state, replay, true-terminal masks, persistence, and complete asset helpers:
+```bash
+uv venv .venv-sac-tests
+UV_PROJECT_ENVIRONMENT=.venv-sac-tests uv sync --locked
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 WANDB_MODE=offline UV_PROJECT_ENVIRONMENT=.venv-sac-tests \
+  uv run python -m pytest tests/sac/ -q -W error
 ```
 See each algorithm's README for its test instructions.
 
