@@ -1,0 +1,47 @@
+# Revised native-reward recipe: temporal exploration informed by a held-action probe.
+project: rl-hero
+entity: null
+run_name: dqn-mountaincar-exploration
+wandb_key: ""
+env_id: MountainCar-v0
+render_mode: null
+seed: 42
+env_kwargs: {}
+
+hidden_sizes: [128, 128]
+activation: relu
+normalize_observations: true
+
+# No reward shaping or physics changes. Warmup provides goal-reaching replay data.
+total_steps: 300000
+learning_starts: 20000
+train_freq: 4
+batch_size: 64
+buffer_size: 100000
+gamma: 0.99
+lr: 0.00025
+target_update_interval: 250
+max_grad_norm: 10.0
+double_dqn: true
+
+# Epsilon is the nominal random-step fraction, corrected for pulse duration.
+epsilon_start: 1.0
+epsilon_end: 0.02
+epsilon_decay_steps: 100000
+exploration_hold_min: 20
+exploration_hold_max: 60
+eval_epsilon: 0.0
+
+log_interval: 1000
+checkpoint_interval: 5000
+checkpoint_dir: deepQN/checkpoints_exploration
+save_best: true
+best_window: 20
+max_steps_per_episode: 1000
+log_level: INFO
+log_to_console: true
+log_to_file: true
+log_file: deepQN/logs/dqn-exploration.log
+inference_model_path: deepQN/checkpoints_exploration/best.pt
+episodes: 5
+device: cpu

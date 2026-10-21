@@ -1,26 +1,20 @@
-"""DQN entry points.
-
-Examples:
-    >>> # Train on MountainCar-v0
-    >>> # python -m deepQN.main train --config deepQN/configs/mountaincar.yaml
-    >>> # Run a demo with a saved checkpoint
-    >>> # python -m deepQN.main demo --config deepQN/configs/mountaincar.yaml --model_path deepQN/checkpoints/best.pt
-"""
-
 from __future__ import annotations
+
 import os
-from typing import Optional, List, Dict
+from dataclasses import asdict
+from typing import Optional
+
 import numpy as np
 import torch
-from tqdm import tqdm
 import wandb
-from gymnasium import spaces
+from tqdm import tqdm
 
-from deepQN.dqn.config import Config
-from deepQN.dqn.utils import set_seed, make_env, save_checkpoint, load_checkpoint
 from deepQN.dqn.agent import DQNAgent
-from deepQN.dqn.replay_buffer import ReplayBuffer
+from deepQN.dqn.config import Config
+from deepQN.dqn.exploration import ActionHoldExplorer
 from deepQN.dqn.logging_utils import setup_logger
+from deepQN.dqn.replay_buffer import ReplayBuffer
+from deepQN.dqn.utils import load_checkpoint, make_env, save_checkpoint, set_seed
 
 
 def _epsilon_by_step(step: int, cfg: Config) -> float:
@@ -30,44 +24,10 @@ def _epsilon_by_step(step: int, cfg: Config) -> float:
     return cfg.epsilon_start + ratio * (cfg.epsilon_end - cfg.epsilon_start)
 
 
-def train(config: str = "deepQN/configs/mountaincar.yaml", wandb_key: str = ""):
-    cfg = Config.from_yaml(config)
-    if wandb_key:
-        cfg.wandb_key = wandb_key
-
-    logger = setup_logger(
-        name="deepqn",
-        level=cfg.log_level,
-        to_console=cfg.log_to_console,
-        to_file=cfg.log_to_file,
-        log_file=cfg.log_file,
-    )
-
-    set_seed(cfg.seed)
-
-    if getattr(cfg, "wandb_key", ""):
-        import wandb as _wandb
-
-        _wandb.login(key=cfg.wandb_key)
-
-    logger.info(f"Initializing wandb run={cfg.run_name}")
-    run = wandb.init(
-        project=cfg.project,
-        entity=cfg.entity,
-        name=cfg.run_name,
-        config=cfg.to_dict(),
-    )
-
-    env = make_env(cfg.env_id, cfg.seed, render_mode=None, env_kwargs=cfg.env_kwargs)
-    obs_space = env.observation_space
-    act_space = env.action_space
-    assert isinstance(obs_space, spaces.Box) and len(obs_space.shape) == 1
-    assert isinstance(act_space, spaces.Discrete)
-
-    device = torch.device(cfg.device)
-    agent = DQNAgent(
-        obs_space=obs_space,
-        act_space=act_space,
+def _agent(cfg: Config, env) -> DQNAgent:
+    return DQNAgent(
+        obs_space=env.observation_space,
+        act_space=env.action_space,
         hidden_sizes=cfg.hidden_sizes,
         activation=cfg.activation,
         lr=cfg.lr,
@@ -76,167 +36,279 @@ def train(config: str = "deepQN/configs/mountaincar.yaml", wandb_key: str = ""):
         max_grad_norm=cfg.max_grad_norm,
         double_dqn=cfg.double_dqn,
         device=cfg.device,
+        normalize_observations=cfg.normalize_observations,
     )
 
-    buffer = ReplayBuffer(
-        obs_dim=int(np.prod(obs_space.shape)),
-        capacity=cfg.buffer_size,
-        device=device,
+
+def _logger(cfg: Config):
+    return setup_logger(
+        name="deepqn",
+        level=cfg.log_level,
+        to_console=cfg.log_to_console,
+        to_file=cfg.log_to_file,
+        log_file=cfg.log_file,
     )
 
-    obs, _ = env.reset(seed=cfg.seed)
-    ep_return = 0.0
-    ep_length = 0
-    best_avg_return = -np.inf
-    episode_returns: List[float] = []
-    episode_lengths: List[int] = []
-    update_metrics: List[Dict[str, float]] = []
 
-    pbar = tqdm(range(1, cfg.total_steps + 1), desc="DQN Steps")
-    for step in pbar:
-        if step <= cfg.learning_starts:
-            epsilon = cfg.epsilon_start
-            action = act_space.sample()
-        else:
-            epsilon = _epsilon_by_step(step - cfg.learning_starts, cfg)
-            action = agent.act(obs, epsilon=epsilon)
-
-        next_obs, reward, terminated, truncated, info = env.step(action)
-        done = bool(terminated or truncated)
-        # Use terminal observation when TimeLimit truncates the episode.
-        if truncated and isinstance(info, dict) and "final_observation" in info:
-            next_obs = info["final_observation"]
-        buffer_done = float(done)
-        buffer.add(obs, action, reward, next_obs, buffer_done)
-
-        ep_return += float(reward)
-        ep_length += 1
-        obs = next_obs
-
-        if (
-            step >= cfg.learning_starts
-            and step % cfg.train_freq == 0
-            and buffer.can_sample(cfg.batch_size)
-        ):
-            stats = agent.update(buffer.sample(cfg.batch_size))
-            update_metrics.append({"loss": stats.loss, "td_error": stats.td_error})
-
-        if done:
-            episode_returns.append(ep_return)
-            episode_lengths.append(ep_length)
-            obs, _ = env.reset()
-            ep_return = 0.0
-            ep_length = 0
-
-        if step % cfg.log_interval == 0:
-            avg_return = (
-                float(np.mean(episode_returns[-10:])) if episode_returns else 0.0
+def train(
+    config: str = "deepQN/configs/mountaincar_exploration.yaml", wandb_key: str = ""
+):
+    """Train DQN on native rewards; evaluate saved policies separately."""
+    cfg = Config.from_yaml(config)
+    env_key = os.getenv("WANDB_API_KEY", "")
+    if wandb_key:
+        cfg.wandb_key = wandb_key
+    elif env_key:
+        cfg.wandb_key = env_key
+    logger = _logger(cfg)
+    set_seed(cfg.seed)
+    if cfg.wandb_key:
+        wandb.login(key=cfg.wandb_key)
+    run = wandb.init(
+        project=cfg.project, entity=cfg.entity, name=cfg.run_name, config=cfg.to_dict()
+    )
+    env = None
+    try:
+        env = make_env(
+            cfg.env_id, cfg.seed, render_mode=None, env_kwargs=cfg.env_kwargs
+        )
+        agent = _agent(cfg, env)
+        explorer = ActionHoldExplorer(
+            cfg.exploration_hold_min, cfg.exploration_hold_max
+        )
+        exploratory_steps = exploration_window_steps = 0
+        buffer = ReplayBuffer(agent.obs_dim, cfg.buffer_size, torch.device(cfg.device))
+        obs, _ = env.reset(seed=cfg.seed)
+        start_q = agent.q_value(obs)
+        mountaincar = cfg.env_id == "MountainCar-v0"
+        max_position = float(obs[0]) if mountaincar else None
+        ep_return = ep_discounted = 0.0
+        ep_length = 0
+        episode_returns, episode_lengths = [], []
+        episode_discounted, episode_start_q = [], []
+        episode_terminations, episode_positions = [], []
+        update_metrics = []
+        best_avg_return = -np.inf
+        pbar = tqdm(range(1, cfg.total_steps + 1), desc="DQN Steps")
+        for step in pbar:
+            epsilon = (
+                1.0
+                if step <= cfg.learning_starts
+                else _epsilon_by_step(step - cfg.learning_starts, cfg)
             )
-            avg_length = (
-                float(np.mean(episode_lengths[-10:])) if episode_lengths else 0.0
+            action, exploratory = explorer.act(agent, obs, epsilon)
+            if exploratory is not None:
+                exploratory_steps += int(exploratory)
+                exploration_window_steps += 1
+            next_obs, reward, terminated, truncated, info = env.step(action)
+            ep_length += 1
+            capped = ep_length >= cfg.max_steps_per_episode and not (
+                terminated or truncated
             )
-            log_payload = {
-                "charts/avg_return": avg_return,
-                "charts/avg_length": avg_length,
-                "charts/epsilon": epsilon,
-                "charts/buffer_size": len(buffer),
-                "progress/step": step,
-            }
-            if update_metrics:
-                loss_mean = float(np.mean([m["loss"] for m in update_metrics]))
-                td_mean = float(np.mean([m["td_error"] for m in update_metrics]))
-                log_payload["loss/q_loss"] = loss_mean
-                log_payload["stats/td_error"] = td_mean
-                update_metrics.clear()
-            wandb.log(log_payload, step=step)
-            pbar.set_postfix({"avgR": f"{avg_return:.1f}", "eps": f"{epsilon:.2f}"})
-
-        if step % cfg.checkpoint_interval == 0:
-            path = os.path.join(cfg.checkpoint_dir, f"checkpoint_{step}.pt")
-            save_checkpoint(path, agent, step, best_avg_return)
-            logger.info(f"Saved checkpoint: {path}")
-
-        if cfg.save_best and len(episode_returns) >= 5:
-            avg_recent = float(np.mean(episode_returns[-5:]))
-            if avg_recent > best_avg_return:
-                best_avg_return = avg_recent
-                best_path = os.path.join(cfg.checkpoint_dir, "best.pt")
-                save_checkpoint(best_path, agent, step, best_avg_return)
-                logger.info(
-                    f"New best avg return {best_avg_return:.2f}; saved {best_path}"
+            ended = bool(terminated or truncated or capped)
+            # This is a manually reset single env. If a wrapper supplies a final
+            # observation, retain that actual transition endpoint in replay.
+            transition_next_obs = next_obs
+            if ended and isinstance(info, dict):
+                final = info.get("final_observation", info.get("final_obs"))
+                if final is not None:
+                    transition_next_obs = final
+            buffer.add(
+                obs, action, float(reward), transition_next_obs, float(terminated)
+            )
+            ep_return += float(reward)
+            ep_discounted += cfg.gamma ** (ep_length - 1) * float(reward)
+            if mountaincar:
+                max_position = max(max_position, float(transition_next_obs[0]))
+            obs = next_obs
+            if (
+                step >= cfg.learning_starts
+                and step % cfg.train_freq == 0
+                and buffer.can_sample(cfg.batch_size)
+            ):
+                update_metrics.append(
+                    asdict(agent.update(buffer.sample(cfg.batch_size)))
                 )
-
-    env.close()
-    run.finish()
-    logger.info(f"Training finished. Best 5-ep avg return: {best_avg_return:.2f}")
+            if ended:
+                episode_returns.append(ep_return)
+                episode_lengths.append(ep_length)
+                episode_discounted.append(ep_discounted)
+                episode_start_q.append(start_q)
+                episode_terminations.append(float(terminated))
+                if mountaincar:
+                    episode_positions.append(max_position)
+                obs, _ = env.reset()
+                explorer.reset()
+                start_q = agent.q_value(obs)
+                max_position = float(obs[0]) if mountaincar else None
+                ep_return = ep_discounted = 0.0
+                ep_length = 0
+            if step % cfg.log_interval == 0 or step == cfg.total_steps:
+                payload = {
+                    "charts/avg_return": float(np.mean(episode_returns[-10:]))
+                    if episode_returns
+                    else 0.0,
+                    "charts/avg_length": float(np.mean(episode_lengths[-10:]))
+                    if episode_lengths
+                    else 0.0,
+                    "charts/termination_rate": float(
+                        np.mean(episode_terminations[-10:])
+                    )
+                    if episode_terminations
+                    else 0.0,
+                    "charts/episodes": len(episode_returns),
+                    "charts/epsilon": epsilon,
+                    "charts/buffer_size": len(buffer),
+                    "progress/step": step,
+                }
+                if episode_returns:
+                    payload["stats/start_q"] = float(np.mean(episode_start_q[-10:]))
+                    payload["stats/discounted_return"] = float(
+                        np.mean(episode_discounted[-10:])
+                    )
+                if mountaincar:
+                    payload["charts/success_rate"] = payload["charts/termination_rate"]
+                    payload["charts/max_position"] = (
+                        float(np.mean(episode_positions[-10:]))
+                        if episode_positions
+                        else float(obs[0])
+                    )
+                if update_metrics:
+                    for name, key in (
+                        ("loss", "loss/q_loss"),
+                        ("td_error", "stats/td_error"),
+                        ("q_value", "stats/q_value"),
+                        ("target_value", "stats/target_value"),
+                    ):
+                        payload[key] = float(
+                            np.mean([row[name] for row in update_metrics])
+                        )
+                    update_metrics.clear()
+                if exploration_window_steps:
+                    payload["charts/exploratory_step_fraction"] = (
+                        exploratory_steps / exploration_window_steps
+                    )
+                wandb.log(payload, step=step)
+                exploratory_steps = exploration_window_steps = 0
+                pbar.set_postfix(
+                    {
+                        "avgR": f"{payload['charts/avg_return']:.1f}",
+                        "eps": f"{epsilon:.2f}",
+                    }
+                )
+            if cfg.save_best and len(episode_returns) >= cfg.best_window:
+                avg_recent = float(np.mean(episode_returns[-cfg.best_window :]))
+                if avg_recent > best_avg_return:
+                    best_avg_return = avg_recent
+                    path = os.path.join(cfg.checkpoint_dir, "best.pt")
+                    save_checkpoint(
+                        path, agent, step, best_avg_return, config=cfg.to_dict()
+                    )
+                    logger.info(
+                        "New best %d-episode return %.2f; saved %s",
+                        cfg.best_window,
+                        best_avg_return,
+                        path,
+                    )
+            if step % cfg.checkpoint_interval == 0 or step == cfg.total_steps:
+                path = os.path.join(cfg.checkpoint_dir, f"checkpoint_{step}.pt")
+                save_checkpoint(
+                    path, agent, step, best_avg_return, config=cfg.to_dict()
+                )
+                logger.info("Saved checkpoint: %s", path)
+        if hasattr(run, "summary"):
+            run.summary.update(
+                {
+                    "training/environment_steps": cfg.total_steps,
+                    "training/gradient_updates": agent.train_steps,
+                    "training/best_avg_return": best_avg_return
+                    if np.isfinite(best_avg_return)
+                    else None,
+                }
+            )
+        logger.info(
+            "Training finished. Best %d-episode avg return: %.2f",
+            cfg.best_window,
+            best_avg_return,
+        )
+        return {
+            "global_step": cfg.total_steps,
+            "gradient_updates": agent.train_steps,
+            "best_avg_return": best_avg_return,
+        }
+    finally:
+        try:
+            if env is not None:
+                env.close()
+        finally:
+            run.finish()
 
 
 def demo(
-    config: str = "deepQN/configs/mountaincar.yaml",
+    config: str = "deepQN/configs/mountaincar_exploration.yaml",
     model_path: Optional[str] = None,
     episodes: Optional[int] = None,
+    deterministic: bool = True,
+    render_mode: Optional[str] = None,
+    seed: Optional[int] = None,
 ):
+    """Saved-policy rollouts; native rewards and headless rendering by default."""
     cfg = Config.from_yaml(config)
-    logger = setup_logger(
-        name="deepqn",
-        level=cfg.log_level,
-        to_console=cfg.log_to_console,
-        to_file=cfg.log_to_file,
-        log_file=cfg.log_file,
-    )
-    model_path = model_path or cfg.inference_model_path
-    episodes = episodes or cfg.episodes
-
-    set_seed(cfg.seed)
-    env = make_env(
-        cfg.env_id,
-        cfg.seed,
-        render_mode=cfg.render_mode or "human",
-        env_kwargs=cfg.env_kwargs,
-    )
-    obs_space = env.observation_space
-    act_space = env.action_space
-    assert isinstance(obs_space, spaces.Box) and len(obs_space.shape) == 1
-    assert isinstance(act_space, spaces.Discrete)
-
-    agent = DQNAgent(
-        obs_space=obs_space,
-        act_space=act_space,
-        hidden_sizes=cfg.hidden_sizes,
-        activation=cfg.activation,
-        lr=cfg.lr,
-        gamma=cfg.gamma,
-        target_update_interval=cfg.target_update_interval,
-        max_grad_norm=cfg.max_grad_norm,
-        double_dqn=cfg.double_dqn,
-        device=cfg.device,
-    )
-    load_checkpoint(model_path, agent)
-
-    returns = []
-    for ep in range(episodes):
-        obs, _ = env.reset(seed=cfg.seed + ep)
-        done = False
-        ep_ret = 0.0
-        while not done:
-            action = agent.act(obs, epsilon=cfg.eval_epsilon, deterministic=True)
-            obs, reward, terminated, truncated, _ = env.step(action)
-            done = bool(terminated or truncated)
-            ep_ret += float(reward)
-        logger.info(f"Episode {ep + 1}: return={ep_ret:.2f}")
-        returns.append(ep_ret)
-
-    avg_return = float(np.mean(returns)) if returns else 0.0
-    logger.info(f"Average return over {episodes} episodes: {avg_return:.2f}")
-    env.close()
+    logger = _logger(cfg)
+    episodes = cfg.episodes if episodes is None else episodes
+    if episodes <= 0:
+        raise ValueError("episodes must be positive")
+    seed = cfg.seed if seed is None else seed
+    mode = cfg.render_mode if render_mode is None else render_mode
+    if isinstance(mode, str) and mode.lower() in {"none", "null"}:
+        mode = None
+    set_seed(seed)
+    env = make_env(cfg.env_id, seed, render_mode=mode, env_kwargs=cfg.env_kwargs)
+    try:
+        agent = _agent(cfg, env)
+        load_checkpoint(model_path or cfg.inference_model_path, agent)
+        agent.q_network.eval()
+        agent.target_q_network.eval()
+        returns, lengths, terminations = [], [], []
+        for episode in range(episodes):
+            obs, _ = env.reset(seed=seed + episode)
+            episode_return = 0.0
+            terminated = False
+            for step in range(cfg.max_steps_per_episode):
+                action = agent.act(
+                    obs, epsilon=cfg.eval_epsilon, deterministic=deterministic
+                )
+                obs, reward, terminated, truncated, _ = env.step(action)
+                episode_return += float(reward)
+                if terminated or truncated:
+                    break
+            returns.append(episode_return)
+            lengths.append(step + 1)
+            terminations.append(bool(terminated))
+            logger.info(
+                "Episode %d: return=%.2f, length=%d",
+                episode + 1,
+                episode_return,
+                step + 1,
+            )
+        termination_rate = float(np.mean(terminations))
+        result = {
+            "returns": returns,
+            "lengths": lengths,
+            "mean": float(np.mean(returns)),
+            "std": float(np.std(returns)),
+            "termination_rate": termination_rate,
+            "success_rate": termination_rate
+            if cfg.env_id == "MountainCar-v0"
+            else None,
+        }
+        logger.info("Average return over %d episodes: %.2f", episodes, result["mean"])
+        return result
+    finally:
+        env.close()
 
 
 if __name__ == "__main__":
     import fire
 
-    fire.Fire(
-        {
-            "train": train,
-            "demo": demo,
-        }
-    )
+    fire.Fire({"train": train, "demo": demo})
