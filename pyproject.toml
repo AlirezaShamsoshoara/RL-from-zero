@@ -30,6 +30,7 @@ include = [
     "A3C*",
     "DDPG*",
     "IQL*",
+    "MADDPG*",
     "MAPPO*",
     "PPO*",
     "TD3*",
