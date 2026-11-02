@@ -34,8 +34,11 @@ def train(config: str = "MADDPG/configs/simple_spread.yaml", wandb_key: str = ""
         wandb_key: Weights & Biases API key for logging
     """
     cfg = Config.from_yaml(config)
+    env_wandb_key = os.getenv("WANDB_API_KEY", "")
     if wandb_key:
         cfg.wandb_key = wandb_key
+    elif env_wandb_key:
+        cfg.wandb_key = env_wandb_key
 
     logger = setup_logger(
         name="maddpg",
@@ -47,10 +50,8 @@ def train(config: str = "MADDPG/configs/simple_spread.yaml", wandb_key: str = ""
 
     set_seed(cfg.seed)
 
-    # Login to WandB if key provided
     if getattr(cfg, "wandb_key", ""):
-        import wandb as _wandb
-        _wandb.login(key=cfg.wandb_key)
+        wandb.login(key=cfg.wandb_key)
 
     logger.info(f"Initializing wandb run={cfg.run_name}")
     run = wandb.init(
@@ -66,12 +67,13 @@ def train(config: str = "MADDPG/configs/simple_spread.yaml", wandb_key: str = ""
         cfg.seed,
         n_agents=cfg.n_agents,
         max_cycles=cfg.max_cycles,
+        local_ratio=cfg.local_ratio,
         render_mode=None,
     )
     n_agents, obs_dims, act_dims, action_lows, action_highs = get_space_info(env)
 
     logger.info(
-        f"Env={cfg.env_id} | n_agents={n_agents} | obs_dims={obs_dims} | act_dims={act_dims}"
+        f"Env={cfg.env_id} | n_agents={n_agents} | obs_dims={obs_dims} | act_dims={act_dims} | local_ratio={cfg.local_ratio}"
     )
 
     # Create MADDPG agent
@@ -85,11 +87,16 @@ def train(config: str = "MADDPG/configs/simple_spread.yaml", wandb_key: str = ""
         activation=cfg.activation,
         actor_lr=cfg.actor_lr,
         critic_lr=cfg.critic_lr,
+        critic_hidden_sizes=cfg.critic_hidden_sizes,
         gamma=cfg.gamma,
         tau=cfg.tau,
         target_policy_noise=cfg.target_policy_noise,
         target_noise_clip=cfg.target_noise_clip,
         device=cfg.device,
+        grad_clip=cfg.grad_clip,
+        layer_norm=cfg.layer_norm,
+        twin_critics=cfg.twin_critics,
+        policy_delay=cfg.policy_delay,
     )
 
     # Create replay buffer
@@ -121,14 +128,27 @@ def train(config: str = "MADDPG/configs/simple_spread.yaml", wandb_key: str = ""
 
         # Select actions
         if step <= cfg.start_steps:
-            # Random exploration
-            actions_list = [env.action_space(agent_id).sample() for agent_id in agent_ids]
+            # Random exploration (cast to float32 to match PettingZoo Box dtype).
+            actions_list = [
+                np.asarray(env.action_space(agent_id).sample(), dtype=np.float32)
+                for agent_id in agent_ids
+            ]
         else:
-            # Policy with exploration noise
+            # Linearly anneal exploration noise from `exploration_noise` down to
+            # `exploration_noise_end` over `exploration_decay_steps` env steps
+            # (after warm-up). Fixed-std noise late in training keeps injecting
+            # random perturbations even after the policy is near-optimal, which
+            # visibly caps the deterministic-eval return on this task.
+            elapsed = max(0, step - cfg.start_steps)
+            frac = min(1.0, elapsed / max(1, cfg.exploration_decay_steps))
+            noise = (
+                cfg.exploration_noise * (1.0 - frac)
+                + cfg.exploration_noise_end * frac
+            )
             actions_list = agent.act(
                 obs_list,
-                noise=cfg.exploration_noise,
-                deterministic=cfg.exploration_noise <= 0.0,
+                noise=noise,
+                deterministic=noise <= 0.0,
             )
 
         # Convert actions to dict for environment
@@ -137,23 +157,35 @@ def train(config: str = "MADDPG/configs/simple_spread.yaml", wandb_key: str = ""
         # Step environment
         next_observations, rewards, terminations, truncations, infos = env.step(actions_dict)
 
-        # Extract data for all agents
-        next_obs_list = [next_observations.get(agent_id, np.zeros(obs_dims[i])) for i, agent_id in enumerate(agent_ids)]
+        # Extract data for all agents.
+        next_obs_list = [next_observations.get(agent_id, np.zeros(obs_dims[i], dtype=np.float32))
+                         for i, agent_id in enumerate(agent_ids)]
         rewards_list = [rewards.get(agent_id, 0.0) for agent_id in agent_ids]
-        dones_list = [
-            bool(terminations.get(agent_id, False) or truncations.get(agent_id, False))
-            for agent_id in agent_ids
-        ]
+        terminations_list = [bool(terminations.get(agent_id, False)) for agent_id in agent_ids]
+        truncations_list = [bool(truncations.get(agent_id, False)) for agent_id in agent_ids]
 
-        # Store transition in replay buffer
-        buffer.add(obs_list, actions_list, rewards_list, next_obs_list, dones_list)
+        # ONLY true terminations mark a transition as done for the value bootstrap.
+        # simple_spread ends by truncation (max_cycles) every episode, and treating
+        # truncation as done zeros out the bootstrap - the critic then can never
+        # learn the value of states late in an episode. Truncation still triggers
+        # an env.reset below, but the buffer stores it with done=False so the
+        # critic bootstraps using next_obs (which PettingZoo returns even at
+        # truncation).
+        buffer.add(obs_list, actions_list, rewards_list, next_obs_list, terminations_list)
 
-        # Track episode statistics (use first agent's reward as representative)
-        episode_return += rewards_list[0]
+        # Track episode statistics as the mean per-agent reward per step (the
+        # convention used in the MADDPG paper for cooperative MPE envs).
+        episode_return += float(np.mean(rewards_list))
         episode_length += 1
 
-        # Check if episode ended
-        episode_done = not next_observations or len(next_observations) == 0 or all(dones_list)
+        # Reset the env on either termination OR truncation (both end the episode
+        # of environment interaction), but the reset is decoupled from the value
+        # bootstrap above.
+        episode_done = (
+            not next_observations
+            or len(next_observations) == 0
+            or all(terminations_list[i] or truncations_list[i] for i in range(len(agent_ids)))
+        )
         if episode_done:
             episode_returns.append(episode_return)
             episode_lengths.append(episode_length)
@@ -164,8 +196,14 @@ def train(config: str = "MADDPG/configs/simple_spread.yaml", wandb_key: str = ""
         else:
             observations = next_observations
 
-        # Training updates
-        if step >= cfg.start_steps and buffer.can_sample(cfg.batch_size):
+        # Training updates: run every `update_every` env steps to avoid
+        # over-fitting the critic on the same batches (the MADDPG paper does
+        # ~1 update per 25 env steps).
+        if (
+            step >= cfg.start_steps
+            and buffer.can_sample(cfg.batch_size)
+            and step % cfg.update_every == 0
+        ):
             for _ in range(cfg.updates_per_step):
                 batch = buffer.sample(cfg.batch_size)
                 stats = agent.update(batch)
@@ -197,20 +235,21 @@ def train(config: str = "MADDPG/configs/simple_spread.yaml", wandb_key: str = ""
             save_checkpoint(path, agent, step, best_avg_return)
             logger.info(f"Saved checkpoint: {path}")
 
-        # Save best model
-        if cfg.save_best and len(episode_returns) >= 5:
-            avg_recent = float(np.mean(episode_returns[-5:]))
+        # Save best model, gated on a 25-episode rolling window (5 is too noisy
+        # on cooperative MPE tasks - it captures lucky spikes over real progress).
+        if cfg.save_best and len(episode_returns) >= 25:
+            avg_recent = float(np.mean(episode_returns[-25:]))
             if avg_recent > best_avg_return:
                 best_avg_return = avg_recent
                 best_path = os.path.join(cfg.checkpoint_dir, "best.pt")
                 save_checkpoint(best_path, agent, step, best_avg_return)
                 logger.info(
-                    f"New best avg return {best_avg_return:.2f}; saved {best_path}"
+                    f"New best 25-ep avg return {best_avg_return:.2f}; saved {best_path}"
                 )
 
     env.close()
     run.finish()
-    logger.info(f"Training finished. Best 5-ep avg return: {best_avg_return:.2f}")
+    logger.info(f"Training finished. Best 25-ep avg return: {best_avg_return:.2f}")
 
 
 def demo(
@@ -247,6 +286,7 @@ def demo(
         cfg.seed,
         n_agents=cfg.n_agents,
         max_cycles=cfg.max_cycles,
+        local_ratio=cfg.local_ratio,
         render_mode=cfg.render_mode or "human",
     )
     n_agents, obs_dims, act_dims, action_lows, action_highs = get_space_info(env)
@@ -266,11 +306,16 @@ def demo(
         activation=cfg.activation,
         actor_lr=cfg.actor_lr,
         critic_lr=cfg.critic_lr,
+        critic_hidden_sizes=cfg.critic_hidden_sizes,
         gamma=cfg.gamma,
         tau=cfg.tau,
         target_policy_noise=cfg.target_policy_noise,
         target_noise_clip=cfg.target_noise_clip,
         device=cfg.device,
+        grad_clip=cfg.grad_clip,
+        layer_norm=cfg.layer_norm,
+        twin_critics=cfg.twin_critics,
+        policy_delay=cfg.policy_delay,
     )
 
     # Load checkpoint
@@ -300,9 +345,9 @@ def demo(
             actions_dict = {agent_id: actions_list[i] for i, agent_id in enumerate(agent_ids)}
             observations, rewards, terminations, truncations, infos = env.step(actions_dict)
 
-            # Accumulate reward from first agent
-            if agent_ids[0] in rewards:
-                ep_ret += rewards[agent_ids[0]]
+            # Accumulate the mean per-agent reward (matches training/save_best metric).
+            if rewards:
+                ep_ret += float(np.mean([rewards.get(a, 0.0) for a in agent_ids]))
 
             # Check if episode ended
             if not observations or len(observations) == 0:
