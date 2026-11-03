@@ -12,28 +12,41 @@ render_mode: null
 seed: 42
 n_agents: 3
 max_cycles: 25
+# 0.0 = purely global reward (MADDPG paper setup). Higher values give each agent
+# more of its own local reward, which weakens the credit-assignment challenge and
+# makes random baselines look artificially strong.
+local_ratio: 0.0
 
 # Training
-total_steps: 1000000
-start_steps: 25000        # Random exploration steps before training
+total_steps: 800000       # ~35 min on CPU; needed to push into the paper's best range
+start_steps: 25000        # random-action warm-up
 batch_size: 1024
 buffer_size: 1000000
 updates_per_step: 1
-gamma: 0.95               # Discount factor
-tau: 0.01                 # Soft update coefficient for target networks
-actor_lr: 0.01            # Actor learning rate
-critic_lr: 0.01           # Critic learning rate
-exploration_noise: 0.1    # Gaussian noise std for exploration
-target_policy_noise: 0.2  # Noise std for target policy smoothing
-target_noise_clip: 0.5    # Noise clipping range for target policy
+update_every: 25          # 1 gradient update per 25 env steps (~1 per episode),
+                          # matching the MADDPG paper's cadence
+gamma: 0.95               # discount factor
+tau: 0.01                 # Polyak (soft) target-network coefficient
+actor_lr: 0.001           # 10x below the paper's 0.01; stable with Adam
+critic_lr: 0.001          # symmetric with actor_lr on this task
+exploration_noise: 0.3           # start high so agents actually leave their spawn cells
+exploration_noise_end: 0.05      # anneal by end of training so deterministic eval isn't perturbed
+exploration_decay_steps: 400000  # matches ~half of total_steps
+target_policy_noise: 0.1         # TD3-style smoothing on the joint target action
+target_noise_clip: 0.25
+grad_clip: 0.0            # off (with a low actor LR gradient blow-up is not a risk)
 
 # Model
-hidden_sizes: [64, 64]
+hidden_sizes: [64, 64]           # actor hidden - keep small (paper spec)
+critic_hidden_sizes: [256, 256]  # centralized critic sees joint (54 obs + 15 acts = 69 dims); needs more capacity
 activation: "relu"
+layer_norm: true                 # LayerNorm on hidden layers - key continuous-control stabilizer
+twin_critics: true               # MATD3: min of two centralized critics on target Q, cuts over-estimation
+policy_delay: 2                  # step actor + target networks every 2 critic updates (TD3-style)
 
 # Logging & Checkpoints
-log_interval: 5000
-checkpoint_interval: 50000
+log_interval: 1000
+checkpoint_interval: 25000
 checkpoint_dir: "MADDPG/checkpoints"
 save_best: true
 log_level: "INFO"
