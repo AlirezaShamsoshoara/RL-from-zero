@@ -81,6 +81,20 @@ class Config:
                 raise ValueError(
                     f"learning_rate must be a float, got {cfg.learning_rate!r}"
                 ) from exc
+        positive_fields = (
+            "num_envs",
+            "total_timesteps",
+            "rollout_steps",
+            "update_iterations",
+            "minibatch_size",
+            "log_interval",
+            "checkpoint_interval",
+        )
+        for name in positive_fields:
+            if getattr(cfg, name) <= 0:
+                raise ValueError(f"{name} must be positive")
+        if cfg.total_timesteps % cfg.num_envs:
+            raise ValueError("total_timesteps must be divisible by num_envs")
         cfg.device = _get_device(cfg.device)
         # Normalize checkpoint paths to be workspace-root relative
         cfg.checkpoint_dir = os.path.normpath(cfg.checkpoint_dir)

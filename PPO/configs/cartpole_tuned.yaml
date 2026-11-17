@@ -1,0 +1,46 @@
+# Longer-budget PPO recipe; cartpole.yaml is retained as the 100k-step baseline.
+project: rl-hero
+entity: null
+run_name: ppo-cartpole-tuned
+seed: 42
+
+# Environment
+# CartPole is intentionally shared with A3C's optional comparison configuration.
+env_id: CartPole-v1
+render_mode: human
+num_envs: 1
+
+# Training
+# More on-policy data lets the sampled policy become consistently confident.
+total_timesteps: 250000
+update_iterations: 4
+rollout_steps: 2048
+minibatch_size: 64
+learning_rate: 3e-4
+gamma: 0.99
+gae_lambda: 0.95
+clip_coef: 0.2
+ent_coef: 0.0
+vf_coef: 0.5
+max_grad_norm: 0.5
+
+# Model
+hidden_sizes: [64, 64]
+activation: tanh
+
+# Logging and checkpoints: cadence is in PPO updates.
+log_interval: 1
+checkpoint_interval: 10
+checkpoint_dir: PPO/checkpoints_tuned
+save_best: true
+log_level: INFO
+log_to_file: true
+log_file: PPO/logs/ppo-tuned.log
+log_to_console: true
+
+# Inference
+inference_model_path: PPO/checkpoints_tuned/best.pt
+episodes: 5
+
+# This tiny MLP is efficient on CPU.
+device: cpu

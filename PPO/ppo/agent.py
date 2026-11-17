@@ -3,7 +3,6 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 import torch.nn as nn
-from typing import Tuple
 from .networks import ActorCritic
 
 
@@ -48,9 +47,11 @@ class PPOAgent:
             return np.asarray(tensor.tolist())
 
     @torch.no_grad()
-    def act(self, obs: np.ndarray):
+    def act(self, obs: np.ndarray, deterministic: bool = False):
         obs_t = torch.as_tensor(obs, dtype=torch.float32, device=self.device)
-        action, logprob, entropy, value = self.model.act(obs_t)
+        action, logprob, entropy, value = self.model.act(
+            obs_t, deterministic=deterministic
+        )
         return (
             self._to_numpy_safe(action),
             self._to_numpy_safe(logprob),
@@ -72,7 +73,10 @@ class PPOAgent:
         )
         logprob, entropy, value = self.evaluate(obs, actions)
         # Normalize advantages
-        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+        # Population variance is also defined for a one-sample minibatch.
+        advantages = (advantages - advantages.mean()) / (
+            advantages.std(unbiased=False) + 1e-8
+        )
 
         # Policy loss
         ratio = torch.exp(logprob - old_logprobs)
@@ -108,20 +112,37 @@ class PPOAgent:
 
     @staticmethod
     def compute_gae(
-        rewards, dones, values, next_value, gamma: float, gae_lambda: float
+        rewards,
+        dones,
+        values,
+        next_value,
+        gamma: float,
+        gae_lambda: float,
+        *,
+        next_values=None,
+        terminations=None,
     ):
+        """GAE with transition-aligned masks and optional timeout bootstrapping.
+
+        dones[t] stops the recurrence at either termination or truncation.
+        terminations[t] stops value bootstrapping only for true terminal states.
+        next_values must use pre-reset final observations for truncated steps.
+        The six-argument form treats every done as terminal for compatibility.
+        """
         T, N = rewards.shape
+        if next_values is None:
+            next_values = np.concatenate(
+                (values[1:], np.asarray(next_value).reshape(1, N)), axis=0
+            )
+        if terminations is None:
+            terminations = dones
         advantages = np.zeros((T, N), dtype=np.float32)
         lastgaelam = np.zeros(N, dtype=np.float32)
         for t in reversed(range(T)):
-            if t == T - 1:
-                nextnonterminal = 1.0 - dones[t]
-                nextvalues = next_value
-            else:
-                nextnonterminal = 1.0 - dones[t + 1]
-                nextvalues = values[t + 1]
-            delta = rewards[t] + gamma * nextvalues * nextnonterminal - values[t]
-            lastgaelam = delta + gamma * gae_lambda * nextnonterminal * lastgaelam
+            bootstrap_mask = 1.0 - terminations[t]
+            continuation_mask = 1.0 - dones[t]
+            delta = rewards[t] + gamma * next_values[t] * bootstrap_mask - values[t]
+            lastgaelam = delta + gamma * gae_lambda * continuation_mask * lastgaelam
             advantages[t] = lastgaelam
         returns = advantages + values
         return advantages, returns

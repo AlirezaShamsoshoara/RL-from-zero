@@ -27,8 +27,8 @@ hidden_sizes: [64, 64]
 activation: tanh
 
 # Logging & Checkpoints
-log_interval: 10
-checkpoint_interval: 10
+log_interval: 1  # logging cadence in PPO updates
+checkpoint_interval: 10  # checkpoint cadence in PPO updates
 checkpoint_dir: PPO/checkpoints
 save_best: true
 # Python logger
@@ -42,4 +42,4 @@ inference_model_path: PPO/checkpoints/best.pt
 episodes: 5
 
 # Misc
-device: auto  # 'cpu', 'cuda', or 'auto'
+device: cpu  # tiny CartPole networks are efficient on CPU; 'cuda'/'auto' also work
