@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import math
+import os
 from pathlib import Path
 
 import gymnasium as gym
@@ -13,6 +14,24 @@ import numpy as np
 from PPO.ppo.agent import PPOAgent
 from PPO.ppo.config import Config
 from PPO.ppo.utils import load_checkpoint
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def portable_path(path: str | Path | None) -> str | None:
+    """Repository-relative POSIX path for JSON metadata, never an absolute local path.
+
+    Absolute paths would publish machine-specific directories and user names.
+    Paths outside the repository are recorded relative to it.
+    """
+    if path is None:
+        return None
+    resolved = Path(path).resolve()
+    try:
+        return Path(os.path.relpath(resolved, REPO_ROOT)).as_posix()
+    except ValueError:  # Windows: no relative path between different drives
+        return resolved.name
 
 
 def positive_int(value: str) -> int:
@@ -96,7 +115,7 @@ def checkpoint_metadata(path: Path, payload: dict) -> dict:
             best_return = None
     step = payload.get("step")
     return {
-        "path": str(path.resolve()),
+        "path": portable_path(path),
         "sha256": digest.hexdigest(),
         "size_bytes": path.stat().st_size,
         "step": int(step) if step is not None else None,

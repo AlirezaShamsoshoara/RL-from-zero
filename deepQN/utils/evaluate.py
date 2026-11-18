@@ -16,6 +16,7 @@ from deepQN.utils._common import (
     checkpoint_metadata,
     episode_cap,
     load_agent,
+    portable_path,
     positive_int,
     redact_config,
     rollout_episode,
@@ -183,7 +184,7 @@ def evaluate(args: argparse.Namespace) -> dict:
             "algorithm": "DQN",
             "env_id": cfg.env_id,
             "policy": policy,
-            "config_path": str(args.config.resolve()),
+            "config_path": portable_path(args.config),
             "config": evaluation_config,
             "evaluation_config": evaluation_config,
             "checkpoint_training_config": checkpoint_training_config,
@@ -211,7 +212,7 @@ def evaluate(args: argparse.Namespace) -> dict:
             "initial_q_values": [record["initial_q"] for record in episodes],
             "max_positions": [record["max_position"] for record in episodes],
             "checkpoint": metadata,
-            "wandb": {"mode": "offline", "run_id": run.id, "run_dir": run.dir},
+            "wandb": {"mode": "offline", "run_id": run.id, "run_dir": portable_path(run.dir)},
         }
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(

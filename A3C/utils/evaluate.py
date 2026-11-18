@@ -16,6 +16,7 @@ from A3C.utils._common import (
     load_agent,
     make_native_env,
     native_source_metadata,
+    portable_path,
     positive_int,
     read_config,
     rollout_episode,
@@ -221,7 +222,7 @@ def evaluate(args: argparse.Namespace) -> dict:
             "policy": "deterministic categorical argmax; no policy RNG or info input",
             "config_provenance": provenance,
             "checkpoint": checkpoint,
-            "source_root": str(Path(args.source_root).resolve())
+            "source_root": portable_path(args.source_root)
             if getattr(args, "source_root", None)
             else None,
             "native_environment": source,
@@ -236,7 +237,7 @@ def evaluate(args: argparse.Namespace) -> dict:
             "episodes": episodes,
             "returns": [ep["native_return"] for ep in episodes],
             "episode_lengths": [ep["episode_length"] for ep in episodes],
-            "wandb": {"mode": "offline", "run_id": run.id, "run_dir": run.dir},
+            "wandb": {"mode": "offline", "run_id": run.id, "run_dir": portable_path(run.dir)},
         }
         write_json(args.out, result)
         return result

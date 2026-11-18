@@ -20,6 +20,7 @@ from TD3.utils._common import (
     load_agent,
     make_native_env,
     network_path,
+    portable_path,
     positive_int,
     protect_inputs,
     rollout_episode,
@@ -268,7 +269,7 @@ def make_gif(args: argparse.Namespace) -> dict:
             playback_note="Only full-span stride/fps and final hold alter presentation; no failure segment removal or trajectory modification",
             segments=segments,
             submitted_frames=len(output_frames),
-            gif_path=str(out.resolve()),
+            gif_path=portable_path(out),
             gif_sha256=sha256(out),
             **encoded,
         )

@@ -9,6 +9,7 @@ import importlib.util
 import inspect
 import json
 import math
+import os
 from pathlib import Path
 
 import gymnasium as gym
@@ -23,6 +24,29 @@ SOFT_Q_NOTE = (
     "reward-to-boundary has a different objective and finite horizon. Their "
     "difference is not a calibration error or proof of overestimation."
 )
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def portable_path(path: str | Path | None) -> str | None:
+    """Repository-relative POSIX path for JSON metadata, never an absolute local path.
+
+    Absolute paths would publish machine-specific directories and user names.
+    Paths outside the repository are recorded relative to it.
+    """
+    if path is None:
+        return None
+    resolved = Path(path).resolve()
+    try:
+        return Path(os.path.relpath(resolved, REPO_ROOT)).as_posix()
+    except ValueError:  # Windows: no relative path between different drives
+        return resolved.name
+
+
+def repo_path(recorded: str | Path) -> Path:
+    """Locate a path recorded by portable_path; absolute legacy paths stay absolute."""
+    return REPO_ROOT / recorded
 
 
 def positive_int(value: str) -> int:
@@ -143,7 +167,7 @@ def read_config(path: str | Path) -> dict:
 def config_metadata(path: str | Path, config: dict) -> dict:
     clean = redact(config)
     return {
-        "path": str(Path(path).resolve()),
+        "path": portable_path(path),
         "config": clean,
         "redacted_sha256": hashlib.sha256(
             json.dumps(clean, sort_keys=True, allow_nan=False).encode()
@@ -284,9 +308,9 @@ def _network_classes(source_root=None):
         module.GaussianPolicy,
         module.QNetwork,
         {
-            "path": str(path),
+            "path": portable_path(path),
             "sha256": before,
-            "source_root": str(root),
+            "source_root": portable_path(root),
             "explicit_stock_source": source_root is not None,
             "trust_note": "Explicit source loading executes trusted Python, not a sandbox",
         },
@@ -423,7 +447,7 @@ def load_agent(config: dict, env, checkpoint: str | Path, source_root=None):
         payload.get("q2_state_dict"),
     )
     metadata = {
-        "path": str(path.resolve()),
+        "path": portable_path(path),
         "sha256": before,
         "sha256_before_load": before,
         "sha256_after_load": after,
@@ -453,12 +477,12 @@ def load_agent(config: dict, env, checkpoint: str | Path, source_root=None):
 
 
 def assert_checkpoint_unchanged(metadata: dict) -> None:
-    if sha256(metadata["path"]) != metadata["sha256"]:
+    if sha256(repo_path(metadata["path"])) != metadata["sha256"]:
         raise ValueError(
             "Checkpoint changed during inference; use an immutable snapshot"
         )
     source = metadata.get("network_source")
-    if source and sha256(source["path"]) != source["sha256"]:
+    if source and sha256(repo_path(source["path"])) != source["sha256"]:
         raise ValueError("Networks source changed during inference")
 
 

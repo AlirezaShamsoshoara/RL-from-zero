@@ -3,7 +3,7 @@
   "policy": "CPU native observation-only categorical argmax",
   "selection": "Top-return selected showcase, not unbiased evaluation",
   "config_provenance": {
-    "path": "/home/alisol/projects/RL-from-zero/A3C/configs/lunarlander.yaml",
+    "path": "A3C/configs/lunarlander.yaml",
     "config": {
       "project": "rl-hero",
       "entity": null,
@@ -48,7 +48,7 @@
     "redacted_sha256": "a5f8a10a2c02b52bbf187a6e674b22cf89eb1f85d7868074e8947f91d3193ef1"
   },
   "checkpoint": {
-    "path": "/home/alisol/projects/RL-from-zero/A3C/checkpoints/checkpoint_250004.pt",
+    "path": "A3C/checkpoints/checkpoint_250004.pt",
     "sha256": "374746e965281a1baaef83832f03681f5759f1ba65abd7911bc60d84a7d58406",
     "size_bytes": 230143,
     "step": 250004.0,
@@ -35448,10 +35448,10 @@
   "encoded_frames": 602,
   "duration_ms": 26840.0,
   "encoder_note": "Identical consecutive submitted frames may merge into fewer encoded frames while retaining their duration.",
-  "gif_path": "/home/alisol/projects/RL-from-zero/A3C/assets/a3c_lunarlander.gif",
+  "gif_path": "A3C/assets/a3c_lunarlander.gif",
   "wandb": {
     "mode": "offline",
     "run_id": "wfzuvmti",
-    "run_dir": "/home/alisol/projects/RL-from-zero/wandb/offline-run-20261013_220657-wfzuvmti/files"
+    "run_dir": "wandb/offline-run-20261013_220657-wfzuvmti/files"
   }
 }

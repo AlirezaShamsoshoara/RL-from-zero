@@ -18,6 +18,7 @@ from wandb.sdk.internal import datastore
 
 from A3C.utils._common import (
     config_metadata,
+    portable_path,
     positive_int,
     read_config,
     sha256,
@@ -198,7 +199,7 @@ def summarize(rows: list[dict], run_path: Path) -> dict:
             }
     return {
         "algorithm": "A3C",
-        "source": str(Path(run_path).resolve()),
+        "source": portable_path(run_path),
         "source_sha256": sha256(run_path),
         "training_rows": len(rows),
         "step_key": STEP_KEY,
@@ -261,7 +262,7 @@ def evaluation_pairs(path: Path, config: dict) -> tuple[list[dict], dict]:
             "No uncensored, unshaped matched native initial-state value/return samples"
         )
     return pairs, {
-        "source": str(Path(path).resolve()),
+        "source": portable_path(path),
         "source_sha256": sha256(path),
         "checkpoint": data.get("checkpoint"),
         "pairs": pairs,

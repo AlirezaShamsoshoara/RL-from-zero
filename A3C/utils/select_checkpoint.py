@@ -19,6 +19,7 @@ from A3C.utils._common import (
     load_agent,
     make_native_env,
     native_source_metadata,
+    portable_path,
     positive_int,
     read_config,
     redact,
@@ -298,7 +299,7 @@ def select_checkpoint(args: argparse.Namespace) -> dict:
                 "selection_metric": "mean native undiscounted return over all episodes",
                 "config_provenance": provenance,
                 "native_environment": source,
-                "candidate_paths": [str(path.resolve()) for path in candidates],
+                "candidate_paths": [portable_path(path) for path in candidates],
                 "episodes_per_candidate": args.episodes,
                 "seed": args.seed,
             },
@@ -317,17 +318,17 @@ def select_checkpoint(args: argparse.Namespace) -> dict:
             "candidates": [],
             "chosen_source_path": None,
             "chosen_source_sha256": None,
-            "out_path": str(out.resolve()),
+            "out_path": portable_path(out),
             "alias_status": "not copied",
             "snapshot_semantics": "byte-identical inference alias; embedded training config and optimizer state are unchanged. This is not a new training result or exact-resume guarantee.",
             "independent_test_note": "Freeze the alias, then evaluate on a disjoint seed range. Selection returns are development scores, not held-out performance.",
-            "wandb": {"mode": "offline", "run_id": run.id, "run_dir": run.dir},
+            "wandb": {"mode": "offline", "run_id": run.id, "run_dir": portable_path(run.dir)},
         }
         log_step = 0
         for index, path in enumerate(candidates):
             candidate = {
                 "candidate_index": index,
-                "source_path": str(path.resolve()),
+                "source_path": portable_path(path),
                 "checkpoint": None,
                 "snapshot_metadata": None,
                 "episodes": [],
@@ -373,7 +374,7 @@ def select_checkpoint(args: argparse.Namespace) -> dict:
         write_json(summary_path, result)
         validate_paths(args.config, candidates, out, summary_path)
         atomic_copy_checkpoint(
-            chosen["source_path"], out, result["chosen_source_sha256"]
+            candidates[chosen["candidate_index"]], out, result["chosen_source_sha256"]
         )
         result["alias_status"] = "copied byte-identically"
         result["out_sha256"] = result["chosen_source_sha256"]

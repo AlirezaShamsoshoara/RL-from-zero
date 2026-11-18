@@ -8,7 +8,7 @@
   "source_url": null,
   "source_id": null,
   "config_provenance": {
-    "path": "/home/alisol/projects/RL-from-zero/SAC/configs/pendulum_fast.yaml",
+    "path": "SAC/configs/pendulum_fast.yaml",
     "config": {
       "project": "rl-hero",
       "entity": null,
@@ -54,7 +54,7 @@
     "digest_note": "Digest covers redacted parsed config, not secret-bearing YAML bytes"
   },
   "checkpoint": {
-    "path": "/home/alisol/projects/RL-from-zero/SAC/checkpoints_fast/best.pt",
+    "path": "SAC/checkpoints_fast/best.pt",
     "sha256": "b1cca6f212ac17cd24a641d12e39cec7a951d2633855b7f2e47f9acf823429de",
     "sha256_before_load": "b1cca6f212ac17cd24a641d12e39cec7a951d2633855b7f2e47f9acf823429de",
     "sha256_after_load": "b1cca6f212ac17cd24a641d12e39cec7a951d2633855b7f2e47f9acf823429de",
@@ -101,9 +101,9 @@
     },
     "training_units": "embedded config, entropy-augmented training objective",
     "network_source": {
-      "path": "/home/alisol/projects/RL-from-zero/SAC/sac/networks.py",
+      "path": "SAC/sac/networks.py",
       "sha256": "b2a394076429c84ab628c3d77ed82643d7201ac171324385ea1fa77ec563cb95",
-      "source_root": "/home/alisol/projects/RL-from-zero",
+      "source_root": ".",
       "explicit_stock_source": false,
       "trust_note": "Explicit source loading executes trusted Python, not a sandbox"
     },
@@ -8298,11 +8298,11 @@
   "encoded_frames": 178,
   "duration_ms": 11050.0,
   "encoder_note": "Identical consecutive frames can merge while retaining duration; GIF timing is quantized to centiseconds. Counts and duration are read from encoded bytes, not inferred from submitted frames.",
-  "gif_path": "/home/alisol/projects/RL-from-zero/SAC/assets/sac_pendulum.gif",
+  "gif_path": "SAC/assets/sac_pendulum.gif",
   "gif_sha256": "6fe850d5ede2a767a4152042fbab251b69a7ec0c02b141a07cda95f85e6bdc50",
   "wandb": {
     "mode": "offline",
     "run_id": "uyx0il64",
-    "run_dir": "/home/alisol/projects/RL-from-zero/wandb/offline-run-20261013_232217-uyx0il64/files"
+    "run_dir": "wandb/offline-run-20261013_232217-uyx0il64/files"
   }
 }

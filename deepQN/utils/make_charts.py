@@ -14,7 +14,7 @@ import numpy as np
 from wandb.proto import wandb_internal_pb2 as pb
 from wandb.sdk.internal import datastore
 
-from deepQN.utils._common import positive_int
+from deepQN.utils._common import portable_path, positive_int
 
 BLUE, RED, GREEN, ORANGE = "#2563eb", "#dc2626", "#16a34a", "#ea580c"
 METRICS = (
@@ -150,7 +150,7 @@ def summarize(rows: list[dict], run_path: Path, env_id: str) -> dict:
                 "values": values.tolist(),
             }
     return {
-        "source": str(run_path.resolve()),
+        "source": portable_path(run_path),
         "env_id": env_id,
         "training_rows": len(rows),
         "step_key": "progress/step",

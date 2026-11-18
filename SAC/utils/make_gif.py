@@ -18,6 +18,7 @@ from SAC.utils._common import (
     load_agent,
     make_native_env,
     native_source_metadata,
+    portable_path,
     positive_int,
     protect_inputs,
     read_config,
@@ -283,7 +284,7 @@ def make_gif(args: argparse.Namespace) -> dict:
             "config_provenance": provenance,
             "checkpoint": checkpoint,
             "native_environment": source,
-            "source_root": str(Path(source_root).resolve()) if source_root else None,
+            "source_root": portable_path(source_root) if source_root else None,
             "gamma": float(config["gamma"]),
             "episodes": records,
             "summary_all_episodes": summary,
@@ -303,9 +304,9 @@ def make_gif(args: argparse.Namespace) -> dict:
             "segments": segments,
             "submitted_frames": len(output_frames),
             **encoded,
-            "gif_path": str(out.resolve()),
+            "gif_path": portable_path(out),
             "gif_sha256": sha256(out),
-            "wandb": {"mode": "offline", "run_id": run.id, "run_dir": run.dir},
+            "wandb": {"mode": "offline", "run_id": run.id, "run_dir": portable_path(run.dir)},
         }
         write_json(summary_path, result)
         return result
