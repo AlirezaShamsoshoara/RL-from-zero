@@ -22,6 +22,7 @@ from TD3.utils._common import (
     MAX_JSON_BYTES,
     Q_NOTE,
     config_metadata,
+    portable_path,
     positive_int,
     protect_inputs,
     read_config,
@@ -224,7 +225,7 @@ def summarize(rows: list[dict], run_path: str | Path) -> dict:
     return {
         "algorithm": "TD3",
         "env_id": ENV_ID,
-        "source": str(Path(run_path).resolve()),
+        "source": portable_path(run_path),
         "source_sha256": sha256(run_path),
         "training_rows": len(rows),
         "step_key": STEP_KEY,
@@ -300,7 +301,7 @@ def evaluation_pairs(path: str | Path, config: dict) -> tuple[list[dict], dict]:
                 }
             )
     return pairs, {
-        "source": str(path.resolve()),
+        "source": portable_path(path),
         "source_sha256": sha256(path),
         "checkpoint": data.get("checkpoint"),
         "all_episode_count": len(episodes),
@@ -548,7 +549,7 @@ def make_charts(args: argparse.Namespace) -> dict:
     if sha256(run_path) != before:
         raise ValueError("Training datastore changed while plotting")
     summary["outputs"] = [
-        {"path": str(path.resolve()), "sha256": sha256(path)} for path in paths
+        {"path": portable_path(path), "sha256": sha256(path)} for path in paths
     ]
     write_json(summary_path, summary, overwrite)
     return summary

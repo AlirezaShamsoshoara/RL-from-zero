@@ -21,6 +21,7 @@ from SAC.utils._common import (
     SOFT_Q_NOTE,
     config_metadata,
     finite,
+    portable_path,
     positive_int,
     protect_inputs,
     read_config,
@@ -218,7 +219,7 @@ def summarize(rows: list[dict], run_path: str | Path) -> dict:
     return {
         "schema_version": 1,
         "algorithm": "SAC",
-        "source": str(Path(run_path).resolve()),
+        "source": portable_path(run_path),
         "source_sha256": sha256(run_path),
         "source_url": None,
         "source_id": None,
@@ -292,7 +293,7 @@ def evaluation_pairs(path: str | Path, config: dict) -> tuple[list[dict], dict]:
             "Evaluation has no optional soft-Q heads; use actor-only evaluation without --evaluation scatter"
         )
     return pairs, {
-        "source": str(Path(path).resolve()),
+        "source": portable_path(path),
         "source_sha256": before,
         "checkpoint": data.get("checkpoint"),
         "pairs": pairs,
@@ -500,7 +501,7 @@ def make_charts(args: argparse.Namespace) -> dict:
     ):
         raise ValueError("Analysis source changed before export")
     summary["charts"] = [
-        {"path": str(path.resolve()), "sha256": sha256(path)} for path in pngs
+        {"path": portable_path(path), "sha256": sha256(path)} for path in pngs
     ]
     write_json(summary_path, summary)
     return summary

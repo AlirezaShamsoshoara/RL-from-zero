@@ -18,6 +18,7 @@ from A3C.utils._common import (
     load_agent,
     make_native_env,
     native_source_metadata,
+    portable_path,
     positive_int,
     read_config,
     rollout_episode,
@@ -234,7 +235,7 @@ def make_gif(args: argparse.Namespace) -> dict:
             "config_provenance": provenance,
             "checkpoint": checkpoint,
             "native_environment": source,
-            "source_root": str(Path(args.source_root).resolve())
+            "source_root": portable_path(args.source_root)
             if getattr(args, "source_root", None)
             else None,
             "episodes": records,
@@ -249,8 +250,8 @@ def make_gif(args: argparse.Namespace) -> dict:
             "source_fps": getattr(env.unwrapped, "metadata", {}).get("render_fps"),
             "submitted_frames": len(output_frames),
             **encoded,
-            "gif_path": str(out.resolve()),
-            "wandb": {"mode": "offline", "run_id": run.id, "run_dir": run.dir},
+            "gif_path": portable_path(out),
+            "wandb": {"mode": "offline", "run_id": run.id, "run_dir": portable_path(run.dir)},
         }
         write_json(summary_path, result)
         return result

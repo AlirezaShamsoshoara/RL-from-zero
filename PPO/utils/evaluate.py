@@ -18,6 +18,7 @@ from PPO.utils._common import (
     checkpoint_metadata,
     deterministic_action,
     load_agent,
+    portable_path,
     positive_int,
     seed_int,
     validate_env,
@@ -131,7 +132,7 @@ def evaluate(args: argparse.Namespace) -> dict:
             "algorithm": "PPO",
             "env_id": cfg.env_id,
             "policy": policy,
-            "config_path": str(args.config.resolve()),
+            "config_path": portable_path(args.config),
             "config": cfg.to_dict(),
             "device": "cpu",
             "seed": args.seed,
@@ -142,7 +143,7 @@ def evaluate(args: argparse.Namespace) -> dict:
             "returns": returns,
             "episode_lengths": lengths,
             "checkpoint": metadata,
-            "wandb": {"mode": "offline", "run_id": run.id, "run_dir": run.dir},
+            "wandb": {"mode": "offline", "run_id": run.id, "run_dir": portable_path(run.dir)},
         }
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(

@@ -18,6 +18,7 @@ from SAC.utils._common import (
     load_agent,
     make_native_env,
     native_source_metadata,
+    portable_path,
     positive_int,
     protect_inputs,
     read_config,
@@ -254,7 +255,7 @@ def evaluate(args: argparse.Namespace) -> dict:
             "policy": "GaussianPolicy.deterministic: tanh(mean) * action_scale + action_bias; no sampling or extra info input",
             "config_provenance": provenance,
             "checkpoint": checkpoint,
-            "source_root": str(Path(source_root).resolve()) if source_root else None,
+            "source_root": portable_path(source_root) if source_root else None,
             "source_url": None,
             "source_id": None,
             "native_environment": source,
@@ -270,7 +271,7 @@ def evaluate(args: argparse.Namespace) -> dict:
             "episodes": episodes,
             "returns": [episode["native_return"] for episode in episodes],
             "episode_lengths": [episode["episode_length"] for episode in episodes],
-            "wandb": {"mode": "offline", "run_id": run.id, "run_dir": run.dir},
+            "wandb": {"mode": "offline", "run_id": run.id, "run_dir": portable_path(run.dir)},
         }
         write_json(args.out, result)
         return result

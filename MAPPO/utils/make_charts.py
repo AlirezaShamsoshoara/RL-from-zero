@@ -15,7 +15,7 @@ import numpy as np
 from wandb.proto import wandb_internal_pb2 as pb
 from wandb.sdk.internal import datastore
 
-from MAPPO.utils._common import positive_int
+from MAPPO.utils._common import portable_path, positive_int
 
 BLUE, RED, GREEN, ORANGE = "#2563eb", "#dc2626", "#16a34a", "#ea580c"
 REQUIRED_METRICS = (
@@ -147,7 +147,7 @@ def summarize(rows: list[dict], run_path: Path) -> dict:
                 "values": values.tolist(),
             }
     return {
-        "source": str(run_path.resolve()),
+        "source": portable_path(run_path),
         "training_rows": len(rows),
         "step_key": "progress/global_step",
         "step_units": "simultaneous parallel environment steps",

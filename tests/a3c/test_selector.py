@@ -195,7 +195,10 @@ class TestCheckpointSelector(unittest.TestCase):
                 result = selector.select_checkpoint(args)
                 save.assert_not_called()
             chosen = directory / "checkpoint_200.pt"
-            self.assertEqual(result["chosen_source_path"], str(chosen.resolve()))
+            self.assertEqual(
+                result["chosen_source_path"], selector.portable_path(chosen)
+            )
+            self.assertFalse(Path(result["chosen_source_path"]).is_absolute())
             self.assertEqual(result["chosen_summary"]["native_return"]["mean"], 60.0)
             self.assertEqual(result["development_seeds"], [90000, 90001])
             self.assertEqual(result["candidate_count"], 3)

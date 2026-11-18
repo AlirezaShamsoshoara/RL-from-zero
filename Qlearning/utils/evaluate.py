@@ -15,6 +15,7 @@ from Qlearning.ql.utils import make_env, set_seed
 from Qlearning.utils._common import (
     checkpoint_metadata,
     load_agent,
+    portable_path,
     positive_int,
     rollout_episode,
     seed_int,
@@ -129,7 +130,7 @@ def evaluate(args: argparse.Namespace) -> dict:
             "algorithm": "Qlearning",
             "env_id": cfg.env_id,
             "policy": policy,
-            "config_path": str(args.config.resolve()),
+            "config_path": portable_path(args.config),
             "config": cfg.to_dict(),
             "device": "cpu",
             "seed": args.seed,
@@ -155,7 +156,7 @@ def evaluate(args: argparse.Namespace) -> dict:
             "seeds": [record["seed"] for record in episodes],
             "episodes": episodes,
             "checkpoint": metadata,
-            "wandb": {"mode": "offline", "run_id": run.id, "run_dir": run.dir},
+            "wandb": {"mode": "offline", "run_id": run.id, "run_dir": portable_path(run.dir)},
         }
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(

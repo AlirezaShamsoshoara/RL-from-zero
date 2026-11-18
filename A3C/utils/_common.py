@@ -8,6 +8,7 @@ import importlib.util
 import inspect
 import json
 import math
+import os
 import sys
 from pathlib import Path
 
@@ -15,6 +16,24 @@ import gymnasium as gym
 import numpy as np
 import torch
 import yaml
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def portable_path(path: str | Path | None) -> str | None:
+    """Repository-relative POSIX path for JSON metadata, never an absolute local path.
+
+    Absolute paths would publish machine-specific directories and user names.
+    Paths outside the repository are recorded relative to it.
+    """
+    if path is None:
+        return None
+    resolved = Path(path).resolve()
+    try:
+        return Path(os.path.relpath(resolved, REPO_ROOT)).as_posix()
+    except ValueError:  # Windows: no relative path between different drives
+        return resolved.name
 
 
 def positive_int(value: str) -> int:
@@ -136,7 +155,7 @@ def read_config(path: str | Path) -> dict:
 
 def config_metadata(path: str | Path, config: dict) -> dict:
     return {
-        "path": str(Path(path).resolve()),
+        "path": portable_path(path),
         "config": redact(config),
         "digest_note": "Digest covers redacted parsed config, not secret-bearing YAML bytes",
         "redacted_sha256": hashlib.sha256(
@@ -261,7 +280,7 @@ def load_agent(config: dict, env, checkpoint: str | Path, source_root=None):
             if key in embedded and embedded[key] != expected:
                 raise ValueError(f"Checkpoint/config mismatch for {key}")
     metadata = {
-        "path": str(path.resolve()),
+        "path": portable_path(path),
         "sha256": before,
         "size_bytes": path.stat().st_size,
         "step": payload.get("step"),

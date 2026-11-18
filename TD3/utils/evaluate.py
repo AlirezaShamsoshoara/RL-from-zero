@@ -22,6 +22,7 @@ from TD3.utils._common import (
     make_native_env,
     native_source_metadata,
     network_path,
+    portable_path,
     positive_int,
     protect_inputs,
     read_config,
@@ -202,7 +203,7 @@ def result_metadata(config, provenance, checkpoint, source, run, records) -> dic
         "seeds": [record["seed"] for record in records],
         "returns": [record["native_return"] for record in records],
         "episode_lengths": [record["episode_length"] for record in records],
-        "wandb": {"mode": "offline", "run_id": run.id, "run_dir": run.dir},
+        "wandb": {"mode": "offline", "run_id": run.id, "run_dir": portable_path(run.dir)},
     }
 
 

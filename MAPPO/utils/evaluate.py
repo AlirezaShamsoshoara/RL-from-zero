@@ -17,6 +17,7 @@ from MAPPO.utils._common import (
     layout,
     load_agent,
     native_horizon,
+    portable_path,
     positive_int,
     provenance,
     redact,
@@ -249,7 +250,7 @@ def evaluate(args: argparse.Namespace) -> dict:
             "action_type": action_type,
             "device": "cpu",
             "seed": args.seed,
-            "config_path": str(args.config.resolve()),
+            "config_path": portable_path(args.config),
             "provenance": source,
             "agent_ids": ids,
             "native_max_cycles": horizon,
@@ -272,7 +273,7 @@ def evaluate(args: argparse.Namespace) -> dict:
             "std_definition": "population standard deviation (ddof=0)",
             "critic_note": "Concatenated padded observations are used only for critic diagnostics; each deployed actor sees its own observation.",
             "checkpoint": metadata,
-            "wandb": {"mode": "offline", "run_id": run.id, "run_dir": run.dir},
+            "wandb": {"mode": "offline", "run_id": run.id, "run_dir": portable_path(run.dir)},
         }
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(
