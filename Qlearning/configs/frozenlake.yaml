@@ -8,7 +8,7 @@ seed: 42
 # env_id options: FrozenLake-v1 (default), Taxi-v3, CliffWalking-v0, custom gymnasium discrete env id
 env_id: FrozenLake-v1
 # render_mode options: null (no render), human (window; needs display), ansi (prints frames to terminal)
-render_mode: null  # no window; uses terminal
+render_mode: null  # headless; use --render_mode ansi for terminal frames
 env_kwargs:
   is_slippery: false  # can be true for stochastic transitions
   map_name: "8x8"    # "4x4", "8x8", or custom map via "desc"
@@ -27,6 +27,7 @@ log_interval: 50
 checkpoint_interval: 250
 checkpoint_dir: Qlearning/checkpoints
 save_best: true
+best_window: 10  # completed episodes in the best-checkpoint rolling window
 log_level: INFO  # DEBUG, INFO, WARNING, ERROR
 log_to_file: true
 log_file: Qlearning/logs/qlearning.log
@@ -37,4 +38,4 @@ inference_model_path: Qlearning/checkpoints/best.pt
 episodes: 5
 
 # Misc
-device: auto  # auto, cpu, or cuda
+device: cpu  # the NumPy Q-table learner is CPU-only; auto also resolves to CPU

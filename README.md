@@ -144,7 +144,7 @@ python -m IQL.main demo --config IQL/configs/pendulum_mixed.yaml --model_path IQ
 ```
 
 ### Optional Weights & Biases logging
-Add `--wandb_key YOUR_KEY` to any `train` command or set `wandb_key` in the YAML config to authenticate and push metrics, losses, and episode returns to W&B. If `WANDB_API_KEY` is set in your environment, trainers that check the env var (for example, PPO, SAC, A3C, TD3, DDPG, MADDPG, TRPO, IQL, Independent-QL, and Nash-QL) will read it automatically.
+Add `--wandb_key YOUR_KEY` to any `train` command or set `wandb_key` in the YAML config to authenticate and push metrics, losses, and episode returns to W&B. If `WANDB_API_KEY` is set in your environment, trainers that check the env var (for example, Qlearning, PPO, SAC, A3C, TD3, DDPG, MADDPG, TRPO, IQL, Independent-QL, and Nash-QL) will read it automatically.
 
 ## Configuring experiments
 - Duplicate a baseline YAML file (for example `PPO/configs/cartpole.yaml`) and edit environment ids, learning rates, rollout lengths, or logging cadence.
@@ -162,6 +162,14 @@ OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 UV_PROJECT_ENVIRONMENT=.venv-ppo-tests \
   uv run python -m pytest tests/ppo/ -q
 ```
 PPO unit tests use stub environments and mocked W&B rather than real training.
+Q-learning has a tabular suite covering TD updates, checkpoints, train/demo
+integration and its evaluation/asset helpers:
+```bash
+uv venv .venv-qlearning-tests
+UV_PROJECT_ENVIRONMENT=.venv-qlearning-tests uv sync
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 UV_PROJECT_ENVIRONMENT=.venv-qlearning-tests \
+  uv run python -m pytest tests/qlearning/ -q
+```
 See each algorithm's README for its test instructions.
 
 ## Repository layout
