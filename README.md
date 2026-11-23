@@ -34,7 +34,7 @@ RL-from-zero is a collection of reinforcement learning agents implemented from s
 | [`Nash-QL/`](Nash-QL/) | Nash Q-learning (multi-agent game theory) | Discrete | `GridSoccer` (custom zero-sum 2-agent) | <img src="Nash-QL/assets/nash_ql_grid_soccer.gif" alt="Nash-QL Grid Soccer demo" width="180"> |
 | [`deepQN/`](deepQN/) | Deep Q-Network (with Double DQN option) | Discrete | `MountainCar-v0` | <img src="deepQN/assets/dqn_mountaincar.gif" alt="DQN MountainCar demo" width="160"> |
 | [`PPO/`](PPO/) | Proximal Policy Optimization | Discrete | `CartPole-v1` | <img src="PPO/assets/ppo_cartpole.gif" alt="PPO CartPole demo" width="160"> |
-| [`MAPPO/`](MAPPO/) | Multi-Agent PPO (centralized critic) | Discrete | `MultiWalker-v9` (PettingZoo) | <img src="MAPPO/assets/mappo_multiwalker.gif" alt="MAPPO MultiWalker demo" width="160"> |
+| [`MAPPO/`](MAPPO/) | Multi-Agent PPO (centralized critic) | Continuous (default), optional discrete grid | `multiwalker_v9` (PettingZoo) | <img src="MAPPO/assets/mappo_full_delivery.gif" alt="One complete native MAPPO package-delivery episode" width="160"> |
 | [`A3C/`](A3C/) | Asynchronous Advantage Actor-Critic | Discrete | `LunarLander-v3` | <img src="A3C/assets/a3c_lunarlander.gif" alt="A3C LunarLander demo" width="160"> |
 | [`SAC/`](SAC/) | Soft Actor-Critic | Continuous | `Pendulum-v1` | <img src="SAC/assets/sac_pendulum.gif" width="180"> |
 | [`DDPG/`](DDPG/) | Deep Deterministic Policy Gradient | Continuous | `LunarLanderContinuous-v3` | <img src="DDPG/assets/ddpg_lunarlander.gif" alt="DDPG LunarLanderContinuous demo" width="180"> |
@@ -61,7 +61,7 @@ All agents expose a two-command Fire CLI (`train` and `demo`), use PyTorch under
    uv venv .venv
    uv sync
    ```
-   The `pyproject.toml` lists core packages: Gymnasium (classic_control and toy-text extras), NumPy, PyTorch, tqdm, Fire, PyYAML, wandb, and pygame for rendering.
+   The `pyproject.toml` lists core packages: Gymnasium (Box2D, classic-control and toy-text extras), NumPy, PyTorch, tqdm, Fire, PyYAML, wandb, and pygame for rendering.
 3. **Activate the environment** before running commands:
    - PowerShell:
      ```powershell
@@ -96,9 +96,9 @@ python Nash-QL/main.py demo --config Nash-QL/configs/line_world.yaml --model_pat
 
 ### Multi-agent deep RL examples
 ```bash
-# MAPPO on MultiWalker (PettingZoo)
-python -m MAPPO.main train --config MAPPO/configs/multiwalker.yaml
-python -m MAPPO.main demo --config MAPPO/configs/multiwalker.yaml --model_path MAPPO/checkpoints/best.pt
+# MAPPO native package delivery (full-course ability, not guaranteed success)
+python -m MAPPO.main train --config MAPPO/configs/multiwalker_delivery_long_credit.yaml
+python -m MAPPO.main demo --episodes 1 --seed 530019 --render_mode human
 
 # MADDPG on Simple Spread (PettingZoo MPE)
 python -m MADDPG.main train --config MADDPG/configs/simple_spread.yaml
@@ -144,7 +144,7 @@ python -m IQL.main demo --config IQL/configs/pendulum_mixed.yaml --model_path IQ
 ```
 
 ### Optional Weights & Biases logging
-Add `--wandb_key YOUR_KEY` to any `train` command or set `wandb_key` in the YAML config to authenticate and push metrics, losses, and episode returns to W&B. If `WANDB_API_KEY` is set in your environment, trainers that check the env var (for example, deepQN, Qlearning, PPO, SAC, A3C, TD3, DDPG, MADDPG, TRPO, IQL, Independent-QL, and Nash-QL) will read it automatically.
+Add `--wandb_key YOUR_KEY` to any `train` command or set `wandb_key` in the YAML config to authenticate and push metrics, losses, and episode returns to W&B. If `WANDB_API_KEY` is set in your environment, trainers that check the env var (for example, MAPPO, deepQN, Qlearning, PPO, SAC, A3C, TD3, DDPG, MADDPG, TRPO, IQL, Independent-QL, and Nash-QL) will read it automatically.
 
 ## Configuring experiments
 - Duplicate a baseline YAML file (for example `PPO/configs/cartpole.yaml`) and edit environment ids, learning rates, rollout lengths, or logging cadence.
@@ -177,6 +177,14 @@ uv venv .venv-dqn-tests
 UV_PROJECT_ENVIRONMENT=.venv-dqn-tests uv sync
 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 UV_PROJECT_ENVIRONMENT=.venv-dqn-tests \
   uv run python -m pytest tests/deepqn/ -q
+```
+MAPPO's suite covers continuous and discrete policies, shared/masked PPO updates,
+GAE, checkpoints, parallel-loop lifecycle and evaluation/asset tooling:
+```bash
+uv venv .venv-mappo-tests
+UV_PROJECT_ENVIRONMENT=.venv-mappo-tests uv sync
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 UV_PROJECT_ENVIRONMENT=.venv-mappo-tests \
+  uv run python -m pytest tests/mappo/ -q
 ```
 See each algorithm's README for its test instructions.
 

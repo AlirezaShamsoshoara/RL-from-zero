@@ -8,7 +8,13 @@ multi-agent settings with centralized training and decentralized execution.
 from .config import Config
 from .agent import MAPPOAgent, Batch
 from .networks import Actor, CentralizedCritic, DecentralizedCritic, ActorCritic
-from .utils import set_seed, make_multiwalker_env, get_space_dims, save_checkpoint, load_checkpoint
+from .utils import (
+    set_seed,
+    make_multiwalker_env,
+    get_space_dims,
+    save_checkpoint,
+    load_checkpoint,
+)
 from .logging_utils import setup_logger
 
 __all__ = [

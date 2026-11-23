@@ -5,30 +5,24 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 import torch
-import torch.nn as nn
+from torch import nn
 
 from .networks import ActorCritic
 
 
 @dataclass
 class Batch:
-    obs: torch.Tensor  # [batch_size, obs_dim]
-    state: torch.Tensor  # [batch_size, state_dim] for centralized critic
-    actions: torch.Tensor  # [batch_size] or [batch_size, act_dim]
-    logprobs: torch.Tensor  # [batch_size]
-    returns: torch.Tensor  # [batch_size]
-    advantages: torch.Tensor  # [batch_size]
-    values: torch.Tensor  # [batch_size]
-    alive_mask: torch.Tensor  # [batch_size]
+    obs: torch.Tensor
+    state: torch.Tensor
+    actions: torch.Tensor
+    logprobs: torch.Tensor
+    returns: torch.Tensor
+    advantages: torch.Tensor
+    values: torch.Tensor
+    alive_mask: torch.Tensor
 
 
 class MAPPOAgent:
-    """
-    Multi-Agent PPO (MAPPO) implementation.
-    Each agent has its own actor-critic network (or shared if share_policy=True).
-    Supports centralized critic using full state information.
-    """
-
     def __init__(
         self,
         n_agents: int,
@@ -49,20 +43,64 @@ class MAPPOAgent:
         action_type: str = "discrete",
         action_low=None,
         action_high=None,
+        critic_learning_rate=None,
+        separate_grad_clipping: bool = False,
+        clip_value_loss: bool = True,
+        normalize_inputs: bool = False,
     ):
-        self.n_agents = n_agents
+        if any(
+            not isinstance(v, int) or isinstance(v, bool) or v <= 0
+            for v in (n_agents, obs_dim, act_dim, state_dim)
+        ):
+            raise ValueError("agent counts and dimensions must be positive integers")
+        if action_type not in {"discrete", "continuous"}:
+            raise ValueError("action_type must be discrete or continuous")
+        if (
+            not np.isfinite(lr)
+            or lr <= 0
+            or not np.isfinite(clip_coef)
+            or not 0 < clip_coef < 1
+        ):
+            raise ValueError("invalid learning rate or clipping coefficient")
+        if any(not np.isfinite(v) or v < 0 for v in (ent_coef, vf_coef, max_grad_norm)):
+            raise ValueError(
+                "loss weights and gradient clip must be finite/nonnegative"
+            )
+        self.n_agents, self.obs_dim, self.act_dim, self.state_dim = (
+            n_agents,
+            obs_dim,
+            act_dim,
+            state_dim,
+        )
         self.device = device
-        self.clip_coef = clip_coef
-        self.ent_coef = ent_coef
-        self.vf_coef = vf_coef
+        self.clip_coef, self.ent_coef, self.vf_coef = clip_coef, ent_coef, vf_coef
         self.max_grad_norm = max_grad_norm
-        self.share_policy = share_policy
-        self.use_centralized_critic = use_centralized_critic
+        self.share_policy, self.use_centralized_critic = (
+            share_policy,
+            use_centralized_critic,
+        )
+        self.action_type = action_type
+        self.separate_grad_clipping = separate_grad_clipping
+        self.clip_value_loss = clip_value_loss
+        self.normalize_inputs = normalize_inputs
+        critic_lr = lr if critic_learning_rate is None else critic_learning_rate
+        if not np.isfinite(critic_lr) or critic_lr <= 0:
+            raise ValueError("critic learning rate must be positive")
 
-        # Create actor-critic networks for each agent
-        if share_policy:
-            # All agents share the same policy network
-            shared_model = ActorCritic(
+        def make_optimizer(model):
+            return (
+                torch.optim.Adam(
+                    [
+                        {"params": model.actor.parameters(), "lr": lr},
+                        {"params": model.critic.parameters(), "lr": critic_lr},
+                    ]
+                )
+                if critic_learning_rate is not None
+                else torch.optim.Adam(model.parameters(), lr=lr)
+            )
+
+        def make_model():
+            return ActorCritic(
                 obs_dim,
                 act_dim,
                 state_dim,
@@ -73,213 +111,346 @@ class MAPPOAgent:
                 action_type=action_type,
                 action_low=action_low,
                 action_high=action_high,
+                normalize_inputs=normalize_inputs,
             ).to(device)
-            self.models = [shared_model for _ in range(n_agents)]
-            # Single optimizer for shared parameters
-            self.optimizers = [torch.optim.Adam(shared_model.parameters(), lr=lr)]
+
+        if share_policy:
+            model = make_model()
+            self.models = [model] * n_agents
+            self.optimizers = [make_optimizer(model)]
         else:
-            # Each agent has its own policy network
-            self.models = [
-                ActorCritic(
-                    obs_dim,
-                    act_dim,
-                    state_dim,
-                    actor_hidden_sizes,
-                    critic_hidden_sizes,
-                    activation,
-                    use_centralized_critic,
-                    action_type=action_type,
-                    action_low=action_low,
-                    action_high=action_high,
-                ).to(device)
-                for _ in range(n_agents)
+            self.models = [make_model() for _ in range(n_agents)]
+            self.optimizers = [make_optimizer(model) for model in self.models]
+
+    def _inputs(self, obs_list, state):
+        obs = torch.as_tensor(
+            np.asarray(obs_list), dtype=torch.float32, device=self.device
+        )
+        if obs.shape != (self.n_agents, self.obs_dim) or not torch.isfinite(obs).all():
+            raise ValueError(
+                "observations must be finite and match all agent dimensions"
+            )
+        if self.use_centralized_critic:
+            if state is None:
+                raise ValueError("centralized critic requires a joint state")
+            state_t = torch.as_tensor(state, dtype=torch.float32, device=self.device)
+            if state_t.shape != (self.state_dim,) or not torch.isfinite(state_t).all():
+                raise ValueError("joint state must match the finite critic dimension")
+        else:
+            state_t = None
+        return obs, state_t
+
+    def _values(self, obs, state):
+        if self.share_policy:
+            if self.use_centralized_critic:
+                return self.models[0].get_value(state).repeat(self.n_agents)
+            return self.models[0].get_value(obs)
+        return torch.stack(
+            [
+                model.get_value(state if self.use_centralized_critic else obs[i])
+                for i, model in enumerate(self.models)
             ]
-            # Separate optimizer for each agent
-            self.optimizers = [
-                torch.optim.Adam(model.parameters(), lr=lr) for model in self.models
-            ]
+        )
 
     @torch.no_grad()
-    def act(
-        self, obs_list: List[np.ndarray], state: np.ndarray = None, deterministic: bool = False
-    ):
-        """
-        Sample actions for all agents.
-        Args:
-            obs_list: List of observations, one per agent [n_agents, obs_dim]
-            state: Full state for centralized critic [state_dim] (optional)
-        Returns:
-            actions: [n_agents]
-            logprobs: [n_agents]
-            values: [n_agents]
-        """
-        actions = []
-        logprobs = []
-        values = []
+    def values(self, obs_list, state=None):
+        """Critic-only bootstrap queries do not sample policy actions."""
+        obs, state_t = self._inputs(obs_list, state)
+        return self._values(obs, state_t).cpu().numpy()
 
-        for i, obs in enumerate(obs_list):
-            obs_t = torch.as_tensor(obs, dtype=torch.float32, device=self.device)
-            action, logprob, _ = self.models[i].act(obs_t, deterministic=deterministic)
+    @torch.no_grad()
+    def act(self, obs_list: List[np.ndarray], state=None, deterministic=False):
+        obs, state_t = self._inputs(obs_list, state)
+        if self.share_policy:
+            actions, logprobs, _ = self.models[0].act(obs, deterministic=deterministic)
+        else:
+            outcomes = [
+                model.act(obs[i], deterministic=deterministic)
+                for i, model in enumerate(self.models)
+            ]
+            actions = torch.stack([out[0] for out in outcomes])
+            logprobs = torch.stack([out[1] for out in outcomes])
+        values = self._values(obs, state_t)
+        return actions.cpu().numpy(), logprobs.cpu().numpy(), values.cpu().numpy()
 
-            # Get value based on centralized or decentralized critic
-            if self.use_centralized_critic and state is not None:
-                state_t = torch.as_tensor(
-                    state, dtype=torch.float32, device=self.device
+    @torch.no_grad()
+    def act_many(self, observations, deterministic=False):
+        """Batched independent teams: [env, agent, observation]."""
+        obs = torch.as_tensor(observations, dtype=torch.float32, device=self.device)
+        if (
+            obs.ndim != 3
+            or obs.shape[1:] != (self.n_agents, self.obs_dim)
+            or not torch.isfinite(obs).all()
+        ):
+            raise ValueError("batched team observations have invalid shape or values")
+        e = len(obs)
+        if self.share_policy:
+            actions, logprobs, _ = self.models[0].act(
+                obs.reshape(-1, self.obs_dim), deterministic=deterministic
+            )
+            actions = (
+                actions.reshape(e, self.n_agents, self.act_dim)
+                if self.action_type == "continuous"
+                else actions.reshape(e, self.n_agents)
+            )
+            logprobs = logprobs.reshape(e, self.n_agents)
+        else:
+            results = [
+                model.act(obs[:, i], deterministic=deterministic)
+                for i, model in enumerate(self.models)
+            ]
+            actions = torch.stack([r[0] for r in results], dim=1)
+            logprobs = torch.stack([r[1] for r in results], dim=1)
+        values = self._values_many(obs)
+        return actions.cpu().numpy(), logprobs.cpu().numpy(), values.cpu().numpy()
+
+    def _values_many(self, obs):
+        state = obs.reshape(len(obs), -1)
+        if self.share_policy:
+            v = self.models[0].get_value(
+                state if self.use_centralized_critic else obs.reshape(-1, self.obs_dim)
+            )
+            return (
+                v[:, None].expand(-1, self.n_agents)
+                if self.use_centralized_critic
+                else v.reshape(len(obs), self.n_agents)
+            )
+        return torch.stack(
+            [
+                model.get_value(state if self.use_centralized_critic else obs[:, i])
+                for i, model in enumerate(self.models)
+            ],
+            dim=1,
+        )
+
+    @torch.no_grad()
+    def values_many(self, observations):
+        obs = torch.as_tensor(observations, dtype=torch.float32, device=self.device)
+        if (
+            obs.ndim != 3
+            or obs.shape[1:] != (self.n_agents, self.obs_dim)
+            or not torch.isfinite(obs).all()
+        ):
+            raise ValueError("batched team observations have invalid shape or values")
+        return self._values_many(obs).cpu().numpy()
+
+    @torch.no_grad()
+    def update_normalizers(self, observations, alive_masks=None):
+        """Called between rollouts, never during collection or PPO epochs."""
+        if not self.normalize_inputs:
+            return
+        obs = torch.as_tensor(
+            observations, dtype=torch.float32, device=self.device
+        ).reshape(-1, self.n_agents, self.obs_dim)
+        live = (
+            torch.ones(obs.shape[:2], dtype=torch.bool, device=self.device)
+            if alive_masks is None
+            else torch.as_tensor(alive_masks, device=self.device)
+            .reshape(obs.shape[:2])
+            .bool()
+        )
+        joint = obs.reshape(len(obs), -1)
+        if self.share_policy:
+            self.models[0].obs_norm.update(obs[live])
+            self.models[0].state_norm.update(
+                joint if self.use_centralized_critic else obs[live]
+            )
+        else:
+            for i, model in enumerate(self.models):
+                model.obs_norm.update(obs[live[:, i], i])
+                model.state_norm.update(
+                    joint[live[:, i]]
+                    if self.use_centralized_critic
+                    else obs[live[:, i], i]
                 )
-                value = self.models[i].get_value(state_t)
-            else:
-                value = self.models[i].get_value(obs_t)
 
-            actions.append(action.cpu().numpy())
-            logprobs.append(logprob.cpu().numpy())
-            values.append(value.cpu().numpy())
-
-        return np.array(actions), np.array(logprobs), np.array(values)
+    def _active_batch(self, batch):
+        count = batch.obs.shape[0]
+        if batch.obs.shape != (count, self.obs_dim) or batch.state.shape != (
+            count,
+            self.state_dim,
+        ):
+            raise ValueError("invalid rollout observation/state shapes")
+        expected = (
+            (count, self.act_dim) if self.action_type == "continuous" else (count,)
+        )
+        if batch.actions.shape != expected or any(
+            getattr(batch, k).shape != (count,)
+            for k in ("logprobs", "returns", "advantages", "values", "alive_mask")
+        ):
+            raise ValueError("invalid rollout action/statistic shapes")
+        if not torch.all((batch.alive_mask == 0) | (batch.alive_mask == 1)):
+            raise ValueError("alive masks must be binary")
+        mask = batch.alive_mask > 0.5
+        if not torch.any(mask):
+            return None
+        fields = {key: getattr(batch, key)[mask] for key in Batch.__dataclass_fields__}
+        if any(not torch.isfinite(value).all() for value in fields.values()):
+            raise ValueError("active rollout samples must be finite")
+        if self.action_type == "discrete" and (
+            torch.any(fields["actions"] < 0)
+            or torch.any(fields["actions"] >= self.act_dim)
+            or torch.any(fields["actions"] != fields["actions"].long())
+        ):
+            raise ValueError("discrete actions must be valid integer indices")
+        return Batch(**fields)
 
     def update(self, batches: List[Batch]) -> Tuple[Dict[str, float], int]:
-        """
-        Update policy and value networks for all agents.
-        Args:
-            batches: List of batches, one per agent
-        Returns:
-            Dictionary of loss statistics and number of agent updates performed
-        """
-        total_stats = {
-            "loss/policy": 0.0,
-            "loss/value": 0.0,
-            "loss/total": 0.0,
-            "stats/entropy": 0.0,
-            "stats/approx_kl": 0.0,
-        }
-        update_steps = 0
-
-        # Update each agent's policy
-        for agent_id, batch in enumerate(batches):
-            obs, state, actions, old_logprobs, returns, advantages, old_values, alive_mask = (
-                batch.obs,
-                batch.state,
-                batch.actions,
-                batch.logprobs,
-                batch.returns,
-                batch.advantages,
-                batch.values,
-                batch.alive_mask,
+        if len(batches) != self.n_agents:
+            raise ValueError("one rollout batch is required per agent")
+        active = [self._active_batch(batch) for batch in batches]
+        if self.share_policy:
+            live = [batch for batch in active if batch is not None]
+            groups = (
+                []
+                if not live
+                else [
+                    (
+                        0,
+                        Batch(
+                            **{
+                                field: torch.cat(
+                                    [getattr(batch, field) for batch in live]
+                                )
+                                for field in Batch.__dataclass_fields__
+                            }
+                        ),
+                    )
+                ]
             )
-
-            alive_idx = alive_mask > 0.5
-            if not torch.any(alive_idx):
+        else:
+            groups = [(i, batch) for i, batch in enumerate(active) if batch is not None]
+        keys = (
+            "loss/policy",
+            "loss/value",
+            "loss/total",
+            "stats/entropy",
+            "stats/approx_kl",
+        )
+        totals = dict.fromkeys(keys, 0.0)
+        successful_steps = skipped_steps = 0
+        for index, batch in groups:
+            model, optimizer = self.models[index], self.optimizers[index]
+            advantages = (batch.advantages - batch.advantages.mean()) / (
+                batch.advantages.std(unbiased=False) + 1e-8
+            )
+            logprob, entropy = model.evaluate_actions(batch.obs, batch.actions)
+            values = model.get_value(
+                batch.state if self.use_centralized_critic else batch.obs
+            )
+            log_ratio = logprob - batch.logprobs
+            if (
+                not torch.isfinite(log_ratio).all()
+                or not torch.isfinite(values).all()
+                or not torch.isfinite(entropy).all()
+                or torch.any(log_ratio.abs() > 20.0)
+            ):
+                # A clipped forward loss can still hide exp overflow in an
+                # unselected branch (0 * inf backward). Reject before exp/Adam.
+                optimizer.zero_grad(set_to_none=True)
+                skipped_steps += 1
                 continue
-
-            obs = obs[alive_idx]
-            state = state[alive_idx]
-            actions = actions[alive_idx]
-            old_logprobs = old_logprobs[alive_idx]
-            returns = returns[alive_idx]
-            advantages = advantages[alive_idx]
-            old_values = old_values[alive_idx]
-
-            # Normalize advantages
-            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-
-            # Evaluate actions with current policy
-            logprob, entropy = self.models[agent_id].evaluate_actions(obs, actions)
-
-            # Get value predictions
-            if self.use_centralized_critic:
-                value = self.models[agent_id].get_value(state)
-            else:
-                value = self.models[agent_id].get_value(obs)
-
-            # Policy loss with PPO clipping
-            ratio = torch.exp(logprob - old_logprobs)
-            pg_loss1 = -advantages * ratio
-            pg_loss2 = -advantages * torch.clamp(
-                ratio, 1.0 - self.clip_coef, 1.0 + self.clip_coef
-            )
-            policy_loss = torch.mean(torch.max(pg_loss1, pg_loss2))
-
-            # Value loss with clipping
-            value_clipped = old_values + (value - old_values).clamp(
+            ratio = torch.exp(log_ratio)
+            policy_loss = torch.maximum(
+                -advantages * ratio,
+                -advantages * ratio.clamp(1 - self.clip_coef, 1 + self.clip_coef),
+            ).mean()
+            clipped_value = batch.values + (values - batch.values).clamp(
                 -self.clip_coef, self.clip_coef
             )
-            vf_losses1 = (value - returns) ** 2
-            vf_losses2 = (value_clipped - returns) ** 2
-            value_loss = 0.5 * torch.mean(torch.max(vf_losses1, vf_losses2))
-
-            # Total loss
-            loss = (
-                policy_loss + self.vf_coef * value_loss - self.ent_coef * entropy.mean()
+            value_loss = (
+                0.5
+                * torch.maximum(
+                    (values - batch.returns).square(),
+                    (clipped_value - batch.returns).square(),
+                ).mean()
+                if self.clip_value_loss
+                else 0.5 * (values - batch.returns).square().mean()
             )
-
-            # Optimize
-            optimizer_idx = 0 if self.share_policy else agent_id
-            self.optimizers[optimizer_idx].zero_grad()
+            entropy_mean = entropy.mean()
+            loss = (
+                policy_loss + self.vf_coef * value_loss - self.ent_coef * entropy_mean
+            )
+            if not torch.isfinite(loss):
+                optimizer.zero_grad(set_to_none=True)
+                skipped_steps += 1
+                continue
+            optimizer.zero_grad()
             loss.backward()
-
-            # Clip gradients
-            if self.share_policy:
-                nn.utils.clip_grad_norm_(
-                    self.models[0].parameters(), self.max_grad_norm
-                )
-            else:
-                nn.utils.clip_grad_norm_(
-                    self.models[agent_id].parameters(), self.max_grad_norm
-                )
-
-            self.optimizers[optimizer_idx].step()
-
-            # Compute KL divergence for monitoring
-            approx_kl = 0.5 * torch.mean((old_logprobs - logprob) ** 2).item()
-
-            # Accumulate stats
-            total_stats["loss/policy"] += policy_loss.item()
-            total_stats["loss/value"] += value_loss.item()
-            total_stats["loss/total"] += loss.item()
-            total_stats["stats/entropy"] += entropy.mean().item()
-            total_stats["stats/approx_kl"] += approx_kl
-            update_steps += 1
-
-        # Average across agent updates
-        if update_steps > 0:
-            for key in total_stats:
-                total_stats[key] /= update_steps
-
-        return total_stats, update_steps
+            if any(
+                p.grad is not None and not torch.isfinite(p.grad).all()
+                for p in model.parameters()
+            ):
+                optimizer.zero_grad(set_to_none=True)
+                skipped_steps += 1
+                continue
+            try:
+                limit = self.max_grad_norm if self.max_grad_norm > 0 else float("inf")
+                if self.separate_grad_clipping:
+                    nn.utils.clip_grad_norm_(
+                        model.actor.parameters(), limit, error_if_nonfinite=True
+                    )
+                    nn.utils.clip_grad_norm_(
+                        model.critic.parameters(), limit, error_if_nonfinite=True
+                    )
+                else:
+                    nn.utils.clip_grad_norm_(
+                        model.parameters(), limit, error_if_nonfinite=True
+                    )
+            except RuntimeError as error:
+                optimizer.zero_grad(set_to_none=True)
+                if (
+                    "non-finite" not in str(error).lower()
+                    and "nonfinite" not in str(error).lower()
+                ):
+                    raise
+                skipped_steps += 1
+                continue
+            optimizer.step()
+            successful_steps += 1
+            current = {
+                "loss/policy": float(policy_loss.item()),
+                "loss/value": float(value_loss.item()),
+                "loss/total": float(loss.item()),
+                "stats/entropy": float(entropy_mean.item()),
+                "stats/approx_kl": float(
+                    (0.5 * (batch.logprobs - logprob).square()).mean().item()
+                ),
+            }
+            for key in keys:
+                totals[key] += current[key]
+        if successful_steps:
+            totals = {key: value / successful_steps for key, value in totals.items()}
+        totals["stats/skipped_updates"] = float(skipped_steps)
+        return totals, successful_steps
 
     @staticmethod
     def compute_gae(
-        rewards, dones, values, next_values, gamma: float, gae_lambda: float
+        rewards,
+        dones,
+        values,
+        next_values,
+        gamma,
+        gae_lambda,
+        *,
+        next_value_sequence=None,
+        terminations=None,
     ):
-        """
-        Compute Generalized Advantage Estimation (GAE).
-        Args:
-            rewards: [T, n_agents]
-            dones: [T, n_agents] where dones[t] marks termination after transition t
-            values: [T, n_agents]
-            next_values: [n_agents]
-            gamma: discount factor
-            gae_lambda: GAE lambda parameter
-        Returns:
-            advantages: [T, n_agents]
-            returns: [T, n_agents]
-        """
-        T = rewards.shape[0]
-        n_agents = rewards.shape[1]
-        advantages = np.zeros((T, n_agents), dtype=np.float32)
-        lastgaelam = np.zeros(n_agents, dtype=np.float32)
-
-        for t in reversed(range(T)):
-            if t == T - 1:
-                nextnonterminal = 1.0 - dones[t]
-                nextvalues = next_values
-            else:
-                # Use dones[t] (termination after transition t). Using dones[t+1]
-                # incorrectly bootstraps across episode boundaries.
-                nextnonterminal = 1.0 - dones[t]
-                nextvalues = values[t + 1]
-            delta = rewards[t] + gamma * nextvalues * nextnonterminal - values[t]
-            lastgaelam = delta + gamma * gae_lambda * nextnonterminal * lastgaelam
-            advantages[t] = lastgaelam
-
-        returns = advantages + values
-        return advantages, returns
+        """Transition-aligned GAE; timeouts bootstrap but stop episode recursion."""
+        if next_value_sequence is None:
+            next_value_sequence = np.concatenate(
+                (values[1:], np.asarray(next_values).reshape(1, -1))
+            )
+        if terminations is None:
+            terminations = dones
+        advantages = np.zeros_like(rewards, dtype=np.float32)
+        tail = np.zeros(rewards.shape[1], dtype=np.float32)
+        for t in reversed(range(len(rewards))):
+            delta = (
+                rewards[t]
+                + gamma * (1 - terminations[t]) * next_value_sequence[t]
+                - values[t]
+            )
+            tail = delta + gamma * gae_lambda * (1 - dones[t]) * tail
+            advantages[t] = tail
+        return advantages, advantages + values

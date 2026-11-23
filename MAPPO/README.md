@@ -1,289 +1,289 @@
 <p align="center">
-  <img src="assets/mappo-logo.svg" alt="MAPPO — Multi-Agent Proximal Policy Optimization" width="600" />
+  <img src="assets/mappo-logo.svg" alt="Multi-Agent Proximal Policy Optimization" width="600" />
+</p>
+<p align="center">
+  <img src="assets/mappo_full_delivery.gif" alt="One complete native package-delivery episode, not an aggregate success claim" width="520" />
 </p>
 
 # Multi-Agent Proximal Policy Optimization (MAPPO)
 
-<p align="center">
-  <img src="assets/mappo_multiwalker.gif" alt="MAPPO MultiWalker Demo" width="520">
-</p>
+MAPPO trains decentralized local-observation actors with a joint-observation
+critic. This implementation supports continuous/discrete actions, shared/separate
+policies, and central/local critics. The MultiWalker delivery recipes use three
+walkers, continuous actions, and one shared actor-critic model.
 
-MAPPO is a multi-agent reinforcement learning algorithm that extends PPO to cooperative multi-agent settings. It features decentralized actor policies with a centralized critic that has access to the full state information, enabling better coordination among agents while maintaining decentralized execution.
+**The model can complete the full native course, but delivery is not reliable
+ yet: 11 of 60 independent deterministic episodes delivered the package.** The
+GIF is one successful full episode; it is not a success-rate estimate. Remaining
+episodes ended in package drops or walker falls. Do not confuse balancing or
+surviving a horizon with completing transport.
 
-## Algorithm Overview
+## Implementation
 
-MAPPO combines the benefits of:
-- **Centralized Training with Decentralized Execution (CTDE)**: During training, a centralized critic uses full state information to provide better value estimates, while actors only use local observations for decentralized execution
-- **PPO's stable updates**: Clipped surrogate objective prevents destructive policy updates
-- **Multi-agent coordination**: Agents learn to cooperate through shared reward signals and centralized value function
+- A tanh-squashed Gaussian produces bounded motor actions. Optional action-grid
+  discretization uses categorical policies instead.
+- Shared updates pool active-agent samples into one optimizer step. Separate
+  policies update only live agent batches. Removed agents keep zero-padded
+  observation slots, and only active IDs receive actions.
+- Transition-aligned GAE distinguishes true termination from time limits.
+  Timeouts bootstrap the actual pre-reset observation and stop cross-episode
+  recursion. Critic-only value queries do not consume action RNG.
+- Parallel training uses spawned, CPU-only independent environment workers.
+  The parent owns the policy and optimizer. Budgets count **team environment
+  transitions**, with active-agent transitions logged separately.
+- Delivery recipes use separate actor/critic learning rates and independent
+  gradient clipping, with value-loss clipping disabled. The original clipped
+  value-loss option remains available.
+- Numerical rejection checks run before exponentiation and Adam. Invalid losses,
+  gradients, or gradient norms never become optimizer steps. A rejected update
+  clears gradients and stops the remaining epochs so the next rollout is fresh.
+- Optional running input normalization is checkpointed and frozen within each
+  rollout/update. It is **off** in the warm-start delivery experiments, preserving
+  the pretrained ReLU actor's input function.
+- Native goal, progress, speed, and stall diagnostics are reporting only. They
+  are never extra actor inputs, rewards, teacher actions, or scripted controls.
 
-### Key Features
-- **Decentralized actors**: Each agent has its own policy network that only observes local information
-- **Centralized critic**: Value function uses concatenated observations from all agents (full state) for better credit assignment
-- **Parameter sharing option**: Agents can optionally share the same policy network to improve sample efficiency
-- **PPO clipping**: Both policy and value function use clipping for stable training
-- **GAE for advantage estimation**: Generalized Advantage Estimation for low-variance policy gradients
+## The math
 
-## Highlights
-- PettingZoo **MultiWalker-v9** environment as the default multi-agent testbed
-- YAML-first configuration (`MAPPO/configs/multiwalker.yaml`) consistent with other algorithms in the project
-- CLI entry points for training and evaluation via `demo` command
-- Weights & Biases logging for training metrics
-- Support for both shared and independent policies across agents
-- Checkpoint saving with best model tracking
+Let $o_t^i$ be agent $i$'s observation, $x_t=[o_t^1;\ldots;o_t^N]$ the padded
+joint critic input, $m_t^i$ its pre-transition active mask, $z_t^i$ true
+termination, and $d_t^i$ an episode boundary, including truncation.
 
-## Usage
+### GAE
+
+$$
+\delta_t^i=r_t^i+\gamma(1-z_t^i)V_{\mathrm{old}}(x'_t)-V_{\mathrm{old}}(x_t)
+$$
+
+$$
+\hat A_t^i=\delta_t^i+\gamma\lambda(1-d_t^i)\hat A_{t+1}^i,\qquad
+\hat R_t^i=\hat A_t^i+V_{\mathrm{old}}(x_t)
+$$
+
+True terminals suppress bootstrapping. Time limits retain the final-observation
+bootstrap, but advantages cannot flow into the reset episode. Inactive samples
+are excluded; advantages use population standard deviation over active samples.
+
+### PPO and value loss
+
+$$
+\rho_t^i=\frac{\pi_\theta(a_t^i\mid o_t^i)}{\pi_{\mathrm{old}}(a_t^i\mid o_t^i)}
+$$
+
+$$
+L_\pi=-\mathbb E_{(t,i):m_t^i=1}\left[\min\left(
+\rho_t^i\hat A_t^i,\operatorname{clip}(\rho_t^i,1-\epsilon,1+\epsilon)\hat A_t^i
+\right)\right]
+$$
+
+The delivery recipes use unclipped native-unit critic regression:
+
+$$
+L_V=\tfrac12\mathbb E_{(t,i):m_t^i=1}[(V_\theta(x_t)-\hat R_t^i)^2],\qquad
+L=L_\pi+c_VL_V-c_H\mathbb E[\mathcal H]
+$$
+
+When `clip_value_loss: true`, the implementation instead takes the maximum of
+squared unclipped error and error from
+$V_{\mathrm{old}}+\operatorname{clip}(V_\theta-V_{\mathrm{old}},-\epsilon,\epsilon)$.
+Local critics substitute $o_t^i$ for $x_t$.
+
+Before computing the exponential ratio, a minibatch with nonfinite outputs or
+$|\log\pi_\theta-\log\pi_{\mathrm{old}}|>20$ is rejected. This is a **numerical
+update-rejection safeguard**, not exact PPO clipping or a formal KL trust-region
+guarantee. A finite clipped forward loss can otherwise hide exponential overflow
+and nonfinite backward gradients. Accepted batches retain the stated PPO loss.
+`stats/skipped_updates` records rejections, including all-rejected updates.
+The approximate KL diagnostic is half the mean squared log-probability change;
+`target_kl` can stop the remaining epochs after an accepted update.
+
+### Continuous actions
+
+$$
+u\sim\mathcal N(\mu_\theta(o),\operatorname{diag}(\sigma^2)),\qquad
+ a=b+c\odot\tanh(u)
+$$
+
+$$
+\log\pi(a\mid o)=\sum_j\left[\log\mathcal N(u_j;\mu_j,\sigma_j)
+-\log c_j-\log(1-\tanh^2u_j)\right]
+$$
+
+$b$ is the action-range midpoint and $c$ its half-width. Collection and
+re-evaluation use the same finite inverse-tanh/Jacobian calculation. Entropy is
+the unsquashed Gaussian proxy, not exact transformed entropy. Deterministic
+continuous inference uses the squashed mean; discrete inference uses argmax.
+
+| Quantity | Code |
+| --- | --- |
+| Local policy | `Actor`, `GaussianActor` |
+| Joint/local value | `CentralizedCritic`, `DecentralizedCritic` |
+| Active and endpoint masks | `main._transition`, `ParallelMultiwalker.step` |
+| Batched action/value queries | `MAPPOAgent.act_many`, `values_many` |
+| GAE and active-sample update | `MAPPOAgent.compute_gae`, `update` |
+| Goal/progress reporting | `diagnostics.task_status`, `motion_summary` |
+| Delivery-first training selection | `train_delivery.evaluate_candidate` |
+
+## Native task and horizon
+
+PettingZoo `multiwalker_v9` has 31 observations and four motor actions per
+walker; the centralized critic receives 93 features. Native terrain length 200
+has a goal at $(200-10)(14/30)=88.6667$. The package starts near 9.3333, requiring
+about **79.3333 native x units** of transport.
+
+Delivery requires the package to cross the native goal, all native simulator
+done flags to be true, and no native package/walker failure. Failure takes
+precedence. Missing engine evidence remains unknown. Termination alone is not
+success, and timeout survival is a separate observation.
+
+The original recipe's 500 steps are ten simulated seconds. Delivery recipes
+explicitly allow **5,000 steps**, or 100 simulated seconds. This is a time-budget
+change, not shortened terrain, moved goal, altered reward, or changed physics.
+Native rewards remain forward reward 1, termination reward -100, fall reward -10,
+shared rewards, removal on fall, and team termination on fall. The time-limit
+adapter marks a pure native cycle limit as truncation without overriding a true
+failure or delivery on that step.
+
+## Run the trained model
+
+From the repository root, choose a new environment name for each run:
 
 ```bash
-# Train MAPPO agents on MultiWalker
-python -m MAPPO.main train --config MAPPO/configs/multiwalker.yaml
+export UV_PROJECT_ENVIRONMENT="$PWD/.venv-mappo-delivery-demo"
+uv venv "$UV_PROJECT_ENVIRONMENT"
+uv sync --locked
 
-# Evaluate a saved model with visualization
-python -m MAPPO.main demo --config MAPPO/configs/multiwalker.yaml --model_path MAPPO/checkpoints/best.pt
-
-# Train with Weights & Biases logging
-python -m MAPPO.main train --config MAPPO/configs/multiwalker.yaml --wandb_key YOUR_KEY
+# Replay the successful full episode illustrated above.
+uv run python -m MAPPO.main demo --episodes 1 --seed 530019 --render_mode human
 ```
 
-Setup with uv:
+Use `--render_mode none` headlessly. The default is
+`configs/multiwalker_delivery_long_credit.yaml`, loading
+`MAPPO/checkpoints_delivery_long_credit/best.pt`. Checkpoints are intentionally
+ignored; use the trained checkpoint supplied with the handoff or reproduce the
+training chain. Only load trusted checkpoints. A known successful replay is an
+illustration, not a replacement for testing fresh seeds.
+
+## Training and configurations
+
+`main.train` dispatches configs with `num_envs > 1` to `train_delivery` rather
+than silently ignoring parallelism. Each training stage needs a **fresh named
+uv environment**. W&B is enabled; `WANDB_MODE=offline` retains local histories
+without cloud synchronization. CLI key, environment key, and YAML key take that
+precedence, and keys are redacted from logged config.
+
+The retained configuration chain is:
+
+1. `multiwalker.yaml`: original moving baseline recipe.
+2. `multiwalker_delivery.yaml`: model-weight warm start from the moving baseline,
+   16 environments, original gamma/lambda, separate actor/critic clipping/rates,
+   and unclipped critic regression. Its run exposed nonfinite actor parameters;
+   the finite selected checkpoint and failed run remain recorded.
+3. `multiwalker_delivery_recovery.yaml`: fresh Adam, actor LR `5e-5`, checked
+   updates, three million additional transitions. Its frozen checkpoint delivered
+   5/40 independent episodes.
+4. `multiwalker_delivery_long_credit.yaml`: fresh Adam from that recovery model,
+   gamma `0.9995`, GAE lambda `0.99`, and three million additional transitions.
+   Other native-task and optimizer settings remain unchanged.
+
 ```bash
-# Create venv and install deps
-uv venv .venv
-uv pip install pettingzoo pygame torch numpy pyyaml tqdm wandb fire
-
-# Train MAPPO on MultiWalker
-uv run -m MAPPO.main train --config MAPPO/configs/multiwalker.yaml
-
-# Demo a trained policy (renders a window)
-uv run -m MAPPO.main demo --config MAPPO/configs/multiwalker.yaml --model_path MAPPO/checkpoints/best.pt --episodes 5
+# Create a fresh named environment before this training run.
+WANDB_MODE=offline OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  uv run python -m MAPPO.main train \
+  --config MAPPO/configs/multiwalker_delivery_long_credit.yaml
 ```
 
-### Training charts
+`init_checkpoint` in YAML documents the predecessor. `--init_checkpoint PATH`
+overrides it. Warm starts restore **model weights, not optimizer/RNG/environment
+state**. Optional normalization layout, team size, architecture, and action
+bounds must match. This is fine-tuning, not exact process resumption.
 
-<p align="center">
-  <img src="assets/chart_01.png" alt="DQN training td_error" width="520" />
-</p>
-<p align="center">
-  <img src="assets/chart_02.png" alt="DQN training q_loss" width="590" />
-</p>
-<p align="center">
-  <img src="assets/chart_03.png" alt="DQN training avg length" width="520" />
-</p>
+The parallel trainer selects `best.pt` lexicographically by **development
+ delivery rate, mean course progress, then native return**, never by survival.
+Development selection used seeds 180000 onward. The selected long-credit model
+is from transition 819,200 of that stage, not its latest checkpoint. This chain
+is one related set of training runs, not evidence from independent training
+seeds. `multiwalker_tuned.yaml` retains the former standing/survival control;
+it is not the recommended locomotion model.
 
-## Default Environment: MultiWalker-v9
+## Verified results and limitations
 
-MultiWalker is a continuous control environment where multiple bipedal walkers must coordinate to carry a package across terrain:
-- **Cooperative task**: All agents share the same reward and must work together
-- **Partial observability**: Each agent observes its own state and package position
-- **Challenging dynamics**: Agents must balance, walk, and coordinate without dropping the package
-- **Termination conditions**: Episode ends if package is dropped or walkers fall
+All following evaluations retain every requested episode and use deterministic
+local actors with unchanged native terrain, rewards, and 5,000-step caps.
 
-This environment tests MAPPO's ability to:
-- Learn coordinated locomotion policies
-- Handle continuous observation spaces
-- Deal with agent removal (when walkers fall)
-- Optimize shared rewards through centralized value functions
+| Model / reset range | Episodes | Native deliveries | Mean displacement |
+| --- | --- | --- | --- |
+| Previous moving model, 120000-120009 | 10 | 0/10 | 12.58 |
+| Previous standing model, 120000-120009 | 10 | 0/10 | 2.63 |
+| Recovery, 230000-230019 | 20 | 3/20 | 58.56 |
+| Recovery, 330000-330019 | 20 | 2/20 | 56.25 |
+| Frozen long-credit model, 430000-430029 | 30 | 5/30 | 51.21 |
+| Frozen long-credit model, 530000-530029 | 30 | 6/30 | 46.78 |
 
-## Algorithm Details
+The final **11/60 (18.3%)** completion rate demonstrates real locomotion and
+some full-course delivery, but it is **not robust transport**. The other 49
+final episodes contained 35 package drops and 14 walker falls. None ended by
+horizon survival. Differences between recovery and long-credit estimates use
+different reset ranges; the small delivery-rate difference is not an isolated,
+statistically established improvement from gamma/lambda.
 
-### Architecture
+The GIF replays successful seed 530019 from reset through native completion at
+2,253 steps. All three walkers arrive upright with a nearly level package.
+It was chosen for a clear coordinated arrival after auditing successful episodes;
+no trajectory segment, script, action hint, or altered environment was inserted.
+Raw rates above remain unfiltered. Native success does not promise parking or
+continued safety after the simulator ends an episode.
 
-**Actor (Policy) Network**:
-- Input: Individual agent observation $o_i$
-- Output: Action distribution $\pi_\theta(a_i | o_i)$
-- Decentralized: Each agent acts based only on local observations
+## Evaluation, charts, and tests
 
-**Critic (Value) Network**:
-- Input: Full state $s = [o_1, o_2, ..., o_n]$ (concatenated observations)
-- Output: State value $V_\phi(s)$
-- Centralized: Uses information from all agents during training
+Use another fresh environment for validation:
 
-### Multi-Agent Objective (CTDE)
+```bash
+uv run python -m MAPPO.utils.evaluate \
+  --config MAPPO/configs/multiwalker_delivery_long_credit.yaml \
+  --episodes 30 --seed 430000 --out MAPPO/logs/delivery-final-a.json
 
-Let $N$ agents have local observations $o_t^i$, joint action $\mathbf{a}_t=(a_t^1,\dots,a_t^N)$, and centralized state $s_t=[o_t^1;\dots;o_t^N]$.
+SDL_VIDEODRIVER=dummy uv run python -m MAPPO.utils.make_gif \
+  --config MAPPO/configs/multiwalker_delivery_long_credit.yaml \
+  --episodes 1 --keep-top 1 --seed 530019 --stride 5 --fps 10 \
+  --require-delivery --out MAPPO/assets/mappo_full_delivery.gif
 
-With decentralized actors, the joint policy factorizes as:
+uv run python -m MAPPO.utils.make_charts \
+  --run wandb/<offline-run>/run-<id>.wandb --out-dir MAPPO/assets \
+  --summary MAPPO/logs/delivery-training-summary.json
+```
 
-$$\pi_{\Theta}(\mathbf{a}_t \mid \mathbf{o}_t)=\prod_{i=1}^{N}\pi_{\theta_i}(a_t^i \mid o_t^i)$$
+Evaluation JSON retains episode seeds, native flags, team/per-agent returns,
+package progress and motion, checkpoint SHA-256, and config provenance. Helpers
+never infer delivery from reward. See [utils](utils/README.md) for details.
 
-If policies are shared (`share_policy: true`), then $\theta_1=\cdots=\theta_N=\theta$.
+The suite passed **99 tests and 121 subtests**, with warnings as errors, in a
+fresh uv environment. Unit cases use fake environments/W&B; real worker smoke,
+full training, independent complete episodes, and a native successful demo were
+also executed on hardware. Use a separate fresh test environment:
 
-For each agent:
+```bash
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 WANDB_MODE=offline \
+  uv run python -m pytest tests/mappo/ -q -W error
+```
 
-$$r_t^i(\theta_i)=\frac{\pi_{\theta_i}(a_t^i \mid o_t^i)}{\pi_{\theta_i,\text{old}}(a_t^i \mid o_t^i)}$$
+<p align="center"><img src="assets/chart_01.png" width="720" alt="Native value predictions, GAE targets, and returns" /></p>
 
-and the MAPPO actor objective aggregates clipped PPO objectives across agents:
+Bootstrapped value targets are not independent calibration measurements.
 
-$$L_{\text{actor}}(\Theta)=\frac{1}{N}\sum_{i=1}^{N}\mathbb{E}_t\left[\min\left(r_t^i\hat{A}_t^i,\ \text{clip}(r_t^i,1-\epsilon,1+\epsilon)\hat{A}_t^i\right)\right]$$
+<p align="center"><img src="assets/chart_02.png" width="720" alt="Policy/value losses, entropy, and KL" /></p>
 
-The centralized critic is trained from the global state:
+Finite losses alone neither prove valid gradients nor coordinated transport.
 
-$$L_{\text{value}}(\phi)=\mathbb{E}_t\left[\max\left((V_\phi(s_t)-R_t)^2,\ (V_\phi^{\text{clip}}(s_t)-R_t)^2\right)\right]$$
+<p align="center"><img src="assets/chart_03.png" width="720" alt="Sampled training native delivery and course progress" /></p>
 
-where:
-- $V_\phi^{\text{clip}}(s_t)=V_{\phi,\text{old}}(s_t)+\text{clip}(V_\phi(s_t)-V_{\phi,\text{old}}(s_t),-\epsilon,\epsilon)$
-- $R_t$ is the return target
-
-Total loss in implementation form:
-
-$$L_{\text{total}}=-L_{\text{actor}}+c_vL_{\text{value}}-c_e\frac{1}{N}\sum_{i=1}^{N}\mathbb{E}_t[\mathcal{H}(\pi_{\theta_i}(\cdot\mid o_t^i))]$$
-
-### Advantage Estimation with Centralized Critic
-
-For each agent $i$:
-
-$$\delta_t^i=r_t^i+\gamma(1-d_t^i)V_\phi(s_{t+1})-V_\phi(s_t)$$
-
-$$\hat{A}_t^i=\sum_{l=0}^{T-t-1}(\gamma\lambda)^l\delta_{t+l}^i,\quad R_t^i=\hat{A}_t^i+V_\phi(s_t)$$
-
-The centralized baseline reduces non-stationarity because the critic conditions on all agents.
-
-### Knowledge Sharing by Parameter Sharing
-
-When policies are shared, MAPPO optimizes one parameter vector $\theta$ with a team-averaged gradient:
-
-$$\nabla_\theta L_{\text{actor}}(\theta)=\frac{1}{N}\sum_{i=1}^{N}\mathbb{E}_t\left[\nabla_\theta \log \pi_\theta(a_t^i\mid o_t^i)\,\tilde{A}_t^i\right]$$
-
-where $\tilde{A}_t^i$ denotes the clipped-importance-weighted advantage term. This is the explicit "knowledge sharing" mechanism in homogeneous-agent MAPPO.
-
-### Convergence Notes (Practical, Not Global-Optimal Guarantees)
-
-For deep multi-agent PPO, there is generally no theorem guaranteeing convergence to the globally best joint policy for all agents. In practice, convergence is improved when:
-- policy updates remain small (monitor/limit KL),
-- critic targets are stable (centralized value with correct terminal handling),
-- gradients are clipped and learning rate is annealed,
-- results are validated across multiple random seeds.
-
-## Configuration Options
-
-Key hyperparameters in `MAPPO/configs/multiwalker.yaml`:
-
-### Multi-Agent Settings
-- `n_agents`: Number of agents in the environment
-- `share_policy`: Whether all agents share the same policy network
-- `use_centralized_critic`: Use centralized critic with full state (recommended: true)
-
-### Training Hyperparameters
-- `total_timesteps`: Total environment steps for training
-- `rollout_steps`: Steps collected before each policy update
-- `update_iterations`: Number of epochs to optimize policy per update
-- `minibatch_size`: Mini-batch size for SGD updates
-- `learning_rate`: Learning rate for Adam optimizer
-- `gamma`: Discount factor for future rewards
-- `gae_lambda`: GAE lambda parameter for advantage estimation
-- `clip_coef`: PPO clipping parameter
-- `ent_coef`: Entropy bonus coefficient (encourages exploration)
-- `vf_coef`: Value function loss coefficient
-- `max_grad_norm`: Gradient clipping threshold
-- `target_kl`: Early-stop threshold for PPO epochs
-- `anneal_lr`: Whether to linearly anneal learning rate across updates
-
-### Network Architecture
-- `actor_hidden_sizes`: Hidden layer sizes for actor networks
-- `critic_hidden_sizes`: Hidden layer sizes for critic network
-- `activation`: Activation function ('relu' or 'tanh')
-
-## Implementation Notes
-
-- **Action spaces**: Supports discrete (Categorical) and continuous (tanh-squashed Gaussian) actions
-- **Continuous observations**: Supports continuous observation spaces of any dimension
-- **Agent removal**: Handles environments where agents can be removed (e.g., fallen walkers)
-- **Shared rewards**: Optimized for cooperative tasks with shared reward structure
-- **PettingZoo integration**: Uses PettingZoo's parallel API for multi-agent environments
-
-## Comparison with Single-Agent PPO
-
-| Aspect | PPO | MAPPO |
-|--------|-----|-------|
-| **Agents** | Single agent | Multiple agents |
-| **Actor** | Uses full state | Uses local observations |
-| **Critic** | Uses full state | Uses concatenated states (centralized) |
-| **Action space** | Single action | Joint action (one per agent) |
-| **Coordination** | N/A | Achieved via centralized critic |
-| **Execution** | Centralized | Decentralized |
-
-## Comparison with Independent PPO
-
-| Aspect | Independent PPO | MAPPO |
-|--------|----------------|-------|
-| **Training** | Decentralized | Centralized training |
-| **Critic** | Local observations | Full state (centralized) |
-| **Credit assignment** | Difficult | Improved via centralized critic |
-| **Non-stationarity** | Severe (each agent sees others as environment) | Reduced (critic aware of all agents) |
-| **Sample efficiency** | Lower | Higher |
-| **Convergence** | Less stable | More stable |
-
-MAPPO addresses the non-stationarity problem of independent learning by using a centralized critic during training while maintaining decentralized execution.
+These charts come from the long-credit run's 147 logging rows. Sampled training
+window delivery/progress is distinct from the unfiltered deterministic results
+above. Source, tests, configs, docs, and assets are reviewable; checkpoints and
+raw logs are ignored and retained separately.
 
 ## References
 
-- **Yu, C., Velu, A., Vinitsky, E., Gao, J., Wang, Y., Bayen, A., & Wu, Y. (2022).** *The Surprising Effectiveness of PPO in Cooperative Multi-Agent Games.* Advances in Neural Information Processing Systems, 35, 24611-24624.
-  - Empirical study showing MAPPO's effectiveness in cooperative multi-agent tasks
-
-- **Schulman, J., Wolski, F., Dhariwal, P., Radford, A., & Klimov, O. (2017).** *Proximal Policy Optimization Algorithms.* arXiv preprint arXiv:1707.06347.
-  - Original PPO paper that MAPPO is based on
-
-- **Foerster, J., Farquhar, G., Afouras, T., Nardelli, N., & Whiteson, S. (2018).** *Counterfactual Multi-Agent Policy Gradients.* Proceedings of the AAAI Conference on Artificial Intelligence, 32(1).
-  - Introduced centralized training with decentralized execution paradigm
-
-- **Lowe, R., Wu, Y., Tamar, A., Harb, J., Abbeel, P., & Mordatch, I. (2017).** *Multi-Agent Actor-Critic for Mixed Cooperative-Competitive Environments.* Advances in Neural Information Processing Systems, 30.
-  - MADDPG paper that introduced centralized critic for multi-agent RL
-
-## Extensions and Future Work
-
-1. **Continuous action improvements**: Tune action rescaling, entropy handling, or std schedules
-   - Consider per-agent std bounds or adaptive exploration schedules
-
-2. **Communication mechanisms**: Add inter-agent communication channels
-   - Agents can share information beyond observations
-   - Improves coordination in partially observable environments
-
-3. **Attention mechanisms**: Use attention in centralized critic
-   - Better scaling to variable numbers of agents
-   - Improved credit assignment in large teams
-
-4. **Competitive/mixed settings**: Extend to competitive or mixed cooperative-competitive scenarios
-   - Separate value networks for different teams
-   - Nash equilibrium concepts
-
-5. **Recurrent policies**: Add LSTM/GRU for memory
-   - Handle partial observability better
-   - Maintain history of observations
-
-6. **Imitation learning**: Bootstrap policies from expert demonstrations
-   - Faster initial learning
-   - Better final performance
-
-## Troubleshooting
-
-- **Agents not coordinating**: Enable centralized critic (`use_centralized_critic: true`) and shared policy (`share_policy: true`) for homogeneous teams
-- **Training unstable**: Reduce `learning_rate`, lower `max_grad_norm`, and use `anneal_lr: true`
-- **Slow convergence**: Increase `rollout_steps`, tune `ent_coef`, and verify GAE/terminal handling
-- **High KL divergence warnings**: Lower `learning_rate` or `clip_coef`, and set a stricter `target_kl`
-- **`ModuleNotFoundError: No module named 'Box2D'`**: Install the SISL extras or Box2D in your env:
-  ```bash
-  python -m pip install "pettingzoo[sisl]"
-  # or, if pip fails on your Python version:
-  conda install -c conda-forge box2d-py
-  ```
-
-## Environment Requirements
-
-Install PettingZoo and dependencies:
-```bash
-pip install pettingzoo[sisl]
-pip install pygame  # For rendering
-```
-
-The implementation has been tested with:
-- PettingZoo >= 1.22.0
-- PyTorch >= 2.0.0
-- Python >= 3.8
-
-## Notes
-
-- This implementation follows the same structure as other algorithms in the RL-from-Zero repository
-- Supports discrete and continuous action spaces (MultiWalker can run with continuous actions)
-- Rendering requires pygame and works best with a local display
-- For headless servers, set `render_mode: null` in config during training
-- Checkpoints store all agent networks (or single shared network if `share_policy: true`)
+- Yu et al., [The Surprising Effectiveness of PPO in Cooperative Multi-Agent Games](https://arxiv.org/abs/2103.01955).
+- Schulman et al., [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347).
+- [PettingZoo MultiWalker](https://pettingzoo.farama.org/environments/sisl/multiwalker/).

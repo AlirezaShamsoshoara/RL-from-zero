@@ -5,7 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-    "gymnasium[classic-control,toy-text]>=0.29.1",
+    "gymnasium[box2d,classic-control,toy-text]>=0.29.1",
     "numpy>=1.24.4",
     "tqdm>=4.67.0",
     "torch>=2.0.1",

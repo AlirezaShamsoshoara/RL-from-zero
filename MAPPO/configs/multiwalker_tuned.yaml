@@ -1,0 +1,52 @@
+# Conservative continuous MAPPO tuning; multiwalker.yaml preserves the baseline.
+project: rl-hero
+entity: null
+run_name: mappo-multiwalker-tuned
+wandb_key: ""
+seed: 42
+
+# Native environment settings are unchanged.
+env_id: multiwalker_v9
+render_mode: null
+n_walkers: 3
+n_agents: 3
+env_kwargs: {}
+discretize_actions: false
+action_bins: 3
+share_policy: true
+use_centralized_critic: true
+
+# Fewer reuse epochs, smaller clip/LR, and no extra entropy pressure.
+total_timesteps: 1000000
+rollout_steps: 1024
+update_iterations: 5
+minibatch_size: 256
+learning_rate: 0.0002
+gamma: 0.99
+gae_lambda: 0.95
+clip_coef: 0.1
+ent_coef: 0.0
+vf_coef: 0.5
+max_grad_norm: 0.5
+target_kl: 0.01
+anneal_lr: true
+
+# Smooth bounded hidden activations for locomotion.
+actor_hidden_sizes: [128, 128]
+critic_hidden_sizes: [256, 128]
+activation: tanh
+
+# Separate output paths retain baseline evidence.
+log_interval: 10
+checkpoint_interval: 50
+checkpoint_dir: MAPPO/checkpoints_tuned
+save_best: true
+best_window: 20
+max_steps_per_episode: 500
+log_level: INFO
+log_to_file: true
+log_file: MAPPO/logs/mappo-tuned.log
+log_to_console: true
+inference_model_path: MAPPO/checkpoints_tuned/best.pt
+episodes: 5
+device: cpu

@@ -45,6 +45,9 @@ log_interval: 10  # log cadence in updates
 checkpoint_interval: 50  # checkpoint cadence in updates
 checkpoint_dir: MAPPO/checkpoints  # checkpoint directory
 save_best: true  # true or false
+best_window: 10  # completed episodes used to select best.pt
+max_steps_per_episode: 500  # safety cap; environment max_cycles also defaults to 500
+env_kwargs: {}  # explicit MultiWalker settings; defaults preserve the native recipe
 # Python logger
 log_level: INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
 log_to_file: true  # true or false
