@@ -20,8 +20,8 @@ class TestNetworks(unittest.TestCase):
         self.assertIsInstance(get_activation("elu"), torch.nn.ELU)
         self.assertIsInstance(get_activation("leaky_relu"), torch.nn.LeakyReLU)
         self.assertIsInstance(get_activation("tanh"), torch.nn.Tanh)
-        # unknown defaults to tanh
-        self.assertIsInstance(get_activation("unknown"), torch.nn.Tanh)
+        with self.assertRaises(ValueError):
+            get_activation("unknown")
 
     def test_forward_output_shapes(self) -> None:
         torch.manual_seed(0)
@@ -72,6 +72,60 @@ class TestNetworks(unittest.TestCase):
         self.assertTrue((log_probs <= 0).all().item())
         # entropies should be non-negative
         self.assertTrue((entropies >= 0).all().item())
+
+    def test_deterministic_act_is_argmax_without_sampling_or_rng_change(self) -> None:
+        from unittest.mock import patch
+
+        model = ActorCritic(obs_dim=6, act_dim=3, hidden_sizes=(8,))
+        obs = torch.ones(4, 6)
+        logits, _ = model(obs)
+        rng_before = torch.random.get_rng_state().clone()
+        with patch(
+            "torch.distributions.Categorical.sample",
+            side_effect=AssertionError("sampled"),
+        ):
+            action, log_prob, entropy, value = model.act(obs, deterministic=True)
+        self.assertTrue(torch.equal(action, logits.argmax(dim=-1)))
+        self.assertTrue(torch.equal(rng_before, torch.random.get_rng_state()))
+        for tensor in (log_prob, entropy, value):
+            self.assertEqual(tensor.shape, (4,))
+            self.assertTrue(torch.isfinite(tensor).all())
+
+    def test_invalid_network_dimensions_and_hidden_sizes_are_rejected(self) -> None:
+        for kwargs in (
+            {"obs_dim": 0},
+            {"obs_dim": True},
+            {"obs_dim": 1.5},
+            {"act_dim": 0},
+            {"act_dim": False},
+            {"hidden_sizes": [0]},
+            {"hidden_sizes": [True]},
+            {"hidden_sizes": [2.5]},
+            {"activation": "unsupported"},
+        ):
+            with self.subTest(kwargs=kwargs):
+                arguments = {"obs_dim": 6, "act_dim": 3, "hidden_sizes": (8,)}
+                arguments.update(kwargs)
+                with self.assertRaises(ValueError):
+                    ActorCritic(**arguments)
+
+    def test_forward_rejects_wrong_shape_and_nonfinite_observations(self) -> None:
+        model = ActorCritic(obs_dim=6, act_dim=3, hidden_sizes=(8,))
+        for obs in (
+            torch.ones(5),
+            torch.ones(2, 3, 6),
+            torch.full((2, 6), float("nan")),
+        ):
+            with self.subTest(shape=tuple(obs.shape)):
+                with self.assertRaises(ValueError):
+                    model(obs)
+
+    def test_evaluate_actions_rejects_wrong_batch_and_invalid_actions(self) -> None:
+        model = ActorCritic(obs_dim=6, act_dim=3, hidden_sizes=(8,))
+        for actions in (torch.tensor([0]), torch.tensor([0, 3]), torch.tensor([-1, 0])):
+            with self.subTest(actions=actions.tolist()):
+                with self.assertRaises(ValueError):
+                    model.evaluate_actions(torch.ones(2, 6), actions)
 
 
 if __name__ == "__main__":

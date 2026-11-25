@@ -2659,7 +2659,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fire", specifier = ">=0.6.0" },
-    { name = "gymnasium", extras = ["box2d", "classic-control", "toy-text"], specifier = ">=0.29.1" },
+    { name = "gymnasium", extras = ["box2d", "classic-control", "toy-text"], specifier = ">=1.1.0" },
     { name = "imageio", specifier = ">=2.34.0" },
     { name = "matplotlib", specifier = ">=3.8.0" },
     { name = "numpy", specifier = ">=1.24.4" },

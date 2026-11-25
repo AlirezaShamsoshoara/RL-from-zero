@@ -1,0 +1,42 @@
+# Inference configuration for the development-selected checkpoint.
+# Train with lunarlander.yaml, then run A3C.utils.select_checkpoint.
+project: rl-hero
+entity: null
+run_name: a3c-lunarlander-greedy-selected
+wandb_key: ""
+seed: 42
+env_id: LunarLander-v3
+env_kwargs: {}
+render_mode: null
+num_workers: 4
+num_envs: 1
+t_max: 20
+total_steps: 500000
+gamma: 0.99
+entropy_coef: 0.15
+entropy_coef_end: 0.01
+anneal_entropy: true
+normalize_advantages: true
+value_loss_coef: 0.01
+learning_rate: 0.001
+max_grad_norm: 40.0
+anneal_lr: true
+reward_scale: 0.01
+reward_shaping: false
+hidden_sizes: [128, 128]
+activation: relu
+log_interval: 5000
+checkpoint_interval: 50000
+checkpoint_dir: A3C/checkpoints
+inference_model_path: A3C/checkpoints/best_greedy.pt
+best_window: 20
+save_best: true
+log_level: INFO
+log_to_file: false
+log_file: A3C/logs/a3c.log
+log_to_console: true
+max_steps_per_episode: 1000
+episodes: 10
+worker_timeout: 120.0
+shutdown_timeout: 10.0
+device: cpu
