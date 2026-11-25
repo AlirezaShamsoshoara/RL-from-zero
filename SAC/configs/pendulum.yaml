@@ -10,11 +10,12 @@ seed: 42  # any integer seed
 env_id: Pendulum-v1
 # render_mode options: null (no render), human (window), rgb_array (frames)
 render_mode: null
-env_kwargs: {}  # env-specific kwargs; Pendulum supports g, max_speed, max_torque, dt
+env_kwargs: {}  # Pendulum constructor supports g; wrapper limits use max_episode_steps
 
 # Training
 total_steps: 200000  # total environment steps (int >= 1)
-start_steps: 10000  # steps of random actions before learning (int >= 0)
+start_steps: 10000  # random-action collection steps (independent of learning)
+update_after: 0  # preserve legacy early updates once replay can sample
 batch_size: 256  # minibatch size (int >= 1)
 buffer_size: 1000000  # replay buffer capacity (int >= 1)
 updates_per_step: 1  # gradient updates per env step (int >= 1)

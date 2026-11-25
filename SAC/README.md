@@ -1,173 +1,296 @@
-![Soft Actor-Critic Logo](assets/sac_logo.svg)
+<p align="center"><img src="assets/sac_logo.svg" alt="Soft Actor-Critic" width="520" /></p>
 
 # Soft Actor-Critic (SAC)
 
-<p align="center">
-    <img src="assets/sac_pendulum.gif" alt="SAC Pendulum Demo" width="520">
-</p>
+<p align="center"><img src="assets/sac_pendulum.gif" alt="One complete native Pendulum swing-up and upright-holding episode" width="520" /></p>
+
+## Overview
+
+SAC is an off-policy continuous-control actor-critic algorithm. A stochastic
+squashed Gaussian actor learns alongside twin Q critics, target critics, and an
+automatically tuned entropy temperature. Replay samples are reused for learning.
+
+The default CLI recipe is the bounded50k-step CPU profile in
+`configs/pendulum_fast.yaml`. Its frozen checkpoint averaged **-164.82 +/-83.61
+native return across200 independent200-step episodes**. The final20 observations
+met the stated settling diagnostic in every episode. Pendulum has **no official
+solved threshold**; this is measured behavior, not a universal success guarantee.
+The GIF shows a full natural near-hanging-down start, swing-up, and upright hold.
+
+## Highlights
+
+- Physical-action log density includes both action-scale and stable tanh
+  Jacobians. The original affine scale correction is preserved.
+- Finite ordered action bounds, tensor shapes, activation/layer validation,
+  single/batched actions, and deterministic mean inference without sampling RNG.
+- No target-critic gradients. Online critic parameters are temporarily frozen
+  during actor optimization, retaining gradients through the sampled action.
+- Temperature is detached from actor loss; loading preserves the existing
+  `log_alpha` Parameter and its optimizer reference.
+- Finite losses/gradients/norms before each Adam phase. Defensive rollback is
+  **phase-local**, not a transaction across all three sequential updates.
+- Replay validates complete inputs before mutation and owns float32 copies.
+  Invalid terminal masks, bounds, empty batches, and unsafe casts are rejected.
+- True terminals suppress bootstrap. Native truncations retain the continuing
+  soft-value bootstrap from the actual endpoint, not a reset observation.
+- Manual caps are reported separately and do not become completed native
+  episodes for best-window selection.
+- Owned checkpoint snapshots, atomic replacement, metadata/credential validation,
+  distinct targets and optimizer state, and safe partial-state compatibility.
+- Installed SAC imports work outside the repository root; optional evaluation,
+  full-span GIF, and offline W&B chart helpers are included.
 
 ## What is SAC?
-- Soft Actor-Critic is an off-policy actor-critic algorithm for continuous action spaces that optimizes expected reward while maximizing policy entropy, leveraging stochastic policies, twin Q-value critics, and automatic temperature tuning to balance exploration and stability.
 
-Below is a compact math view aligned with this repository's implementation (see `SAC/sac/agent.py`) and written to render in both VSCode Markdown preview and GitHub.
+The actor optimizes a maximum-entropy return rather than only expected native
+reward. Twin critics reduce optimistic targets by taking their minimum. Target
+critics change slowly through Polyak averaging. Temperature balances reward and
+entropy and is learned from the policy's log density.
 
-**Maximum-entropy objective**
+Greedy deployment uses the tanh-transformed Gaussian mean. Its native200-step
+reward is a different objective and horizon from a stochastic continuing soft Q.
+Do not interpret soft-Q versus observed native reward as direct calibration or
+proof of overestimation without accounting for those differences.
 
-$$
-J(\pi) = \mathbb{E}_{\pi}\left[\sum_{t=0}^{\infty} \gamma^t \left(r_t + \alpha \mathcal{H}(\pi(\cdot \mid s_t))\right)\right]
-$$
+## The math
 
-$$
-\mathcal{H}(\pi(\cdot \mid s)) = -\mathbb{E}_{a \sim \pi}\left[\log \pi(a \mid s)\right]
-$$
-
-**Policy (squashed Gaussian with action scaling)**
-
-$$
-z = \mu_\theta(s) + \sigma_\theta(s) \odot \epsilon,\quad \epsilon \sim \mathcal{N}(0, I)
-$$
+### Entropy-augmented objective
 
 $$
-u = \tanh(z),\quad a = u \odot c + b
+J(\pi)=\mathbb E_\pi\left[\sum_{t\ge0}\gamma^t
+(r_t+\alpha\mathcal H(\pi(\cdot\mid s_t)))\right],\qquad
+\mathcal H=-\mathbb E_{a\sim\pi}[\log\pi(a\mid s)]
 $$
 
-**Log-probability with tanh correction**
+### Squashed Gaussian in physical action units
 
 $$
-\log \pi_\theta(a \mid s) = \sum_i \left[\log \mathcal{N}(z_i; \mu_i, \sigma_i) - \log c_i - \log(1 - \tanh(z_i)^2 + \varepsilon)\right]
+z=\mu_\theta(s)+\sigma_\theta(s)\odot\epsilon,\quad
+\epsilon\sim\mathcal N(0,I),\qquad a=b+c\odot\tanh(z)
 $$
 
-**Critic target and loss (twin Q)**
+Here $c=(a_{\max}-a_{\min})/2$ and $b=(a_{\max}+a_{\min})/2$.
 
 $$
-y_t = r_t + \gamma (1 - d_t)\left(\min_{i=1,2} Q_{\bar{\phi}_i}(s_{t+1}, a_{t+1}) - \alpha \log \pi_\theta(a_{t+1} \mid s_{t+1})\right)
+\log\pi_\theta(a\mid s)=\sum_j\left[
+\log\mathcal N(z_j;\mu_j,\sigma_j)-\log c_j
+-2(\log2-z_j-\operatorname{softplus}(-2z_j))\right]
 $$
 
-$$
-L_Q = \mathbb{E}_{(s,a,r,s',d)\sim \mathcal{D}}\left[(Q_{\phi_1}(s,a) - y_t)^2 + (Q_{\phi_2}(s,a) - y_t)^2\right]
-$$
+The stable expression is the exact log tanh Jacobian, avoiding an epsilon
+approximation at saturated actions. Differential entropy/log density can be
+negative/positive; it is not a categorical probability or a0-to1 score.
 
-**Actor loss**
+### Twin critics
 
-$$
-L_\pi = \mathbb{E}_{s\sim \mathcal{D},\, a\sim \pi_\theta}\left[\alpha \log \pi_\theta(a \mid s) - \min_{i=1,2} Q_{\phi_i}(s,a)\right]
-$$
-
-**Temperature (entropy) loss**
+Let $z_t^{\mathrm{term}}$ indicate **true termination**, not a time limit.
 
 $$
-L_\alpha = \mathbb{E}_{a\sim \pi_\theta}\left[-\log \alpha \left(\log \pi_\theta(a \mid s) + \mathcal{H}_{\text{target}}\right)\right]
+y_t=r_t+\gamma(1-z_t^{\mathrm{term}})\left[
+\min_iQ_{\bar\phi_i}(s_{t+1},a_{t+1})-\alpha\log\pi_\theta(a_{t+1}\mid s_{t+1})
+\right]
 $$
 
 $$
-\mathcal{H}_{\text{target}} = -d_a \cdot \eta,\quad d_a = \dim(\mathcal{A})
+L_Q=\mathbb E_{\mathcal D}\left[
+(Q_{\phi_1}(s_t,a_t)-y_t)^2+(Q_{\phi_2}(s_t,a_t)-y_t)^2\right]
 $$
 
-**Target-network update (Polyak averaging)**
+The next action and target are computed without gradients. Native Pendulum's
+200-step TimeLimit is a truncation; the actual endpoint is retained for bootstrap.
+
+### Actor and temperature
 
 $$
-\bar{\phi} \leftarrow \tau \phi + (1 - \tau)\bar{\phi}
+L_\pi=\mathbb E_{s\sim\mathcal D,a\sim\pi_\theta}
+[\operatorname{stopgrad}(\alpha)\log\pi_\theta(a\mid s)-\min_iQ_{\phi_i}(s,a)]
 $$
 
-**Parameter/term guide**
-- $s_t$, $a_t$, $r_t$: state, action, reward at time $t$; $s_{t+1}$ is the next state.
-- $\gamma$: discount factor; $\tau$: target network smoothing coefficient.
-- $\theta$: actor parameters; $\phi_1,\phi_2$: critic parameters; $\bar{\phi}_1,\bar{\phi}_2$: target critic parameters.
-- $\alpha$: temperature coefficient controlling entropy strength; $d_a$ is action dimension.
-- $\eta$: target entropy scale (config: `target_entropy_scale`).
-- $\mu_\theta(s)$, $\sigma_\theta(s)$: actor outputs (mean and std); $\odot$ is elementwise multiply.
-- $c = (a_{\max} - a_{\min})/2$, $b = (a_{\max} + a_{\min})/2$ are action scale/bias from env bounds.
-- $d_t \in \{0,1\}$: terminal indicator (1 if terminal, 0 otherwise); $\mathcal{D}$: replay buffer.
-- $\varepsilon$: small constant for numerical stability in the log-prob correction.
+$$
+L_\alpha=-\mathbb E\left[\log\alpha\,
+\operatorname{stopgrad}(\log\pi_\theta(a\mid s)+\mathcal H_{\mathrm{target}})\right],
+\qquad\mathcal H_{\mathrm{target}}=-d_a\eta
+$$
 
-This implementation mirrors the structure used for the existing PPO and Q-learning agents in this repository. It trains a Soft Actor-Critic agent on continuous-control tasks from Gymnasium, with default settings targeting `Pendulum-v1`.
+The target is defined in the implemented physical-action density units; action
+scaling is not silently removed from the log density. `target_entropy_scale`
+controls $\eta$. Actor, critic, and temperature Adam phases remain sequential.
 
-## Features
-- Torch-based stochastic actor with twin Q critics and target networks.
-- Replay buffer with configurable capacity and warmup phase.
-- Automatic entropy tuning with configurable target scale.
-- WandB integration, logging utilities, and checkpointing consistent with the other algorithms.
+$$
+\bar\phi_i\leftarrow\tau\phi_i+(1-\tau)\bar\phi_i
+$$
 
-### Training charts
- <p align="center">
-    <img src="assets/chart_01.png" alt="SAC stats chart" width="840">
-    <img src="assets/chart_03.png" alt="SAC Reward chart" width="435">
- </p>
- <p align="center">
-    <img src="assets/chart_02.png" alt="SAC Loss charts">
- </p>
+### Algorithm summary
 
+1. Seed model/environment/action spaces and inspect flat continuous spaces.
+2. Collect random actions for `start_steps`, then sample the learned policy.
+3. Store owned transitions with a true-terminal-only mask and actual endpoint.
+4. After `update_after` and sufficient replay, sample batches with replacement.
+5. Update critics, actor, and temperature with finite checks; soft-update targets.
+6. Log losses, soft-Q diagnostics, native completed episodes, and update counts.
+7. Save only genuine completed-episode best windows, then evaluate all requested
+   fresh episodes and inspect a full-span deployment demonstration.
+
+| Quantity | Code |
+| --- | --- |
+| Policy and physical log density | `GaussianPolicy.sample`, `deterministic` |
+| Twin and target Q networks | `QNetwork`, `SACAgent.q1/q2/q1_target/q2_target` |
+| Temperature and target entropy | `log_alpha`, `alpha`, `target_entropy` |
+| Replay and true-terminal mask | `ReplayBuffer`, `main.train` |
+| Sequential losses/target update | `SACAgent.update`, `_soft_update` |
+| Owned model/Adam snapshot | `state_dict`, `save_checkpoint`, `load_checkpoint` |
+| Native complete inference | `utils.evaluate`, `utils.make_gif` |
+
+## Environment and diagnostics
+
+Default native `Pendulum-v1` has3 features (cosine, sine, angular velocity), one
+bounded torque action in[-2,2], gravity10, and a200-step horizon. The native reward
+penalizes angle, angular velocity, and torque. More nearly upright, low-velocity
+control yields returns closer to zero. Native timestep0.05 means10 simulated
+seconds per200-step episode.
+
+`env_kwargs` forwards valid Gym constructor arguments; native Pendulum exposes
+`g`, not constructor arguments for `max_speed`, `max_torque`, or `dt`. Native
+helpers retain stock gravity and horizon. No reward shaping, teacher controller,
+extra actor information, or goal modification is used in reported evaluations.
+
+The observer settling diagnostic is **all last20 post-transition states within
+|wrapped angle|<=0.1 rad and |angular velocity|<=0.5 rad/s**. It is a1-second final
+snapshot, not an official success flag or lasting-stability proof. Native
+TimeLimit truncation is normal and must not be described as200 failures.
 
 ## Quickstart
+
+From the repository root, create a new custom environment for each run:
+
 ```bash
-python -m SAC.main train --config SAC/configs/pendulum.yaml
+export UV_PROJECT_ENVIRONMENT="$PWD/.venv-sac-training"
+uv venv "$UV_PROJECT_ENVIRONMENT"
+uv sync --locked
+WANDB_MODE=offline OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  uv run python -m SAC.main train --config SAC/configs/pendulum_fast.yaml
 ```
-Set `--wandb_key YOUR_KEY` if you need to authenticate programmatically. Checkpoints are written to `SAC/checkpoints` and the best moving-average model is stored as `best.pt`.
 
-To watch the trained policy:
+The original200k-step256-layer recipe remains in `configs/pendulum.yaml` for
+comparison. The bounded50k profile uses128 layers and batch128 with1k random and
+learning warm-up. It changes capacity/batch/budget/warm-up/clipping as well as the
+correctness fixes; this is not an isolated causal ablation.
+
+In a separate fresh environment:
+
 ```bash
-python -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/checkpoints/best.pt
+uv run python -m SAC.main demo --episodes 5 --render_mode human
+# Default null render mode is headless; --render_mode none is explicit.
 ```
 
-Setup with uv (activate the venv if you want to call `python` directly; `uv run` does not require activation):
+Default checkpoint follows the selected config, normally
+`SAC/checkpoints_fast/best.pt`. Checkpoints/raw logs are intentionally ignored;
+use the supplied trusted model or train it locally. CLI W&B key overrides
+`WANDB_API_KEY`, then YAML key. Logged config and checkpoint metadata exclude
+credentials. Examples enable offline W&B without cloud synchronization.
 
-Windows cmd:
-```cmd
-uv venv .venv
-uv sync
-.\.venv\Scripts\activate.bat
-python -m SAC.main train --config SAC/configs/pendulum.yaml
-python -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/checkpoints/best.pt --episodes 5
-```
+## Configuration and persistence
 
-macOS/Linux (bash or zsh):
+- `start_steps` controls random-action collection. `update_after` independently
+  controls learning eligibility and defaults to `start_steps`; an explicit0
+  reproduces the old early-update mode. The old recipe updated as soon as replay
+  could sample even while collecting random actions.
+- `best_window` is both the native completed-episode minimum and score window.
+  It is a sampled training selection, not a held-out or official solved result.
+- `max_steps_per_episode` is an explicit safety cap; artificial caps are counted
+  separately and never become native completed-episode best scores.
+- `global_step` inside the agent counts completed SAC updates. Environment steps
+  and update counts are logged/saved separately.
+- `max_grad_norm: 0` disables clipping but still checks norms. Each optimizer
+  phase verifies finite data; a failing later phase does not promise rollback of
+  an already completed earlier phase.
+
+Snapshots own CPU tensor copies. Loading preserves distinct targets and existing
+optimizer/temperature identities. Legacy snapshots missing target states fall
+back to online critics explicitly. Restoring models/Adam is not exact process
+resumption: replay, environment, and RNG state are not checkpointed.
+
+## Verified training and evaluation
+
+The frozen50k-profile checkpoint at environment step20,400, selected by a
+sampled20-episode window, was evaluated without filtering any episode:
+
+| Model / reset range | Episodes | Native mean +/- population std | Full200-step episodes |
+| --- | --- | --- | --- |
+| Untouched stock50k snapshot,180000-180099 |100|-158.05 +/-81.42|100|
+|50k profile,180000-180099 |100|-161.51 +/-86.96|100|
+| Same frozen model,280000-280099 |100|-168.14 +/-80.00|100|
+|50k profile combined |200|-164.82 +/-83.61|200|
+
+Every evaluated episode met the stated final-window settling diagnostic, with no
+action bounds violations or added diagnostic caps. Average upright time under
+that diagnostic was about8.07 of10 simulated seconds. These are same-dynamics
+reset evaluations of one related training run, not independent training-seed
+robustness evidence. The small difference from the stock50k score is not proof
+that correctness fixes improved native return.
+
+The nominal200k stock control was intentionally stopped after its immutable50k
+comparison snapshot and matched-budget evaluation were complete. Its remaining
+configured budget was not completed; no full200k result is claimed. Original
+source/config, generated snapshots, and raw log remain available separately.
+
+The GIF deliberately illustrates a natural near-hanging-down reset (seed280015,
+initial angle-2.8717rad) rather than an easy already-upright start. It includes all
+200 transitions and holds upright late in the trajectory, ending at angle0.0459rad
+and velocity0.0052rad/s. Its native return is-224.97. Selection is an illustration,
+not a filtered aggregate success estimate. The same raw episode remains in the
+independent evaluation data.
+
+## Tests, evaluation, and asset tools
+
+The strict fresh-environment suite passed **80 tests and220 subtests** with
+warnings as errors. Unit cases use stub environments and mocked W&B. Real native
+learning smoke, complete training, isolated installed imports, and full native
+inference are additional hardware checks.
+
 ```bash
-uv venv .venv
-uv sync
-source .venv/bin/activate
-python -m SAC.main train --config SAC/configs/pendulum.yaml
-python -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/checkpoints/best.pt --episodes 5
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 WANDB_MODE=offline \
+  uv run python -m pytest tests/sac/ -q -W error
+
+uv run python -m SAC.utils.evaluate --episodes 100 --seed 180000 \
+  --out SAC/logs/native-evaluation.json
+
+SDL_VIDEODRIVER=dummy uv run python -m SAC.utils.make_gif \
+  --episodes 1 --keep-top 1 --seed 280015 --out SAC/assets/sac_pendulum.gif
+
+uv run python -m SAC.utils.make_charts \
+  --config SAC/configs/pendulum_fast.yaml \
+  --run wandb/<offline-run>/run-<id>.wandb \
+  --evaluation SAC/logs/native-evaluation.json \
+  --summary SAC/logs/training-summary.json
 ```
 
-If you prefer `uv run` instead of activation:
-```bash
-uv run -m SAC.main train --config SAC/configs/pendulum.yaml
-uv run -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/checkpoints/best.pt --episodes 5
-```
+See [helpers](utils/README.md) for complete trajectory JSON, conservative native
+diagnostics, provenance, read-only checkpoints, and selected media. GIF metadata
+reports submitted and encoded frames separately and preserves playback duration.
+Independent actual pixel review confirmed full swing-up and upright holding.
 
-Setup without uv (standard venv + pip):
+## Training charts
 
-Windows cmd:
-```cmd
-python -m venv .venv
-.\.venv\Scripts\activate.bat
-pip install -e .
-python -m SAC.main train --config SAC/configs/pendulum.yaml
-python -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/checkpoints/best.pt --episodes 5
-```
+<p align="center"><img src="assets/chart_01.png" width="720" alt="Twin soft-Q and TD-target means with separate native reward diagnostics" /></p>
 
-macOS/Linux (bash or zsh):
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .
-python -m SAC.main train --config SAC/configs/pendulum.yaml
-python -m SAC.main demo --config SAC/configs/pendulum.yaml --model_path SAC/checkpoints/best.pt --episodes 5
-```
+Soft Q includes future entropy and continuing bootstrap beyond a native TimeLimit.
+Finite-horizon greedy native return has a different objective/horizon; matched
+points do not alone establish calibration or overestimation.
 
-## Configuration
-Hyper-parameters live in YAML files under `SAC/configs/`. The default file exposes:
-- **Environment**: id, render mode, and optional kwargs passed to `gymnasium.make`.
-- **Training**: total interaction steps, warmup steps, batch size, buffer size, Polyak coefficient `tau`, learning rates, and entropy target scaling.
-- **Model**: hidden layer sizes and activation function shared by actor and critics.
-- **Logging**: intervals, checkpointing behaviour, and logger destinations.
-- **Inference**: default checkpoint for demos and number of rollout episodes.
+<p align="center"><img src="assets/chart_02.png" width="720" alt="Critic, actor and temperature losses; temperature and physical-action log density" /></p>
 
-Feel free to duplicate the YAML stub to experiment with other continuous Gym tasks.
+Differential entropy/log density can be negative/positive. These are not copied
+categorical probabilities or unrelated algorithm loss labels.
 
+<p align="center"><img src="assets/chart_03.png" width="720" alt="Native return and complete episode duration without a solved threshold" /></p>
 
-# References, useful links, and Papers:
+Charts come from the50k run's100 logging rows. No native zero-return/length curves
+are invented before an episode completes. Low loss and high sampled windows are
+not independent policy-quality guarantees.
 
-- Original SAC paper: https://arxiv.org/abs/1801.01290
-- SAC implementation in PyTorch: https://github.com/pranz24/pytorch-soft-actor-critic
-- SAC implementation in JAX: https://github.com/haarnoja/sac_jax
+## References
+
+- Haarnoja et al., [Soft Actor-Critic](https://arxiv.org/abs/1801.01290).
+- Haarnoja et al., [Soft Actor-Critic Algorithms and Applications](https://arxiv.org/abs/1812.05905).
+- [Gymnasium Pendulum](https://gymnasium.farama.org/environments/classic_control/pendulum/).

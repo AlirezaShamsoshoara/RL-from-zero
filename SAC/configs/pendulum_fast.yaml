@@ -1,0 +1,37 @@
+# Bounded CPU training profile; native Pendulum-v1 dynamics/reward unchanged.
+project: rl-hero
+entity: null
+run_name: sac-pendulum-fast
+wandb_key: ""
+seed: 42
+env_id: Pendulum-v1
+env_kwargs: {}
+render_mode: null
+total_steps: 50000
+start_steps: 1000
+update_after: 1000
+batch_size: 128
+buffer_size: 100000
+updates_per_step: 1
+gamma: 0.99
+tau: 0.005
+actor_lr: 0.0003
+critic_lr: 0.0003
+alpha_lr: 0.0003
+target_entropy_scale: 1.0
+max_grad_norm: 10.0
+hidden_sizes: [128, 128]
+activation: relu
+log_interval: 500
+checkpoint_interval: 10000
+checkpoint_dir: SAC/checkpoints_fast
+inference_model_path: SAC/checkpoints_fast/best.pt
+best_window: 20
+save_best: true
+log_level: INFO
+log_to_file: false
+log_file: SAC/logs/sac-fast.log
+log_to_console: true
+max_steps_per_episode: 200
+episodes: 10
+device: cpu
