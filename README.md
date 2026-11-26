@@ -39,7 +39,7 @@ RL-from-zero is a collection of reinforcement learning agents implemented from s
 | [`SAC/`](SAC/) | Soft Actor-Critic | Continuous | `Pendulum-v1` | <img src="SAC/assets/sac_pendulum.gif" alt="Complete native SAC Pendulum swing-up and holding example" width="180"> |
 | [`DDPG/`](DDPG/) | Deep Deterministic Policy Gradient | Continuous | `LunarLanderContinuous-v3` | <img src="DDPG/assets/ddpg_lunarlander.gif" alt="DDPG LunarLanderContinuous demo" width="180"> |
 | [`MADDPG/`](MADDPG/) | Multi-Agent DDPG (centralized critic) | Continuous | `simple_spread_v3` (PettingZoo MPE) | <img src="MADDPG/assets/maddpg_simple_spread.gif" alt="MADDPG simple_spread demo" width="180"> |
-| [`TD3/`](TD3/) | Twin Delayed DDPG | Continuous | `MountainCarContinuous-v0` | <img src="TD3/assets/td3_moutaincar_cont.gif" width="180">  |
+| [`TD3/`](TD3/) | Twin Delayed DDPG | Continuous | `MountainCarContinuous-v0` | <img src="TD3/assets/td3_mountaincar_continuous.gif" alt="Three complete deterministic native TD3 goal episodes" width="180">  |
 | [`TRPO/`](TRPO/) | Trust Region Policy Optimization | Discrete + Continuous | `Acrobot-v1` (discrete) | <img src="TRPO/assets/trpo_acrobot.gif" alt="TRPO Acrobot demo" width="180"> |
 | [`IQL/`](IQL/) | Implicit Q-Learning (offline) | Continuous | `Pendulum-v1` (offline dataset) | <img src="IQL/assets/iql_pendulum.gif" alt="IQL Pendulum demo" width="180"> |
 
@@ -131,9 +131,9 @@ python -m SAC.main demo --config SAC/configs/pendulum_fast.yaml --render_mode hu
 python -m DDPG.main train --config DDPG/configs/lunarlander_continuous_tuned.yaml
 python -m DDPG.main demo --config DDPG/configs/lunarlander_continuous_tuned.yaml --model_path DDPG/checkpoints_tuned/best.pt
 
-# Twin Delayed DDPG
-python -m TD3.main train --config TD3/configs/mountaincar_continuous.yaml
-python -m TD3.main demo --config TD3/configs/mountaincar_continuous.yaml --model_path TD3/checkpoints/best.pt
+# Twin Delayed DDPG: native goal-reaching profile
+python -m TD3.main train --config TD3/configs/mountaincar_balanced.yaml
+python -m TD3.main demo --config TD3/configs/mountaincar_balanced.yaml --render_mode human
 
 # Trust Region Policy Optimization
 python -m TRPO.main train --config TRPO/configs/acrobot.yaml
@@ -202,6 +202,14 @@ uv venv .venv-sac-tests
 UV_PROJECT_ENVIRONMENT=.venv-sac-tests uv sync --locked
 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 WANDB_MODE=offline UV_PROJECT_ENVIRONMENT=.venv-sac-tests \
   uv run python -m pytest tests/sac/ -q -W error
+```
+TD3's suite checks delayed actor/target updates, replay wraps, native vector
+endpoints, checkpoints, cleanup, and complete evaluation/asset helpers:
+```bash
+uv venv .venv-td3-tests
+UV_PROJECT_ENVIRONMENT=.venv-td3-tests uv sync --locked
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 WANDB_MODE=offline UV_PROJECT_ENVIRONMENT=.venv-td3-tests \
+  uv run python -m pytest tests/td3/ -q -W error
 ```
 See each algorithm's README for its test instructions.
 
